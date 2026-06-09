@@ -4,16 +4,60 @@ import { useState } from "react";
 import Cta from "@/components/Cta";
 import { questions, scoreQuiz, type QuizResult } from "./quizData";
 
-type Stage = "intro" | "quiz" | "result";
+type Stage = "intro" | "lead" | "quiz" | "result";
+
+type Lead = { name: string; email: string; phone: string };
+type LeadErrors = Partial<Record<keyof Lead, string>>;
+
+const emptyLead: Lead = { name: "", email: "", phone: "" };
 
 export default function Quiz() {
   const [stage, setStage] = useState<Stage>("intro");
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [lead, setLead] = useState<Lead>(emptyLead);
+  const [leadErrors, setLeadErrors] = useState<LeadErrors>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const total = questions.length;
   const progress = stage === "result" ? 100 : Math.round((current / total) * 100);
+
+  function validateLead(data: Lead): LeadErrors {
+    const errors: LeadErrors = {};
+    if (data.name.trim().length < 3) errors.name = "Digite seu nome completo.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim()))
+      errors.email = "Digite um e-mail válido.";
+    if (data.phone.replace(/\D/g, "").length < 10)
+      errors.phone = "Digite um telefone com DDD.";
+    return errors;
+  }
+
+  async function submitLead(e: React.FormEvent) {
+    e.preventDefault();
+    const errors = validateLead(lead);
+    setLeadErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lead),
+      });
+    } catch {
+      // se o registro falhar, não bloqueia a pessoa de fazer o quiz
+    } finally {
+      setSubmitting(false);
+      setStage("quiz");
+    }
+  }
+
+  function updateLead(field: keyof Lead, value: string) {
+    setLead((prev) => ({ ...prev, [field]: value }));
+    if (leadErrors[field]) setLeadErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
 
   function choose(optionIndex: number) {
     const next = [...answers];
@@ -37,6 +81,8 @@ export default function Quiz() {
     setAnswers([]);
     setCurrent(0);
     setResult(null);
+    setLead(emptyLead);
+    setLeadErrors({});
     setStage("intro");
   }
 
@@ -44,8 +90,8 @@ export default function Quiz() {
     <section className="relative min-h-[100svh] flex items-center py-24">
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[760px]">
-        {/* barra de progresso (some na intro) */}
-        {stage !== "intro" && (
+        {/* barra de progresso (só durante as perguntas e no resultado) */}
+        {(stage === "quiz" || stage === "result") && (
           <div className="mb-9">
             <div className="flex items-center justify-between mb-2.5">
               <span className="font-mono text-[11px] tracking-[.14em] uppercase text-muted">
@@ -77,13 +123,85 @@ export default function Quiz() {
               o caminho certo pra parar de deixar dinheiro na mesa.
             </p>
             <div className="mt-9">
-              <button className="btn btn--lg" onClick={() => setStage("quiz")}>
+              <button className="btn btn--lg" onClick={() => setStage("lead")}>
                 Começar diagnóstico
               </button>
             </div>
             <p className="reassure mt-4">
-              <b>Grátis</b> · sem cadastro · resultado na hora
+              <b>Grátis</b> · leva 1 minuto · resultado na hora
             </p>
+          </div>
+        )}
+
+        {/* ---------- CAPTURA DE LEAD ---------- */}
+        {stage === "lead" && (
+          <div className="cta-reveal max-w-[520px] mx-auto">
+            <div className="text-center">
+              <span className="tag">Quase lá</span>
+              <h2 className="font-display font-extrabold text-[clamp(24px,4vw,36px)] leading-[1.1] tracking-[-.02em] mt-5">
+                Pra onde enviamos seu <span className="text-blue">resultado?</span>
+              </h2>
+              <p className="lead mt-4">
+                Preencha seus dados e o diagnóstico libera na sequência.
+              </p>
+            </div>
+
+            <form className="grid gap-4 mt-8" onSubmit={submitLead} noValidate>
+              <div className="grid gap-1.5">
+                <label htmlFor="lead-name" className="quiz-label">Nome completo</label>
+                <input
+                  id="lead-name"
+                  type="text"
+                  autoComplete="name"
+                  className={`quiz-input ${leadErrors.name ? "is-invalid" : ""}`}
+                  placeholder="Seu nome completo"
+                  value={lead.name}
+                  onChange={(e) => updateLead("name", e.target.value)}
+                />
+                {leadErrors.name && <span className="quiz-error">{leadErrors.name}</span>}
+              </div>
+
+              <div className="grid gap-1.5">
+                <label htmlFor="lead-email" className="quiz-label">E-mail</label>
+                <input
+                  id="lead-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  className={`quiz-input ${leadErrors.email ? "is-invalid" : ""}`}
+                  placeholder="voce@email.com"
+                  value={lead.email}
+                  onChange={(e) => updateLead("email", e.target.value)}
+                />
+                {leadErrors.email && <span className="quiz-error">{leadErrors.email}</span>}
+              </div>
+
+              <div className="grid gap-1.5">
+                <label htmlFor="lead-phone" className="quiz-label">Telefone (com DDD)</label>
+                <input
+                  id="lead-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  className={`quiz-input ${leadErrors.phone ? "is-invalid" : ""}`}
+                  placeholder="(00) 00000-0000"
+                  value={lead.phone}
+                  onChange={(e) => updateLead("phone", e.target.value)}
+                />
+                {leadErrors.phone && <span className="quiz-error">{leadErrors.phone}</span>}
+              </div>
+
+              <button type="submit" className="btn btn--wide mt-2" disabled={submitting}>
+                {submitting ? "Enviando…" : "Ver meu diagnóstico"}
+              </button>
+            </form>
+
+            <button
+              onClick={() => setStage("intro")}
+              className="mt-6 mx-auto block font-mono text-[12px] tracking-[.1em] uppercase text-muted hover:text-offwhite transition-colors"
+            >
+              ← Voltar
+            </button>
           </div>
         )}
 
