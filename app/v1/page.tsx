@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Logo } from "@/components/icons";
-import Cta from "@/components/Cta";
 import VturbPlayer from "@/components/VturbPlayer";
+import ExpiryBanner from "@/components/ExpiryBanner";
+import DelayedCta from "@/components/DelayedCta";
 
 const ACCOUNT = "b809ca06-75c2-4eba-ae57-2f6bbda7e885";
 const PLAYER = "6a282ada1bc96b19a568dcc5";
@@ -38,6 +39,8 @@ export default function V1() {
       <link rel="dns-prefetch" href="https://scripts.converteai.net" />
       <link rel="dns-prefetch" href="https://images.converteai.net" />
       <link rel="dns-prefetch" href="https://license.vturb.com" />
+
+      <ExpiryBanner />
 
       <main className="min-h-screen flex flex-col items-center justify-center py-16 lg:py-24">
         <div className="wrap max-w-[920px] text-center flex flex-col items-center">
@@ -77,14 +80,8 @@ export default function V1() {
             <VturbPlayer />
           </div>
 
-          <div className="flex flex-col items-center gap-[14px] mt-12">
-            <Cta href="#checkout" variant="lg">
-              Quero acessar por R$197
-            </Cta>
-            <span className="reassure">
-              Parcelável • <b>Acesso imediato</b> • Garantia 7 dias
-            </span>
-          </div>
+          {/* CTA aparece só 20s após o vídeo começar a tocar */}
+          <DelayedCta />
         </div>
       </main>
     </>
