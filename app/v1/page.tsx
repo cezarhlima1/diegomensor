@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Logo } from "@/components/icons";
 import VturbPlayer from "@/components/VturbPlayer";
 import ExpiryBanner from "@/components/ExpiryBanner";
 import DelayedCta from "@/components/DelayedCta";
@@ -44,35 +43,17 @@ export default function V1() {
 
       <main className="min-h-screen flex flex-col items-center justify-center py-16 lg:py-24">
         <div className="wrap max-w-[920px] text-center flex flex-col items-center">
-          {/* marca discreta — VSL distraction-free, sem nav completa */}
-          <a
-            href="/"
-            className="brand inline-flex items-center gap-[11px] font-display font-extrabold text-base tracking-[-.01em] mb-10"
+          <h1
+            className="font-display font-black text-[clamp(22px,3.4vw,36px)] mt-2 mb-4 max-w-[26ch]"
+            style={{ color: "#9d1529" }}
           >
-            <span className="brand-mark">
-              <Logo className="w-[18px] h-[18px]" />
-            </span>
-            <span>
-              Precificação para Oficinas
-              <small className="block font-mono font-medium text-[10px] tracking-[.14em] text-muted uppercase">
-                by Diego Mensor
-              </small>
-            </span>
-          </a>
-
-          <span className="hero-badge">
-            <span className="dot" />
-            Assista antes que a oferta saia do ar
-          </span>
-
-          <h1 className="font-display font-black text-[clamp(28px,4.6vw,52px)] my-6 max-w-[20ch]">
-            O vídeo que mostra onde sua oficina está{" "}
-            <span className="text-blue">deixando dinheiro na mesa</span>.
+            Por que você trabalha igual um condenado na oficina… mas o dinheiro
+            nunca sobra de verdade?
           </h1>
 
-          <p className="text-muted text-[clamp(15px,1.6vw,19px)] max-w-[52ch] mb-10">
-            Dê o play e descubra, em poucos minutos, quanto custa manter a oficina
-            aberta e quanto você realmente deveria estar cobrando.
+          <p className="text-muted text-[clamp(14px,1.4vw,17px)] max-w-[54ch] mb-6">
+            Descubra a principal trava invisível que mantém donos de oficina
+            presos no operacional e faz o dinheiro sumir no fim do mês.
           </p>
 
           {/* player VSL */}
