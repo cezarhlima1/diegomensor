@@ -62,7 +62,7 @@ export default function Steps() {
               A conta fechando, com clareza e no preto.
             </h3>
             <p className="text-[#cfe2f1] text-sm mt-2.5">
-              Do custo real ao preço certo — sem improviso.
+              Do custo real ao preço certo, sem improviso.
             </p>
           </article>
         </div>

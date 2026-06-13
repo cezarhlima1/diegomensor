@@ -9,7 +9,7 @@ export default function Receive() {
         {/* mockup à esquerda */}
         <div className="reveal">
           <div className="laptop max-w-[520px]">
-            <div className="screen">
+            <div className="screen" style={{ aspectRatio: "auto" }}>
               <div className="player">
                 <div className="topbar">
                   <i />
@@ -20,7 +20,7 @@ export default function Receive() {
                 <img
                   src="/notebook2.jpeg"
                   alt="Módulos do treinamento dentro da plataforma"
-                  className="flex-1 min-h-0 w-full object-cover object-top"
+                  className="block w-full h-auto"
                 />
               </div>
             </div>
@@ -52,7 +52,7 @@ export default function Receive() {
           </div>
 
           <div className="reveal d4 mt-[30px]">
-            <Cta href="#checkout" variant="lg">
+            <Cta variant="lg">
               Quero acessar por R$197
             </Cta>
           </div>

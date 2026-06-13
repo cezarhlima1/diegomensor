@@ -25,7 +25,7 @@ export default function Footer() {
         </div>
 
         <div className="w-full border-t border-line mt-[34px] pt-[22px] font-mono text-xs text-muted-dim flex flex-wrap justify-between gap-3.5">
-          <span>© MENSOR TREINAMENTOS LTDA — Todos os direitos reservados</span>
+          <span>© MENSOR TREINAMENTOS LTDA - Todos os direitos reservados</span>
           <span className="text-blue">@diegomensor</span>
         </div>
       </div>

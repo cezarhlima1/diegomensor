@@ -62,7 +62,7 @@ export default function ForWho() {
         </div>
 
         <div className="text-center mt-10 reveal d2">
-          <Cta href="#checkout" variant="lg">
+          <Cta variant="lg">
             Quero acessar por R$197
           </Cta>
         </div>

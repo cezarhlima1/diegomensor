@@ -9,7 +9,7 @@ const PLAYER = "6a282ada1bc96b19a568dcc5";
 const MEDIA = "6a282a878a83ed8548b9f7d9";
 
 export const metadata: Metadata = {
-  title: "Assista agora — Precificação para Oficinas | Diego Mensor",
+  title: "Assista agora - Precificação para Oficinas | Diego Mensor",
   description:
     "Em poucos minutos você entende quanto sua oficina realmente custa, quanto deveria cobrar e onde está deixando dinheiro na mesa. Assista ao vídeo.",
 };

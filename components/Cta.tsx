@@ -1,4 +1,7 @@
-/** Botão CTA reutilizável. Todos apontam para o mesmo checkout (# placeholder). */
+/** Botão CTA reutilizável. Todos apontam para o mesmo checkout do produto. */
+
+const CHECKOUT_URL =
+  "https://payfast.greenn.com.br/redirect/267726?utm_source=ig&utm_medium=social&utm_content=link_in_bio";
 
 type Variant = "lg" | "wide" | "base";
 
@@ -10,7 +13,7 @@ const variantClass: Record<Variant, string> = {
 
 export default function Cta({
   children,
-  href = "#",
+  href = CHECKOUT_URL,
   variant = "base",
   className = "",
 }: {

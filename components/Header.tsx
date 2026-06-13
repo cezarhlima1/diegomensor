@@ -19,7 +19,7 @@ export default function Header() {
         </span>
       </a>
 
-      <Cta href="#checkout" className="hidden md:inline-flex !py-[11px] !px-5 !text-[13px]">
+      <Cta className="hidden md:inline-flex !py-[11px] !px-5 !text-[13px]">
         Quero acessar
       </Cta>
     </header>

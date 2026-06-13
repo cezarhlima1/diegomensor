@@ -15,18 +15,18 @@ export default function Hero() {
           </span>
 
           <h1 className="reveal d1 font-display font-black text-[clamp(34px,5.4vw,62px)] my-6 max-w-[16ch]">
-            Pare de trabalhar muito… e comece a ver{" "}
+            Pare de cobrar errado e comece a ver{" "}
             <span className="text-blue">mais dinheiro sobrando</span> na oficina.
           </h1>
 
           <p className="reveal d2 text-muted text-[clamp(16px,1.7vw,20px)] max-w-[46ch] mb-[34px]">
-            Você conserta carro como ninguém — mas nunca te ensinaram quanto custa{" "}
+            Você conserta carro como ninguém, mas nunca te ensinaram quanto custa{" "}
             <b className="text-offwhite">manter a oficina aberta</b> nem quanto você deveria
             cobrar. É exatamente isso que muda aqui.
           </p>
 
           <div className="reveal d3 flex flex-col items-start gap-[14px]">
-            <Cta href="#checkout" variant="lg">
+            <Cta variant="lg">
               Quero acessar por R$197
             </Cta>
             <span className="reassure">
@@ -61,7 +61,7 @@ export default function Hero() {
         {/* coluna visual: mockup de notebook (placeholder de imagem) */}
         <div className="reveal d3 relative">
           <div className="laptop max-w-[520px] mx-auto lg:mr-0 lg:ml-auto">
-            <div className="screen">
+            <div className="screen" style={{ aspectRatio: "auto" }}>
               <div className="player">
                 <div className="topbar">
                   <i />
@@ -72,17 +72,11 @@ export default function Hero() {
                 <img
                   src="/capa.jpeg"
                   alt="Aula dentro da plataforma do treinamento"
-                  className="flex-1 min-h-0 w-full object-cover object-top"
+                  className="block w-full h-auto"
                 />
               </div>
             </div>
             <div className="base" />
-          </div>
-
-          {/* etiqueta de preço flutuante */}
-          <div className="float-price">
-            <div className="k">12x de</div>
-            <div className="v">R$19,70</div>
           </div>
         </div>
       </div>

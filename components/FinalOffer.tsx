@@ -18,7 +18,7 @@ export default function FinalOffer() {
             </small>
           </div>
           <div className="mt-[26px]">
-            <Cta href="#" variant="wide">
+            <Cta variant="wide">
               Quero acessar agora
             </Cta>
           </div>

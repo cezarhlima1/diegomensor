@@ -48,7 +48,7 @@ export const results: QuizResult[] = [
     course: "Fundamentos da Precificação",
     tagline: "Pare de chutar preço e descubra seus números reais.",
     description:
-      "Você ainda decide preço no feeling ou copiando o concorrente — e isso te deixa exposto. O primeiro passo é enxergar quanto a sua oficina realmente custa antes de pensar em quanto cobrar.",
+      "Você ainda decide preço no feeling ou copiando o concorrente, e isso te deixa exposto. O primeiro passo é enxergar quanto a sua oficina realmente custa antes de pensar em quanto cobrar.",
     highlights: [
       "Descubra o custo real da hora de trabalho",
       "Monte uma base de preço que não depende de achismo",
@@ -62,7 +62,7 @@ export const results: QuizResult[] = [
     course: "Margem & Lucro na Oficina",
     tagline: "Você fatura, mas no fim do mês some. Vamos arrumar isso.",
     description:
-      "Você já tem preço definido, mas o dinheiro não sobra como deveria. O foco aqui é margem: ajustar o que você cobra para que cada serviço entregue lucro de verdade — sem perder cliente.",
+      "Você já tem preço definido, mas o dinheiro não sobra como deveria. O foco aqui é margem: ajustar o que você cobra para que cada serviço entregue lucro de verdade, sem perder cliente.",
     highlights: [
       "Calcule a margem certa por tipo de serviço",
       "Identifique os serviços que dão prejuízo escondido",
@@ -74,7 +74,7 @@ export const results: QuizResult[] = [
     id: "escala",
     kicker: "Seu próximo nível",
     course: "Gestão & Escala",
-    tagline: "Sua oficina roda — agora é hora de crescer com controle.",
+    tagline: "Sua oficina roda, agora é hora de crescer com controle.",
     description:
       "Você já tem estrutura e equipe, mas crescer sem método vira caos. O foco é gestão: previsibilidade, indicadores e processos para escalar faturamento sem que tudo dependa de você.",
     highlights: [
