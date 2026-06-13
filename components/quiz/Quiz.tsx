@@ -113,14 +113,14 @@ export default function Quiz() {
         {/* ---------- INTRO ---------- */}
         {stage === "intro" && (
           <div className="text-center cta-reveal">
-            <span className="tag">Diagnóstico em 1 minuto</span>
+            <span className="tag">Diagnóstico em 2 minutos</span>
             <h1 className="section-title mt-5">
-              Qual treinamento vai{" "}
-              <span className="text-blue">destravar sua oficina?</span>
+              Em menos de 2 minutos, descubra se você está{" "}
+              <span className="text-blue">faturando menos do que deveria.</span>
             </h1>
             <p className="lead mt-5 max-w-[540px] mx-auto">
-              Responda {total} perguntas rápidas sobre como você cobra hoje e descubra
-              o caminho certo pra parar de deixar dinheiro na mesa.
+              Responda algumas perguntas rápidas e descubra se você está cobrando
+              certo ou perdendo dinheiro em serviços todos os dias.
             </p>
             <div className="mt-9">
               <button className="btn btn--lg" onClick={() => setStage("lead")}>

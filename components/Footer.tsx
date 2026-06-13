@@ -17,15 +17,15 @@ export default function Footer() {
         </a>
 
         <div className="font-mono text-[12.5px] text-muted leading-[1.8] text-left sm:text-right">
-          <b className="text-offwhite font-bold">Produtor:</b> Diego Mensor
+          <b className="text-offwhite font-bold">Produtor:</b> MENSOR TREINAMENTOS LTDA
           <br />
-          CNPJ: 00.000.000/0001-00
+          CNPJ: 66.021.375/0001-46
           <br />
-          contato@diegomensor.com.br
+          diegomensor@hotmail.com
         </div>
 
         <div className="w-full border-t border-line mt-[34px] pt-[22px] font-mono text-xs text-muted-dim flex flex-wrap justify-between gap-3.5">
-          <span>© Diego Mensor — Todos os direitos reservados</span>
+          <span>© MENSOR TREINAMENTOS LTDA — Todos os direitos reservados</span>
           <span className="text-blue">@diegomensor</span>
         </div>
       </div>
