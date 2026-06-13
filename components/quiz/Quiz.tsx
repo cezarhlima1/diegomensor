@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Cta from "@/components/Cta";
 import { questions, scoreQuiz, type QuizResult } from "./quizData";
 
 type Stage = "intro" | "lead" | "quiz" | "result";
@@ -266,9 +265,14 @@ export default function Quiz() {
                 ))}
               </ul>
 
-              <Cta href="#checkout" variant="wide">
+              <a
+                href="https://payfast.greenn.com.br/redirect/267726?utm_source=ig&utm_medium=social&utm_content=link_in_bio"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn--wide"
+              >
                 {result.cta}
-              </Cta>
+              </a>
             </div>
 
             <button
