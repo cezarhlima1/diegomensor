@@ -17,29 +17,11 @@ export default function Receive() {
                   <i />
                   <span>modulos / 7 aulas</span>
                 </div>
-                <div className="stage !place-items-stretch">
-                  <div className="p-[18px] grid gap-[9px] content-center w-full">
-                    <div className="font-mono text-[10px] text-blue tracking-[.1em] uppercase">
-                      Conteúdo do treinamento
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-lg px-[11px] py-[9px] bg-blue/10 border border-blue/30">
-                      <span className="font-mono text-blue text-xs">01</span>
-                      <span className="text-xs text-white">Quanto custa manter a oficina</span>
-                      <span className="ml-auto w-4 h-4 rounded-full bg-blue" />
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-lg px-[11px] py-[9px] bg-[rgba(143,178,204,.06)]">
-                      <span className="font-mono text-muted text-xs">02</span>
-                      <span className="text-xs text-offwhite">Aluguel pra você mesmo</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-lg px-[11px] py-[9px] bg-[rgba(143,178,204,.06)]">
-                      <span className="font-mono text-muted text-xs">03</span>
-                      <span className="text-xs text-offwhite">Precificando do jeito certo</span>
-                    </div>
-                    <div className="font-mono text-[10px] text-muted-dim text-center mt-0.5">
-                      + 4 aulas práticas
-                    </div>
-                  </div>
-                </div>
+                <img
+                  src="/notebook2.jpeg"
+                  alt="Módulos do treinamento dentro da plataforma"
+                  className="flex-1 min-h-0 w-full object-cover object-top"
+                />
               </div>
             </div>
             <div className="base" />

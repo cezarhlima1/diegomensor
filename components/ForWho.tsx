@@ -9,16 +9,14 @@ const items = [
 
 const testimonials = [
   {
-    initial: "J",
-    name: "Jardel — Oficina Mecânica",
-    quote:
-      "Eu cobrava a hora no chute. Fiz a conta do jeito que o Diego ensina e descobri que estava trabalhando quase de graça. Ajustei o preço e o caixa respirou.",
+    src: "/depoimento.jpeg",
+    alt: "Print de WhatsApp com o faturamento da oficina antes e depois do método",
+    caption: "resultado real no grupo",
   },
   {
-    initial: "M",
-    name: "Marcos — Auto Center",
-    quote:
-      "Sempre achei que era questão de vender mais. Era questão de saber meu custo. Em uma semana corrigi a precificação e parei de perder dinheiro em serviço grande.",
+    src: "/depoimento1.jpeg",
+    alt: "Print de WhatsApp com relato de aluno sobre a precificação",
+    caption: "relato após aplicar o método",
   },
 ];
 
@@ -48,23 +46,18 @@ export default function ForWho() {
           ))}
         </ul>
 
-        {/* faixa de 2 depoimentos (prints placeholder) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-11">
+        {/* faixa de 2 depoimentos (prints reais de WhatsApp) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-11 items-start">
           {testimonials.map((t, i) => (
-            <div key={i} className={`testi reveal d${i + 1}`}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="testi-av">{t.initial}</div>
-                <div>
-                  <b className="block font-display font-bold text-sm">{t.name}</b>
-                  <span className="font-mono text-[11px] text-muted">WhatsApp • print de relato</span>
-                </div>
-                <div className="ml-auto text-amber text-[13px] tracking-[2px]">★★★★★</div>
-              </div>
-              <p className="text-[14.5px] text-offwhite">&ldquo;{t.quote}&rdquo;</p>
-              <span className="inline-flex items-center gap-1.5 mt-3 font-mono text-[11px] text-brand-green">
-                <Check className="w-[13px] h-[13px]" /> aplicou o método
-              </span>
-            </div>
+            <figure key={i} className={`testi reveal d${i + 1} !p-0 overflow-hidden`}>
+              <img src={t.src} alt={t.alt} className="block w-full h-auto" />
+              <figcaption className="flex items-center gap-2 px-4 py-3 border-t border-line">
+                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-brand-green">
+                  <Check className="w-[13px] h-[13px]" /> {t.caption}
+                </span>
+                <span className="ml-auto text-amber text-[13px] tracking-[2px]">★★★★★</span>
+              </figcaption>
+            </figure>
           ))}
         </div>
 

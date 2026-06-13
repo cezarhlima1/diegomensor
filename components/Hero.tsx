@@ -67,18 +67,13 @@ export default function Hero() {
                   <i />
                   <i />
                   <i />
-                  <span>treinamento-precificacao.mp4</span>
+                  <span>plataforma-do-treinamento</span>
                 </div>
-                <div className="stage">
-                  <div className="play-btn" aria-label="Reproduzir aula" />
-                  <div className="meta">
-                    <div className="ep">Aula 01 de 07</div>
-                    <div className="title">Quanto custa manter sua oficina aberta?</div>
-                    <div className="progress">
-                      <i />
-                    </div>
-                  </div>
-                </div>
+                <img
+                  src="/capa.jpeg"
+                  alt="Aula dentro da plataforma do treinamento"
+                  className="flex-1 min-h-0 w-full object-cover object-top"
+                />
               </div>
             </div>
             <div className="base" />
