@@ -12,7 +12,11 @@ export default function FinalOffer() {
 
         <div className="final-card reveal d2 max-w-[680px] mx-auto">
           <div className="font-display font-black text-[clamp(22px,3vw,30px)] text-white">
-            <span className="text-blue">12x de R$19,70</span> ou R$197 à vista
+            de <s className="[text-decoration-color:var(--color-brand-red)] text-muted font-medium">R$497</s>{" "}
+            por <b className="text-offwhite">R$197</b> à vista
+            <span className="block text-[clamp(15px,2vw,20px)] mt-1">
+              ou <span className="text-blue">12x de R$20,25</span>
+            </span>
             <small className="block font-mono font-medium text-[13px] text-muted tracking-[.06em] uppercase mt-2">
               Acesso imediato + vitalício
             </small>

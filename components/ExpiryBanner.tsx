@@ -21,7 +21,7 @@ export default function ExpiryBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-50 w-full bg-blue-deep text-white text-center px-4 py-2.5 text-[12.5px] sm:text-[13.5px] font-medium tracking-[.01em] shadow-[0_8px_30px_-12px_rgba(0,0,0,.6)]"
+      className="sticky top-0 z-50 w-full bg-brand-red text-white text-center px-4 py-2.5 text-[12.5px] sm:text-[13.5px] font-medium tracking-[.01em] shadow-[0_8px_30px_-12px_rgba(0,0,0,.6)]"
     >
       <span className="dot mr-2 align-middle" />
       Atenção: este conteúdo fica no ar somente até hoje

@@ -191,7 +191,7 @@ export default function Quiz() {
               </div>
 
               <button type="submit" className="btn btn--wide mt-2" disabled={submitting}>
-                {submitting ? "Enviando…" : "Ver meu diagnóstico"}
+                {submitting ? "Enviando…" : "Começar meu diagnóstico"}
               </button>
             </form>
 

@@ -58,12 +58,8 @@ export default function Offer() {
       {/* dobra 2: a oferta */}
       <section id="checkout" className="py-[72px] md:py-24">
         <div className="wrap max-w-2xl mx-auto text-center">
-          <p className="reveal text-muted text-[17px] mb-2.5">
-            No total, esse tipo de conhecimento poderia facilmente custar{" "}
-            <s className="[text-decoration-color:var(--color-brand-red)]">R$497,00</s>.
-          </p>
           <p className="reveal d1 text-offwhite text-[19px] leading-snug mb-9 max-w-[36ch] mx-auto">
-            Mas hoje você vai ter acesso ao{" "}
+            Hoje você vai ter acesso ao{" "}
             <b className="text-white">Treinamento Precificação Para Oficinas</b> por apenas…
           </p>
 
@@ -71,10 +67,16 @@ export default function Offer() {
             <span className="pointer-glow" />
             <span className="limited mx-auto">⚡ Condição especial por tempo limitado</span>
 
-            <div className="font-mono text-xs tracking-[.2em] text-muted uppercase">Por apenas</div>
-            <div className="price-main !text-[clamp(32px,7vw,64px)] mx-auto">12x de R$19,70</div>
-            <div className="font-mono text-offwhite text-[16px] mb-6">
-              ou <b className="text-white">R$197</b> à vista
+            <div className="flex items-baseline justify-center gap-3 mt-3">
+              <span className="font-mono text-[18px] text-muted">
+                de <s className="[text-decoration-color:var(--color-brand-red)]">R$497</s>
+              </span>
+              <span className="font-mono text-[14px] text-muted">por</span>
+            </div>
+            <div className="price-main !text-[clamp(36px,7vw,68px)] mx-auto leading-none mt-1">R$197</div>
+            <div className="font-mono text-offwhite text-[14px] tracking-[.1em] uppercase mb-3">à vista</div>
+            <div className="font-mono text-[16px] mb-6">
+              ou <b className="text-blue">12x de R$20,25</b>
             </div>
 
             <div className="grid gap-[11px] max-w-xs mx-auto text-left mb-6">

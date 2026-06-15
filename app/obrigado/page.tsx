@@ -43,8 +43,10 @@ export default function ObrigadoPage() {
           </p>
 
           <p className="lead mt-4 max-w-[560px] mx-auto">
-            Agora, pra concluir o teu acesso: entra no grupo abaixo e participa
-            das aulas semanais.
+            <b className="text-blue font-bold">
+              Agora, pra concluir o teu acesso: entra no grupo abaixo e participa
+              das aulas semanais.
+            </b>
           </p>
 
           {/* card de acesso ao grupo */}

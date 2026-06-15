@@ -44,8 +44,7 @@ export default function V1() {
       <main className="min-h-screen flex flex-col items-center justify-center py-16 lg:py-24">
         <div className="wrap max-w-[920px] text-center flex flex-col items-center">
           <h1
-            className="font-display font-black text-[clamp(22px,3.4vw,36px)] mt-2 mb-4 max-w-[26ch]"
-            style={{ color: "#9d1529" }}
+            className="font-display font-black text-[clamp(22px,3.4vw,36px)] mt-2 mb-4 max-w-[26ch] text-blue"
           >
             Por que você trabalha igual um condenado na oficina… mas o dinheiro
             nunca sobra de verdade?
