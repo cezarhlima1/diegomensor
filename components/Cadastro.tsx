@@ -216,7 +216,7 @@ export default function Cadastro() {
             </span>
 
             <h1 className="section-title mt-6">
-              De mecânico a <span className="text-blue">empresário</span>
+              Bastidor da oficina de <span className="text-blue">alta performance</span>
             </h1>
 
             <p className="lead mt-5 max-w-[520px]">
