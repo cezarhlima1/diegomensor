@@ -43,7 +43,7 @@ export default function Quiz() {
       await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lead),
+        body: JSON.stringify({ ...lead, source: "quiz" }),
       });
     } catch {
       // se o registro falhar, não bloqueia a pessoa de fazer o quiz

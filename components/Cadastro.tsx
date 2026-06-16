@@ -123,7 +123,7 @@ function LeadForm() {
       await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lead),
+        body: JSON.stringify({ ...lead, source: "cadastro" }),
       });
     } catch {
       // se o registro falhar, não bloqueia a pessoa de entrar no grupo
