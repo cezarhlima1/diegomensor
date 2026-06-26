@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { questions, scoreQuiz, type QuizResult } from "./quizData";
+import { questions, buildDiagnosis, type QuizResult } from "./quizData";
 
 type Stage = "intro" | "lead" | "quiz" | "result";
 
@@ -15,6 +15,8 @@ export default function Quiz() {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [signals, setSignals] = useState<string[]>([]);
+  const [verdict, setVerdict] = useState("");
   const [lead, setLead] = useState<Lead>(emptyLead);
   const [leadErrors, setLeadErrors] = useState<LeadErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +68,10 @@ export default function Quiz() {
     if (current + 1 < total) {
       setCurrent(current + 1);
     } else {
-      setResult(scoreQuiz(next));
+      const diagnosis = buildDiagnosis(next);
+      setResult(diagnosis.result);
+      setSignals(diagnosis.signals);
+      setVerdict(diagnosis.verdict);
       setStage("result");
     }
   }
@@ -80,6 +85,8 @@ export default function Quiz() {
     setAnswers([]);
     setCurrent(0);
     setResult(null);
+    setSignals([]);
+    setVerdict("");
     setLead(emptyLead);
     setLeadErrors({});
     setStage("intro");
@@ -244,7 +251,7 @@ export default function Quiz() {
               <div className="pointer-glow" aria-hidden="true" />
               <span className="limited">{result.kicker}</span>
               <p className="font-mono text-[12px] tracking-[.14em] uppercase text-muted">
-                Treinamento recomendado
+                Diagnóstico identificado
               </p>
               <h2 className="font-display font-black text-[clamp(28px,5vw,46px)] leading-[1.05] text-blue mt-1 mb-3">
                 {result.course}
@@ -254,6 +261,28 @@ export default function Quiz() {
               </p>
               <p className="text-muted text-[15.5px] leading-relaxed mb-6">
                 {result.description}
+              </p>
+
+              {signals.length > 0 && (
+                <div className="rounded-xl border border-amber/25 bg-amber/[.06] p-5 mb-6">
+                  <p className="font-mono text-[11px] tracking-[.14em] uppercase text-amber mb-4">
+                    {signals.length === 1
+                      ? "1 sinal detectado nas suas respostas"
+                      : `${signals.length} sinais detectados nas suas respostas`}
+                  </p>
+                  <ul className="grid gap-3">
+                    {signals.map((s, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="diag-flag" aria-hidden="true">!</span>
+                        <span className="text-offwhite text-[14.5px] leading-relaxed">{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-white text-[15.5px] leading-relaxed font-medium mb-7">
+                {verdict}
               </p>
 
               <ul className="grid gap-3 mb-8">
