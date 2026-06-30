@@ -119,6 +119,71 @@ export type Orcamento = {
 
 const STORAGE_ORCAMENTOS = "calc:orcamentos:v1";
 const STORAGE_TIERS = "calc:markupTiers:v1";
+const STORAGE_INPUTS = "calc:inputs:v1";
+
+/* ---------- dados digitados pelo usuário (rascunho persistido) ---------- */
+export type CalcInputs = {
+  custos: Record<string, string>;
+  horasMes: string;
+  mecanicos: string;
+  multiplicador: number;
+  custoPeca: string;
+  nomeCarro: string;
+  valorHoraInput: string;
+  valorPecaInput: string;
+};
+
+export const EMPTY_INPUTS: CalcInputs = {
+  custos: {},
+  horasMes: "",
+  mecanicos: "",
+  multiplicador: MULT_DEFAULT,
+  custoPeca: "",
+  nomeCarro: "",
+  valorHoraInput: "",
+  valorPecaInput: "",
+};
+
+export function loadInputs(): CalcInputs {
+  if (typeof window === "undefined") return EMPTY_INPUTS;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_INPUTS);
+    if (!raw) return EMPTY_INPUTS;
+    const saved = JSON.parse(raw) as Partial<CalcInputs>;
+    if (!saved || typeof saved !== "object") return EMPTY_INPUTS;
+    return {
+      ...EMPTY_INPUTS,
+      ...saved,
+      custos:
+        saved.custos && typeof saved.custos === "object"
+          ? saved.custos
+          : {},
+      multiplicador: Number.isFinite(saved.multiplicador)
+        ? (saved.multiplicador as number)
+        : MULT_DEFAULT,
+    };
+  } catch {
+    return EMPTY_INPUTS;
+  }
+}
+
+export function saveInputs(inputs: CalcInputs): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_INPUTS, JSON.stringify(inputs));
+  } catch {
+    // armazenamento indisponível: ignora
+  }
+}
+
+export function clearInputs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_INPUTS);
+  } catch {
+    // ignora
+  }
+}
 
 export function loadOrcamentos(): Orcamento[] {
   if (typeof window === "undefined") return [];

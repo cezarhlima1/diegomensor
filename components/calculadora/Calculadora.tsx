@@ -8,11 +8,14 @@ import {
   MULT_MAX,
   brl,
   calcCustoHora,
+  clearInputs,
   formatData,
+  loadInputs,
   loadOrcamentos,
   loadTiers,
   parseNum,
   precoPeca,
+  saveInputs,
   saveOrcamentos,
   saveTiers,
   somaCustos,
@@ -148,16 +151,54 @@ export default function Calculadora() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [justSaved, setJustSaved] = useState(false);
 
+  // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
+  const [hydrated, setHydrated] = useState(false);
+
   // hidrata do localStorage no cliente (evita mismatch de SSR)
   useEffect(() => {
     setOrcamentos(loadOrcamentos());
     setTiers(loadTiers());
+    const saved = loadInputs();
+    setCustos(saved.custos);
+    setHorasMes(saved.horasMes);
+    setMecanicos(saved.mecanicos);
+    setMultiplicador(saved.multiplicador);
+    setCustoPeca(saved.custoPeca);
+    setNomeCarro(saved.nomeCarro);
+    setValorHoraInput(saved.valorHoraInput);
+    setValorPecaInput(saved.valorPecaInput);
+    setHydrated(true);
   }, []);
 
   // persiste edições da tabela de markup
   useEffect(() => {
     saveTiers(tiers);
   }, [tiers]);
+
+  // persiste os dados digitados pelo usuário
+  useEffect(() => {
+    if (!hydrated) return;
+    saveInputs({
+      custos,
+      horasMes,
+      mecanicos,
+      multiplicador,
+      custoPeca,
+      nomeCarro,
+      valorHoraInput,
+      valorPecaInput,
+    });
+  }, [
+    hydrated,
+    custos,
+    horasMes,
+    mecanicos,
+    multiplicador,
+    custoPeca,
+    nomeCarro,
+    valorHoraInput,
+    valorPecaInput,
+  ]);
 
   /* ---------- derivados ---------- */
   const totalCustos = useMemo(() => somaCustos(custos), [custos]);
@@ -204,6 +245,20 @@ export default function Calculadora() {
 
   function setCusto(key: string, value: string) {
     setCustos((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function limparCampos() {
+    setCustos({});
+    setHorasMes("");
+    setMecanicos("");
+    setMultiplicador(MULT_DEFAULT);
+    setCustoPeca("");
+    setNomeCarro("");
+    setValorHoraInput("");
+    setValorPecaInput("");
+    clearInputs();
+    setStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function setTierMarkup(index: number, value: string) {
@@ -310,6 +365,7 @@ export default function Calculadora() {
                   <h2 className="calc-card-title">Custos fixos da oficina</h2>
                   <p className="calc-card-sub">
                     Preencha os custos mensais. O que estiver zerado é ignorado.
+                    Tudo é salvo automaticamente neste navegador.
                   </p>
 
                   <div className="calc-grid calc-stagger mt-6">
@@ -410,7 +466,10 @@ export default function Calculadora() {
                   </div>
                 </div>
 
-                <div className="flex justify-end mt-7">
+                <div className="flex justify-between items-center mt-7 gap-3">
+                  <button className="calc-back" onClick={limparCampos}>
+                    Limpar campos
+                  </button>
                   <button className="btn" onClick={() => goToStep(2)}>
                     Avançar para a peça →
                   </button>
