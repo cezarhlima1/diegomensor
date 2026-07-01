@@ -9,7 +9,5 @@ export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/HMONNxxhyMlGsDTiyU8
 
 /**
  * Link do formulário de aplicação da Mentoria OAG (usado na página /bio).
- *
- * PLACEHOLDER: troque pela URL real do formulário quando estiver pronto.
  */
-export const MENTORIA_OAG_FORM_URL = "#";
+export const MENTORIA_OAG_FORM_URL = "https://form.respondi.app/FgLrSq95";
