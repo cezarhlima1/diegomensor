@@ -6,22 +6,32 @@ import {
   MULT_DEFAULT,
   MULT_MIN,
   MULT_MAX,
+  MARKUP_MIN,
+  MARKUP_MAX,
   brl,
+  buildOrcamentoMsg,
   calcCustoHora,
   clearInputs,
   formatData,
+  formatMoneyBlur,
   loadInputs,
   loadOrcamentos,
   loadTiers,
+  markupDaPeca,
+  maskIntTyping,
+  maskMoneyTyping,
+  novaPeca,
   parseNum,
-  precoPeca,
+  precoPecaItem,
   saveInputs,
   saveOrcamentos,
   saveTiers,
   somaCustos,
+  somaPecas,
   tierForCost,
   type MarkupTier,
   type Orcamento,
+  type Peca,
 } from "./calcLogic";
 
 type View = "calc" | "hist";
@@ -121,7 +131,8 @@ function MoneyField({
           inputMode="decimal"
           placeholder="0,00"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(maskMoneyTyping(e.target.value))}
+          onBlur={(e) => onChange(formatMoneyBlur(e.target.value))}
         />
       </span>
     </label>
@@ -139,17 +150,20 @@ export default function Calculadora() {
   const [multiplicador, setMultiplicador] = useState(MULT_DEFAULT);
 
   // Passo #02
-  const [custoPeca, setCustoPeca] = useState("");
+  const [pecas, setPecas] = useState<Peca[]>([]);
+  const [expandedId, setExpandedId] = useState<string>("");
   const [tiers, setTiers] = useState<MarkupTier[]>(loadTiers);
 
   // Passo #03
+  const [nomeCliente, setNomeCliente] = useState("");
   const [nomeCarro, setNomeCarro] = useState("");
   const [valorHoraInput, setValorHoraInput] = useState("");
-  const [valorPecaInput, setValorPecaInput] = useState("");
+  const [horas, setHoras] = useState("");
 
   // Histórico
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [justSaved, setJustSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
   const [hydrated, setHydrated] = useState(false);
@@ -159,14 +173,24 @@ export default function Calculadora() {
     setOrcamentos(loadOrcamentos());
     setTiers(loadTiers());
     const saved = loadInputs();
-    setCustos(saved.custos);
+    // reaplica a máscara de moeda aos valores salvos
+    const custosFmt: Record<string, string> = {};
+    for (const [k, v] of Object.entries(saved.custos))
+      custosFmt[k] = formatMoneyBlur(v);
+    setCustos(custosFmt);
     setHorasMes(saved.horasMes);
     setMecanicos(saved.mecanicos);
     setMultiplicador(saved.multiplicador);
-    setCustoPeca(saved.custoPeca);
+    const pecasFmt = saved.pecas.map((p) => ({
+      ...p,
+      custo: formatMoneyBlur(p.custo),
+    }));
+    setPecas(pecasFmt);
+    setExpandedId(pecasFmt[pecasFmt.length - 1]?.id ?? "");
+    setNomeCliente(saved.nomeCliente);
     setNomeCarro(saved.nomeCarro);
-    setValorHoraInput(saved.valorHoraInput);
-    setValorPecaInput(saved.valorPecaInput);
+    setValorHoraInput(formatMoneyBlur(saved.valorHoraInput));
+    setHoras(saved.horas);
     setHydrated(true);
   }, []);
 
@@ -183,10 +207,11 @@ export default function Calculadora() {
       horasMes,
       mecanicos,
       multiplicador,
-      custoPeca,
+      pecas,
+      nomeCliente,
       nomeCarro,
       valorHoraInput,
-      valorPecaInput,
+      horas,
     });
   }, [
     hydrated,
@@ -194,10 +219,11 @@ export default function Calculadora() {
     horasMes,
     mecanicos,
     multiplicador,
-    custoPeca,
+    pecas,
+    nomeCliente,
     nomeCarro,
     valorHoraInput,
-    valorPecaInput,
+    horas,
   ]);
 
   /* ---------- derivados ---------- */
@@ -214,30 +240,31 @@ export default function Calculadora() {
     [totalCustos, horasMes, mecanicos, multiplicador],
   );
 
-  const custoPecaNum = parseNum(custoPeca);
-  const pecaTier = useMemo(
-    () => tierForCost(custoPecaNum, tiers),
-    [custoPecaNum, tiers],
-  );
-  const valorPecaCalc = useMemo(
-    () => precoPeca(custoPecaNum, tiers),
-    [custoPecaNum, tiers],
-  );
+  const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
 
-  const totalOrcamento = parseNum(valorHoraInput) + parseNum(valorPecaInput);
+  const expandedPeca = pecas.find((p) => p.id === expandedId) ?? pecas[0];
+  const expandedCustoNum = expandedPeca ? parseNum(expandedPeca.custo) : 0;
+  const expandedTier = useMemo(
+    () => tierForCost(expandedCustoNum, tiers),
+    [expandedCustoNum, tiers],
+  );
+  const expandedMarkup = expandedPeca
+    ? markupDaPeca(expandedPeca, tiers)
+    : expandedTier.markup;
+
+  const maoDeObra = parseNum(valorHoraInput) * parseNum(horas);
+  const totalOrcamento = maoDeObra + pecasTotal;
 
   const pulseHora = usePulse(Math.round(hora.custoFinal));
-  const pulsePeca = usePulse(Math.round(valorPecaCalc));
+  const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
 
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
     if (next === 3) {
-      // leva os valores calculados para o orçamento (sem sobrescrever ajustes manuais)
+      // leva o custo da hora calculado (sem sobrescrever ajuste manual)
       if (!valorHoraInput && hora.custoFinal > 0)
-        setValorHoraInput(hora.custoFinal.toFixed(2).replace(".", ","));
-      if (!valorPecaInput && valorPecaCalc > 0)
-        setValorPecaInput(valorPecaCalc.toFixed(2).replace(".", ","));
+        setValorHoraInput(formatMoneyBlur(hora.custoFinal.toFixed(2).replace(".", ",")));
     }
     setStep(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -252,10 +279,13 @@ export default function Calculadora() {
     setHorasMes("");
     setMecanicos("");
     setMultiplicador(MULT_DEFAULT);
-    setCustoPeca("");
+    const p = novaPeca();
+    setPecas([p]);
+    setExpandedId(p.id);
+    setNomeCliente("");
     setNomeCarro("");
     setValorHoraInput("");
-    setValorPecaInput("");
+    setHoras("");
     clearInputs();
     setStep(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -268,15 +298,83 @@ export default function Calculadora() {
     );
   }
 
+  /* ---------- peças ---------- */
+  function setPecaField(id: string, field: "nome" | "custo", value: string) {
+    setPecas((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+    );
+  }
+
+  function setPecaMarkup(id: string, value: number) {
+    const clamped = Math.max(MARKUP_MIN, Math.min(MARKUP_MAX, value));
+    setPecas((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, markup: clamped } : p)),
+    );
+  }
+
+  function addPeca() {
+    const p = novaPeca();
+    setPecas((prev) => [...prev, p]);
+    setExpandedId(p.id);
+  }
+
+  function removePeca(id: string) {
+    setPecas((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      const list = next.length > 0 ? next : [novaPeca()];
+      if (id === expandedId) setExpandedId(list[list.length - 1].id);
+      return list;
+    });
+  }
+
+  function pecasResumo() {
+    return pecas
+      .filter((p) => parseNum(p.custo) > 0)
+      .map((p) => ({
+        nome: p.nome.trim() || "Peça",
+        valor: precoPecaItem(p, tiers),
+      }));
+  }
+
+  function mensagemOrcamento(): string {
+    return buildOrcamentoMsg({
+      nomeCliente,
+      nomeCarro,
+      pecas: pecasResumo(),
+      maoDeObra,
+      total: totalOrcamento,
+    });
+  }
+
+  async function copiarOrcamento() {
+    try {
+      await navigator.clipboard.writeText(mensagemOrcamento());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      // clipboard indisponível: ignora
+    }
+  }
+
+  function enviarWhatsApp() {
+    const url = `https://wa.me/?text=${encodeURIComponent(mensagemOrcamento())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   function salvarOrcamento() {
+    const resumo = pecasResumo();
     const orc: Orcamento = {
       id:
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : String(Date.now()),
+      nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
       valorHora: parseNum(valorHoraInput),
-      valorPeca: parseNum(valorPecaInput),
+      horas: parseNum(horas),
+      maoDeObra,
+      pecas: resumo,
+      valorPeca: pecasTotal,
       total: totalOrcamento,
       data: new Date().toISOString(),
     };
@@ -288,12 +386,32 @@ export default function Calculadora() {
   }
 
   function novoOrcamento() {
+    setNomeCliente("");
     setNomeCarro("");
-    setValorHoraInput(hora.custoFinal > 0 ? hora.custoFinal.toFixed(2).replace(".", ",") : "");
-    setValorPecaInput(valorPecaCalc > 0 ? valorPecaCalc.toFixed(2).replace(".", ",") : "");
+    setHoras("");
+    setValorHoraInput(
+      hora.custoFinal > 0
+        ? formatMoneyBlur(hora.custoFinal.toFixed(2).replace(".", ","))
+        : "",
+    );
     setView("calc");
     setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function reenviarWhatsApp(o: Orcamento) {
+    const msg = buildOrcamentoMsg({
+      nomeCliente: o.nomeCliente,
+      nomeCarro: o.nomeCarro,
+      pecas: o.pecas ?? [],
+      maoDeObra: o.maoDeObra ?? o.valorHora ?? 0,
+      total: o.total,
+    });
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   function removerOrcamento(id: string) {
@@ -391,7 +509,7 @@ export default function Calculadora() {
                         className="quiz-input"
                         placeholder="ex.: 200"
                         value={horasMes}
-                        onChange={(e) => setHorasMes(e.target.value)}
+                        onChange={(e) => setHorasMes(maskIntTyping(e.target.value))}
                       />
                     </label>
                     <label className="grid gap-1.5">
@@ -482,20 +600,109 @@ export default function Calculadora() {
               <div className="cta-reveal">
                 <div className="calc-card">
                   <p className="calc-card-kicker">Passo 02 — Valor da peça</p>
-                  <h2 className="calc-card-title">Precificação da peça</h2>
+                  <h2 className="calc-card-title">Precificação das peças</h2>
                   <p className="calc-card-sub">
-                    Informe o custo real da peça. O markup é aplicado
-                    automaticamente conforme a faixa.
+                    Adicione as peças do orçamento. O markup é aplicado
+                    automaticamente conforme a faixa — e você pode ajustar na
+                    régua.
                   </p>
 
-                  <div className="max-w-[340px] mt-6">
-                    <MoneyField
-                      label="Custo real da peça"
-                      value={custoPeca}
-                      onChange={setCustoPeca}
-                      big
-                    />
+                  {/* lista de peças (acordeão) */}
+                  <div className="calc-pecas mt-6">
+                    {pecas.map((p, i) => {
+                      const custoNum = parseNum(p.custo);
+                      const valor = precoPecaItem(p, tiers);
+                      const isOpen = p.id === expandedId;
+                      const mk = markupDaPeca(p, tiers);
+                      return (
+                        <div
+                          key={p.id}
+                          className={`calc-peca ${isOpen ? "is-open" : ""}`}
+                        >
+                          <button
+                            type="button"
+                            className="calc-peca-head"
+                            onClick={() => setExpandedId(isOpen ? "" : p.id)}
+                          >
+                            <span className="calc-peca-idx">{i + 1}</span>
+                            <span className="calc-peca-name">
+                              {p.nome.trim() || "Nova peça"}
+                            </span>
+                            <span className="calc-peca-val">
+                              {custoNum > 0 ? brl(valor) : "—"}
+                            </span>
+                            <span className="calc-peca-chev" aria-hidden="true">
+                              ⌄
+                            </span>
+                          </button>
+
+                          {isOpen && (
+                            <div className="calc-peca-body">
+                              <label className="grid gap-1.5">
+                                <span className="quiz-label">Nome da peça</span>
+                                <input
+                                  type="text"
+                                  className="quiz-input"
+                                  placeholder="ex.: Pastilha de freio"
+                                  value={p.nome}
+                                  onChange={(e) =>
+                                    setPecaField(p.id, "nome", e.target.value)
+                                  }
+                                />
+                              </label>
+
+                              <MoneyField
+                                label="Custo real da peça"
+                                value={p.custo}
+                                onChange={(v) => setPecaField(p.id, "custo", v)}
+                              />
+
+                              {/* régua de ajuste do markup */}
+                              <div className="calc-mult">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <span className="quiz-label">
+                                    Markup da peça
+                                  </span>
+                                  <span className="calc-mult-value">{mk}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  className="calc-range"
+                                  min={MARKUP_MIN}
+                                  max={MARKUP_MAX}
+                                  step={1}
+                                  value={mk}
+                                  onChange={(e) =>
+                                    setPecaMarkup(p.id, Number(e.target.value))
+                                  }
+                                />
+                                <p className="calc-warn">
+                                  <span aria-hidden="true">⚠</span> Ajuste entre{" "}
+                                  <b>{MARKUP_MIN}%</b> e <b>{MARKUP_MAX}%</b>.
+                                  Sugestão da faixa:{" "}
+                                  <b>{tierForCost(custoNum, tiers).markup}%</b>.
+                                </p>
+                              </div>
+
+                              {pecas.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="calc-peca-del"
+                                  onClick={() => removePeca(p.id)}
+                                >
+                                  Remover peça
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  <button type="button" className="calc-add" onClick={addPeca}>
+                    + Adicionar peça
+                  </button>
 
                   {/* tabela de markup editável */}
                   <div className="calc-divider" />
@@ -505,7 +712,8 @@ export default function Calculadora() {
                   </p>
                   <div className="calc-tiers">
                     {tiers.map((t, i) => {
-                      const active = custoPecaNum > 0 && t === pecaTier;
+                      const active =
+                        expandedCustoNum > 0 && t === expandedTier;
                       return (
                         <div
                           key={t.label}
@@ -530,22 +738,22 @@ export default function Calculadora() {
                 <div className={`calc-readout mt-6 ${pulsePeca ? "is-pulsing" : ""}`}>
                   <div className="calc-readout-breakdown">
                     <div>
-                      <span className="calc-readout-k">Custo da peça</span>
+                      <span className="calc-readout-k">Peças</span>
                       <span className="calc-readout-v">
-                        <AnimatedBRL value={custoPecaNum} />
+                        {pecas.filter((p) => parseNum(p.custo) > 0).length}
                       </span>
                     </div>
                     <div>
-                      <span className="calc-readout-k">Markup aplicado</span>
+                      <span className="calc-readout-k">Markup da peça atual</span>
                       <span className="calc-readout-v">
-                        {custoPecaNum > 0 ? `${pecaTier.markup}%` : "—"}
+                        {expandedCustoNum > 0 ? `${expandedMarkup}%` : "—"}
                       </span>
                     </div>
                   </div>
                   <div className="calc-readout-main">
-                    <span className="calc-readout-main-k">Valor da peça</span>
+                    <span className="calc-readout-main-k">Total em peças</span>
                     <span className="calc-readout-num">
-                      <AnimatedBRL value={valorPecaCalc} />
+                      <AnimatedBRL value={pecasTotal} />
                     </span>
                   </div>
                 </div>
@@ -566,34 +774,54 @@ export default function Calculadora() {
               <div className="cta-reveal">
                 <div className="calc-card">
                   <p className="calc-card-kicker">Passo 03 — Orçamento</p>
-                  <h2 className="calc-card-title">Peça + hora</h2>
+                  <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
                   <p className="calc-card-sub">
-                    Valores trazidos dos passos anteriores. Ajuste se precisar e
-                    salve o orçamento.
+                    Informe o cliente e as horas de serviço. A mão de obra é o
+                    valor da hora × as horas trabalhadas.
                   </p>
 
                   <div className="grid gap-4 mt-6">
-                    <label className="grid gap-1.5">
-                      <span className="quiz-label">Nome do carro</span>
-                      <input
-                        type="text"
-                        className="quiz-input"
-                        placeholder="ex.: Onix 1.4 — Cliente João"
-                        value={nomeCarro}
-                        onChange={(e) => setNomeCarro(e.target.value)}
-                      />
-                    </label>
+                    <div className="calc-grid-2">
+                      <label className="grid gap-1.5">
+                        <span className="quiz-label">Nome do cliente</span>
+                        <input
+                          type="text"
+                          className="quiz-input"
+                          placeholder="ex.: João Silva"
+                          value={nomeCliente}
+                          onChange={(e) => setNomeCliente(e.target.value)}
+                        />
+                      </label>
+                      <label className="grid gap-1.5">
+                        <span className="quiz-label">Veículo</span>
+                        <input
+                          type="text"
+                          className="quiz-input"
+                          placeholder="ex.: Onix 1.4"
+                          value={nomeCarro}
+                          onChange={(e) => setNomeCarro(e.target.value)}
+                        />
+                      </label>
+                    </div>
                     <div className="calc-grid-2">
                       <MoneyField
                         label="Valor da hora"
                         value={valorHoraInput}
                         onChange={setValorHoraInput}
                       />
-                      <MoneyField
-                        label="Valor da peça"
-                        value={valorPecaInput}
-                        onChange={setValorPecaInput}
-                      />
+                      <label className="grid gap-1.5">
+                        <span className="quiz-label">Quantidade de horas</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          className="quiz-input"
+                          placeholder="ex.: 4 ou 1,5"
+                          value={horas}
+                          onChange={(e) =>
+                            setHoras(maskMoneyTyping(e.target.value))
+                          }
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -603,6 +831,20 @@ export default function Calculadora() {
                     pulseTotal ? "is-pulsing" : ""
                   }`}
                 >
+                  <div className="calc-readout-breakdown">
+                    <div>
+                      <span className="calc-readout-k">Mão de obra</span>
+                      <span className="calc-readout-v">
+                        <AnimatedBRL value={maoDeObra} />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="calc-readout-k">Peças</span>
+                      <span className="calc-readout-v">
+                        <AnimatedBRL value={pecasTotal} />
+                      </span>
+                    </div>
+                  </div>
                   <div className="calc-readout-main calc-readout-main--solo">
                     <span className="calc-readout-main-k">Total do orçamento</span>
                     <span className="calc-readout-num calc-readout-num--xl">
@@ -611,18 +853,32 @@ export default function Calculadora() {
                   </div>
                 </div>
 
-                {justSaved && (
+                {(copied || justSaved) && (
                   <p className="calc-saved cta-reveal mt-4">
-                    ✓ Orçamento salvo no histórico.
+                    {copied
+                      ? "✓ Orçamento copiado."
+                      : "✓ Orçamento salvo no histórico."}
                   </p>
                 )}
 
-                <div className="flex justify-between items-center mt-7 flex-wrap gap-3">
-                  <button className="calc-back" onClick={() => goToStep(2)}>
-                    ← Voltar
+                <div className="calc-actions mt-6">
+                  <button
+                    className="btn btn--ghost"
+                    onClick={copiarOrcamento}
+                  >
+                    Copiar orçamento
+                  </button>
+                  <button className="btn btn--wa" onClick={enviarWhatsApp}>
+                    Enviar no WhatsApp
                   </button>
                   <button className="btn" onClick={salvarOrcamento}>
                     Salvar orçamento
+                  </button>
+                </div>
+
+                <div className="mt-6">
+                  <button className="calc-back" onClick={() => goToStep(2)}>
+                    ← Voltar
                   </button>
                 </div>
               </div>
@@ -661,22 +917,32 @@ export default function Calculadora() {
                   {orcamentos.map((o) => (
                     <div key={o.id} className="calc-hist">
                       <div className="calc-hist-main">
-                        <span className="calc-hist-name">{o.nomeCarro}</span>
+                        <span className="calc-hist-name">
+                          {o.nomeCliente || o.nomeCarro}
+                        </span>
                         <span className="calc-hist-date">
+                          {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
                           {formatData(o.data)}
                         </span>
                       </div>
                       <div className="calc-hist-vals">
                         <span>
-                          <i>Hora</i> {brl(o.valorHora)}
+                          <i>Mão de obra</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
                         </span>
                         <span>
-                          <i>Peça</i> {brl(o.valorPeca)}
+                          <i>Peças</i> {brl(o.valorPeca)}
                         </span>
                         <span className="calc-hist-total">
                           <i>Total</i> {brl(o.total)}
                         </span>
                       </div>
+                      <button
+                        className="calc-hist-wa"
+                        onClick={() => reenviarWhatsApp(o)}
+                        aria-label={`Enviar orçamento ${o.nomeCarro} no WhatsApp`}
+                      >
+                        WhatsApp
+                      </button>
                       <button
                         className="calc-hist-del"
                         onClick={() => removerOrcamento(o.id)}

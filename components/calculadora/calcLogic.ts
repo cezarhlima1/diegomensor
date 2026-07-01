@@ -55,22 +55,57 @@ export const MULT_MIN = 1;
 export const MULT_MAX = 2;
 export const MULT_DEFAULT = 2;
 
+/* ---------- ajuste manual do markup da peça ---------- */
+export const MARKUP_MIN = 65;
+export const MARKUP_MAX = 300;
+
 /* ---------- parsing / formatação (pt-BR) ---------- */
 
-/** Converte texto digitado (ex.: "1.500,50" ou "1500.5") em número. */
+/** Converte texto no formato BR (ex.: "1.500,50" ou "2.100") em número. */
 export function parseNum(v: string): number {
   if (!v) return 0;
-  const cleaned = v.replace(/[^\d,.-]/g, "");
-  // vírgula presente → formato BR (ponto = milhar, vírgula = decimal)
+  const cleaned = v.replace(/[^\d,.]/g, "");
+  // vírgula presente → decimal BR; ponto sempre é separador de milhar
   const normalized = cleaned.includes(",")
     ? cleaned.replace(/\./g, "").replace(",", ".")
-    : cleaned;
+    : cleaned.replace(/\./g, "");
   const n = parseFloat(normalized);
   return Number.isFinite(n) ? n : 0;
 }
 
 export const brl = (n: number): string =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Máscara de digitação: agrupa milhares e mantém a vírgula decimal (até 2 casas). */
+export function maskMoneyTyping(v: string): string {
+  let s = v.replace(/[^\d,]/g, "");
+  const firstComma = s.indexOf(",");
+  if (firstComma !== -1) {
+    s = s.slice(0, firstComma + 1) + s.slice(firstComma + 1).replace(/,/g, "");
+  }
+  const [rawInt, rawDec] = s.split(",");
+  const intPart = (rawInt ?? "").replace(/^0+(?=\d)/, "");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (rawDec !== undefined) return `${grouped || "0"},${rawDec.slice(0, 2)}`;
+  return grouped;
+}
+
+/** Ao sair do campo: completa para 2 casas decimais (ex.: "2.100" → "2.100,00"). */
+export function formatMoneyBlur(v: string): string {
+  if (!v.trim()) return "";
+  const n = parseNum(v);
+  if (n === 0 && !/\d/.test(v)) return "";
+  return n.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Máscara de inteiro simples com separador de milhar (horas, mecânicos). */
+export function maskIntTyping(v: string): string {
+  const digits = v.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 
 /* ---------- Passo #01 — custo da hora ---------- */
 export type CustoHoraResult = {
@@ -90,28 +125,67 @@ export function calcCustoHora(
   mecanicos: number,
   multiplicador: number,
 ): CustoHoraResult {
-  const horasEfetivas = mecanicos > 0 ? horasMes / mecanicos : 0;
+  // horas disponíveis somadas entre os mecânicos → mais mecânicos, menor custo/hora
+  const horasEfetivas = horasMes * mecanicos;
   const custoBase = horasEfetivas > 0 ? totalCustos / horasEfetivas : 0;
   const custoFinal = custoBase * multiplicador;
   return { totalCustos, horasEfetivas, custoBase, custoFinal };
 }
 
 /* ---------- Passo #02 — valor da peça ---------- */
+export type Peca = {
+  id: string;
+  nome: string;
+  custo: string;
+  /** markup manual (%); null = usa a sugestão da faixa */
+  markup: number | null;
+};
+
+export function novaPeca(): Peca {
+  return {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : String(Date.now() + Math.random()),
+    nome: "",
+    custo: "",
+    markup: null,
+  };
+}
+
 export function tierForCost(cost: number, tiers: MarkupTier[]): MarkupTier {
   return tiers.find((t) => cost <= t.max) ?? tiers[tiers.length - 1];
 }
 
-export function precoPeca(cost: number, tiers: MarkupTier[]): number {
+/** markup efetivo da peça: manual se definido, senão a sugestão da faixa. */
+export function markupDaPeca(peca: Peca, tiers: MarkupTier[]): number {
+  if (peca.markup != null) return peca.markup;
+  return tierForCost(parseNum(peca.custo), tiers).markup;
+}
+
+/** preço final de uma peça (custo + markup efetivo). */
+export function precoPecaItem(peca: Peca, tiers: MarkupTier[]): number {
+  const cost = parseNum(peca.custo);
   if (cost <= 0) return 0;
-  const tier = tierForCost(cost, tiers);
-  return cost * (1 + tier.markup / 100);
+  return cost * (1 + markupDaPeca(peca, tiers) / 100);
+}
+
+/** soma dos preços finais de todas as peças. */
+export function somaPecas(pecas: Peca[], tiers: MarkupTier[]): number {
+  return pecas.reduce((acc, p) => acc + precoPecaItem(p, tiers), 0);
 }
 
 /* ---------- Histórico de orçamentos (localStorage) ---------- */
+export type PecaResumo = { nome: string; valor: number };
+
 export type Orcamento = {
   id: string;
+  nomeCliente: string;
   nomeCarro: string;
   valorHora: number;
+  horas: number;
+  maoDeObra: number;
+  pecas: PecaResumo[];
   valorPeca: number;
   total: number;
   data: string; // ISO
@@ -127,10 +201,11 @@ export type CalcInputs = {
   horasMes: string;
   mecanicos: string;
   multiplicador: number;
-  custoPeca: string;
+  pecas: Peca[];
+  nomeCliente: string;
   nomeCarro: string;
   valorHoraInput: string;
-  valorPecaInput: string;
+  horas: string;
 };
 
 export const EMPTY_INPUTS: CalcInputs = {
@@ -138,10 +213,11 @@ export const EMPTY_INPUTS: CalcInputs = {
   horasMes: "",
   mecanicos: "",
   multiplicador: MULT_DEFAULT,
-  custoPeca: "",
+  pecas: [novaPeca()],
+  nomeCliente: "",
   nomeCarro: "",
   valorHoraInput: "",
-  valorPecaInput: "",
+  horas: "",
 };
 
 export function loadInputs(): CalcInputs {
@@ -151,6 +227,14 @@ export function loadInputs(): CalcInputs {
     if (!raw) return EMPTY_INPUTS;
     const saved = JSON.parse(raw) as Partial<CalcInputs>;
     if (!saved || typeof saved !== "object") return EMPTY_INPUTS;
+    const pecas =
+      Array.isArray(saved.pecas) && saved.pecas.length > 0
+        ? saved.pecas.map((p) => ({
+            ...novaPeca(),
+            ...p,
+            markup: Number.isFinite(p?.markup) ? p.markup : null,
+          }))
+        : [novaPeca()];
     return {
       ...EMPTY_INPUTS,
       ...saved,
@@ -161,6 +245,7 @@ export function loadInputs(): CalcInputs {
       multiplicador: Number.isFinite(saved.multiplicador)
         ? (saved.multiplicador as number)
         : MULT_DEFAULT,
+      pecas,
     };
   } catch {
     return EMPTY_INPUTS;
@@ -233,6 +318,31 @@ export function saveTiers(tiers: MarkupTier[]): void {
   } catch {
     // ignora
   }
+}
+
+/* ---------- mensagem de orçamento (WhatsApp / copiar) ---------- */
+export function buildOrcamentoMsg(o: {
+  nomeCliente: string;
+  nomeCarro: string;
+  pecas: PecaResumo[];
+  maoDeObra: number;
+  total: number;
+}): string {
+  const linhas: string[] = ["*Orçamento — Diego Mensor*", ""];
+  if (o.nomeCliente.trim()) linhas.push(`Cliente: ${o.nomeCliente.trim()}`);
+  if (o.nomeCarro.trim()) linhas.push(`Veículo: ${o.nomeCarro.trim()}`);
+
+  const pecasValidas = o.pecas.filter((p) => p.valor > 0);
+  if (pecasValidas.length > 0) {
+    linhas.push("", "*Peças*");
+    for (const p of pecasValidas) {
+      linhas.push(`• ${p.nome.trim() || "Peça"}: ${brl(p.valor)}`);
+    }
+  }
+
+  if (o.maoDeObra > 0) linhas.push("", `Mão de obra: ${brl(o.maoDeObra)}`);
+  linhas.push("", `*Total: ${brl(o.total)}*`);
+  return linhas.join("\n");
 }
 
 export function formatData(iso: string): string {
