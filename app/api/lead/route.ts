@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing-webhook" }, { status: 500 });
   }
 
-  let body: { name?: string; email?: string; phone?: string; source?: string };
+  let body: { name?: string; email?: string; phone?: string; source?: string; answers?: string };
   try {
     body = await req.json();
   } catch {
@@ -23,6 +23,7 @@ export async function POST(req: Request) {
   const email = (body.email ?? "").trim();
   const phone = (body.phone ?? "").trim();
   const source = (body.source ?? "").trim() || "desconhecido";
+  const answers = (body.answers ?? "").trim();
 
   if (!name || !email || !phone) {
     return NextResponse.json({ ok: false, error: "missing-fields" }, { status: 400 });
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, phone, source }),
+      body: JSON.stringify({ name, email, phone, source, ...(answers ? { answers } : {}) }),
     });
   } catch {
     return NextResponse.json({ ok: false, error: "sheets-failed" }, { status: 502 });

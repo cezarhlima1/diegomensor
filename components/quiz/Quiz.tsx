@@ -60,6 +60,24 @@ export default function Quiz() {
     if (leadErrors[field]) setLeadErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
+  async function saveAnswers(finalAnswers: number[]) {
+    const answersText = finalAnswers
+      .map(
+        (optIdx, qIdx) =>
+          `${qIdx + 1}) ${questions[qIdx]?.options[optIdx]?.label ?? "—"}`
+      )
+      .join("  |  ");
+    try {
+      await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...lead, source: "quiz", answers: answersText }),
+      });
+    } catch {
+      // se o registro falhar, não bloqueia o resultado da pessoa
+    }
+  }
+
   function choose(optionIndex: number) {
     const next = [...answers];
     next[current] = optionIndex;
@@ -73,6 +91,7 @@ export default function Quiz() {
       setSignals(diagnosis.signals);
       setVerdict(diagnosis.verdict);
       setStage("result");
+      saveAnswers(next);
     }
   }
 
