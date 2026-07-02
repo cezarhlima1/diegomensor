@@ -111,7 +111,7 @@ export const questions: QuizQuestion[] = [
     question: "Hoje, como você define o valor da mão de obra na sua oficina?",
     options: [
       { label: "Tenho um cálculo baseado nos custos da operação.", scores: { escala: 2 } },
-      { label: "Uso um cálculo, mas faço ajustes pela experiência.", scores: { margem: 2, escala: 1 }, signal: "Você calcula a mão de obra, mas ajusta no feeling — e aí abre brecha para erro." },
+      { label: "Uso um cálculo, mas faço ajustes pela experiência.", scores: { margem: 2, escala: 1 }, signal: "Você calcula a mão de obra, mas na hora ajusta no feeling. É aí que o erro passa batido." },
       { label: "Me baseio principalmente no mercado e na concorrência.", scores: { fundamentos: 1, margem: 1 }, signal: "Você precifica a mão de obra olhando o concorrente, não o seu custo real." },
       { label: "Vou definindo conforme cada situação.", scores: { fundamentos: 2 }, signal: "Você define a mão de obra conforme a situação, sem um cálculo por trás." },
     ],
@@ -121,9 +121,9 @@ export const questions: QuizQuestion[] = [
     question: "Quando você vende uma peça para o cliente:",
     options: [
       { label: "Tenho uma margem definida e sigo um padrão.", scores: { escala: 2 } },
-      { label: "Normalmente aplico uma margem parecida.", scores: { margem: 2, escala: 1 }, signal: "Sua margem na venda de peças varia — nem sempre o lucro está garantido." },
+      { label: "Normalmente aplico uma margem parecida.", scores: { margem: 2, escala: 1 }, signal: "Sua margem na venda de peças muda de um cliente pro outro, então nem sempre o lucro tá garantido." },
       { label: "Depende muito do cliente e da situação.", scores: { fundamentos: 1, margem: 1 }, signal: "A margem da peça depende do cliente, então o lucro fica imprevisível." },
-      { label: "Muitas vezes repasso praticamente o preço que paguei.", scores: { fundamentos: 2 }, signal: "Você repassa a peça quase pelo preço que pagou — praticamente sem lucro." },
+      { label: "Muitas vezes repasso praticamente o preço que paguei.", scores: { fundamentos: 2 }, signal: "Você repassa a peça quase pelo preço que pagou, então quase não sobra lucro nisso." },
     ],
   },
   {
@@ -132,7 +132,7 @@ export const questions: QuizQuestion[] = [
     options: [
       { label: "Explicar com segurança como o preço foi definido.", scores: { escala: 2 } },
       { label: "Defender o orçamento, mas fico desconfortável.", scores: { margem: 2, escala: 1 }, signal: "Você defende o orçamento, mas sem segurança total no próprio preço." },
-      { label: "Negociar para não perder o serviço.", scores: { fundamentos: 1, margem: 1 }, signal: "Você negocia para não perder o serviço — e perde margem nisso." },
+      { label: "Negociar para não perder o serviço.", scores: { fundamentos: 1, margem: 1 }, signal: "Você negocia pra não perder o serviço e acaba deixando margem na mesa." },
       { label: "Reduzir o valor na maioria das vezes.", scores: { fundamentos: 2 }, signal: "Você reduz o valor na maioria das vezes em que é questionado." },
     ],
   },
@@ -196,11 +196,11 @@ export function scoreQuiz(answers: number[]): QuizResult {
 /** Frase de fechamento por perfil, ligando os sinais ao problema central. */
 const verdicts: Record<ResultId, string> = {
   fundamentos:
-    "Juntos, esses pontos mostram que falta uma base de precificação — por isso o esforço não vira lucro.",
+    "Olhando tudo junto, dá pra ver que falta uma base de precificação. É por isso que tanto esforço não vira lucro no fim do mês.",
   margem:
-    "Juntos, esses pontos explicam por que você fatura, mas o dinheiro não sobra como deveria.",
+    "Olhando tudo junto, dá pra entender por que você fatura bastante, mas o dinheiro não sobra como deveria.",
   escala:
-    "Você já está num bom nível: ajustando esses detalhes, dá para crescer com muito mais controle.",
+    "Você já está num nível bom. Ajustando esses detalhes, dá pra crescer com muito mais controle.",
 };
 
 export type Diagnosis = {
