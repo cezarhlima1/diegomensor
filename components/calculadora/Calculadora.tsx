@@ -17,16 +17,19 @@ import {
   loadInputs,
   loadOrcamentos,
   loadTiers,
+  maoDeObraPeca,
   markupDaPeca,
   maskIntTyping,
   maskMoneyTyping,
   novaPeca,
   parseNum,
   precoPecaItem,
+  quantidadePeca,
   saveInputs,
   saveOrcamentos,
   saveTiers,
   somaCustos,
+  somaMaoDeObra,
   somaPecas,
   tierForCost,
   type MarkupTier,
@@ -157,8 +160,6 @@ export default function Calculadora() {
   // Passo #03
   const [nomeCliente, setNomeCliente] = useState("");
   const [nomeCarro, setNomeCarro] = useState("");
-  const [valorHoraInput, setValorHoraInput] = useState("");
-  const [horas, setHoras] = useState("");
 
   // Histórico
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
@@ -189,8 +190,6 @@ export default function Calculadora() {
     setExpandedId(pecasFmt[pecasFmt.length - 1]?.id ?? "");
     setNomeCliente(saved.nomeCliente);
     setNomeCarro(saved.nomeCarro);
-    setValorHoraInput(formatMoneyBlur(saved.valorHoraInput));
-    setHoras(saved.horas);
     setHydrated(true);
   }, []);
 
@@ -210,8 +209,6 @@ export default function Calculadora() {
       pecas,
       nomeCliente,
       nomeCarro,
-      valorHoraInput,
-      horas,
     });
   }, [
     hydrated,
@@ -222,8 +219,6 @@ export default function Calculadora() {
     pecas,
     nomeCliente,
     nomeCarro,
-    valorHoraInput,
-    horas,
   ]);
 
   /* ---------- derivados ---------- */
@@ -252,8 +247,17 @@ export default function Calculadora() {
     ? markupDaPeca(expandedPeca, tiers)
     : expandedTier.markup;
 
-  const maoDeObra = parseNum(valorHoraInput) * parseNum(horas);
-  const totalOrcamento = maoDeObra + pecasTotal;
+  // valor da hora vem do Passo 01 e fica travado no Passo 03
+  const valorHora = hora.custoFinal;
+  const pecasValidas = useMemo(
+    () => pecas.filter((p) => parseNum(p.custo) > 0),
+    [pecas],
+  );
+  const maoDeObraTotal = useMemo(
+    () => somaMaoDeObra(pecasValidas, valorHora),
+    [pecasValidas, valorHora],
+  );
+  const totalOrcamento = maoDeObraTotal + pecasTotal;
 
   const pulseHora = usePulse(Math.round(hora.custoFinal));
   const pulsePeca = usePulse(Math.round(pecasTotal));
@@ -261,11 +265,6 @@ export default function Calculadora() {
 
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
-    if (next === 3) {
-      // leva o custo da hora calculado (sem sobrescrever ajuste manual)
-      if (!valorHoraInput && hora.custoFinal > 0)
-        setValorHoraInput(formatMoneyBlur(hora.custoFinal.toFixed(2).replace(".", ",")));
-    }
     setStep(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -284,8 +283,6 @@ export default function Calculadora() {
     setExpandedId(p.id);
     setNomeCliente("");
     setNomeCarro("");
-    setValorHoraInput("");
-    setHoras("");
     clearInputs();
     setStep(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -299,7 +296,11 @@ export default function Calculadora() {
   }
 
   /* ---------- peças ---------- */
-  function setPecaField(id: string, field: "nome" | "custo", value: string) {
+  function setPecaField(
+    id: string,
+    field: "nome" | "custo" | "quantidade" | "horas",
+    value: string,
+  ) {
     setPecas((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
     );
@@ -328,12 +329,12 @@ export default function Calculadora() {
   }
 
   function pecasResumo() {
-    return pecas
-      .filter((p) => parseNum(p.custo) > 0)
-      .map((p) => ({
-        nome: p.nome.trim() || "Peça",
-        valor: precoPecaItem(p, tiers),
-      }));
+    return pecasValidas.map((p) => ({
+      nome: p.nome.trim() || "Peça",
+      quantidade: quantidadePeca(p),
+      valor: precoPecaItem(p, tiers),
+      maoDeObra: maoDeObraPeca(p, valorHora),
+    }));
   }
 
   function mensagemOrcamento(): string {
@@ -341,7 +342,7 @@ export default function Calculadora() {
       nomeCliente,
       nomeCarro,
       pecas: pecasResumo(),
-      maoDeObra,
+      maoDeObra: maoDeObraTotal,
       total: totalOrcamento,
     });
   }
@@ -370,9 +371,9 @@ export default function Calculadora() {
           : String(Date.now()),
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
-      valorHora: parseNum(valorHoraInput),
-      horas: parseNum(horas),
-      maoDeObra,
+      valorHora,
+      horas: pecasValidas.reduce((acc, p) => acc + parseNum(p.horas), 0),
+      maoDeObra: maoDeObraTotal,
       pecas: resumo,
       valorPeca: pecasTotal,
       total: totalOrcamento,
@@ -388,12 +389,7 @@ export default function Calculadora() {
   function novoOrcamento() {
     setNomeCliente("");
     setNomeCarro("");
-    setHoras("");
-    setValorHoraInput(
-      hora.custoFinal > 0
-        ? formatMoneyBlur(hora.custoFinal.toFixed(2).replace(".", ","))
-        : "",
-    );
+    setPecas((prev) => prev.map((p) => ({ ...p, horas: "" })));
     setView("calc");
     setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -638,18 +634,37 @@ export default function Calculadora() {
 
                           {isOpen && (
                             <div className="calc-peca-body">
-                              <label className="grid gap-1.5">
-                                <span className="quiz-label">Nome da peça</span>
-                                <input
-                                  type="text"
-                                  className="quiz-input"
-                                  placeholder="ex.: Pastilha de freio"
-                                  value={p.nome}
-                                  onChange={(e) =>
-                                    setPecaField(p.id, "nome", e.target.value)
-                                  }
-                                />
-                              </label>
+                              <div className="calc-peca-row">
+                                <label className="grid gap-1.5">
+                                  <span className="quiz-label">Nome da peça</span>
+                                  <input
+                                    type="text"
+                                    className="quiz-input"
+                                    placeholder="ex.: Pastilha de freio"
+                                    value={p.nome}
+                                    onChange={(e) =>
+                                      setPecaField(p.id, "nome", e.target.value)
+                                    }
+                                  />
+                                </label>
+                                <label className="grid gap-1.5 calc-qtd">
+                                  <span className="quiz-label">Qtd.</span>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    className="quiz-input"
+                                    placeholder="1"
+                                    value={p.quantidade}
+                                    onChange={(e) =>
+                                      setPecaField(
+                                        p.id,
+                                        "quantidade",
+                                        maskIntTyping(e.target.value),
+                                      )
+                                    }
+                                  />
+                                </label>
+                              </div>
 
                               <MoneyField
                                 label="Custo real da peça"
@@ -776,8 +791,8 @@ export default function Calculadora() {
                   <p className="calc-card-kicker">Passo 03 — Orçamento</p>
                   <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
                   <p className="calc-card-sub">
-                    Informe o cliente e as horas de serviço. A mão de obra é o
-                    valor da hora × as horas trabalhadas.
+                    Informe o cliente e as horas de serviço de cada peça. O
+                    valor da hora vem do Passo 01 e fica travado.
                   </p>
 
                   <div className="grid gap-4 mt-6">
@@ -803,27 +818,73 @@ export default function Calculadora() {
                         />
                       </label>
                     </div>
-                    <div className="calc-grid-2">
-                      <MoneyField
-                        label="Valor da hora"
-                        value={valorHoraInput}
-                        onChange={setValorHoraInput}
-                      />
-                      <label className="grid gap-1.5">
-                        <span className="quiz-label">Quantidade de horas</span>
+
+                    <label className="grid gap-1.5">
+                      <span className="quiz-label">
+                        Valor da hora{" "}
+                        <span className="calc-lock-tag">
+                          🔒 definido no Passo 01
+                        </span>
+                      </span>
+                      <span className="calc-money calc-money--locked">
+                        <span className="calc-money-prefix">R$</span>
                         <input
                           type="text"
-                          inputMode="decimal"
-                          className="quiz-input"
-                          placeholder="ex.: 4 ou 1,5"
-                          value={horas}
-                          onChange={(e) =>
-                            setHoras(maskMoneyTyping(e.target.value))
-                          }
+                          readOnly
+                          tabIndex={-1}
+                          value={valorHora.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         />
-                      </label>
-                    </div>
+                      </span>
+                    </label>
                   </div>
+
+                  {pecasValidas.length > 0 && (
+                    <>
+                      <div className="calc-divider" />
+                      <p className="quiz-label mb-3">
+                        Horas de serviço por peça
+                      </p>
+                      <div className="calc-pecas-horas">
+                        {pecasValidas.map((p) => (
+                          <div key={p.id} className="calc-ph">
+                            <div className="calc-ph-info">
+                              <span className="calc-ph-name">
+                                {p.nome.trim() || "Peça"}
+                                {quantidadePeca(p) > 1 && (
+                                  <span className="calc-ph-qtd">
+                                    ×{quantidadePeca(p)}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="calc-ph-val">
+                                {brl(precoPecaItem(p, tiers))}
+                              </span>
+                            </div>
+                            <label className="calc-ph-hours">
+                              <span className="quiz-label">Horas</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                className="quiz-input"
+                                placeholder="ex.: 2 ou 1,5"
+                                value={p.horas}
+                                onChange={(e) =>
+                                  setPecaField(
+                                    p.id,
+                                    "horas",
+                                    maskMoneyTyping(e.target.value),
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div
@@ -831,15 +892,39 @@ export default function Calculadora() {
                     pulseTotal ? "is-pulsing" : ""
                   }`}
                 >
+                  {pecasValidas.length > 0 && (
+                    <div className="calc-resumo">
+                      {pecasValidas.map((p) => (
+                        <div key={p.id} className="calc-resumo-row">
+                          <span className="calc-resumo-name">
+                            {p.nome.trim() || "Peça"}
+                            {quantidadePeca(p) > 1 && (
+                              <i>×{quantidadePeca(p)}</i>
+                            )}
+                          </span>
+                          <span className="calc-resumo-vals">
+                            <span>
+                              <em>Peça</em>
+                              {brl(precoPecaItem(p, tiers))}
+                            </span>
+                            <span>
+                              <em>Mão de obra</em>
+                              {brl(maoDeObraPeca(p, valorHora))}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="calc-readout-breakdown">
                     <div>
-                      <span className="calc-readout-k">Mão de obra</span>
+                      <span className="calc-readout-k">Total mão de obra</span>
                       <span className="calc-readout-v">
-                        <AnimatedBRL value={maoDeObra} />
+                        <AnimatedBRL value={maoDeObraTotal} />
                       </span>
                     </div>
                     <div>
-                      <span className="calc-readout-k">Peças</span>
+                      <span className="calc-readout-k">Total peças</span>
                       <span className="calc-readout-v">
                         <AnimatedBRL value={pecasTotal} />
                       </span>

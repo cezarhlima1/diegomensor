@@ -30,6 +30,7 @@ export const CUSTO_FIELDS: CustoField[] = [
   { key: "valeAlimentacao", label: "Vale alimentação" },
   { key: "coletaInsumos", label: "Empresa de coleta de insumos" },
   { key: "uniformes", label: "Uniformes" },
+  { key: "outros", label: "Outros" },
 ];
 
 /* ---------- Passo #02 — faixas de markup por custo da peça ---------- */
@@ -139,6 +140,10 @@ export type Peca = {
   custo: string;
   /** markup manual (%); null = usa a sugestão da faixa */
   markup: number | null;
+  /** quantidade de peças (multiplica o valor final) */
+  quantidade: string;
+  /** horas de serviço da peça (define a mão de obra individual) */
+  horas: string;
 };
 
 export function novaPeca(): Peca {
@@ -150,7 +155,15 @@ export function novaPeca(): Peca {
     nome: "",
     custo: "",
     markup: null,
+    quantidade: "1",
+    horas: "",
   };
+}
+
+/** quantidade da peça (mínimo 1). */
+export function quantidadePeca(peca: Peca): number {
+  const q = parseNum(peca.quantidade);
+  return q > 0 ? q : 1;
 }
 
 export function tierForCost(cost: number, tiers: MarkupTier[]): MarkupTier {
@@ -163,11 +176,11 @@ export function markupDaPeca(peca: Peca, tiers: MarkupTier[]): number {
   return tierForCost(parseNum(peca.custo), tiers).markup;
 }
 
-/** preço final de uma peça (custo + markup efetivo). */
+/** preço final de uma peça (custo + markup efetivo × quantidade). */
 export function precoPecaItem(peca: Peca, tiers: MarkupTier[]): number {
   const cost = parseNum(peca.custo);
   if (cost <= 0) return 0;
-  return cost * (1 + markupDaPeca(peca, tiers) / 100);
+  return cost * (1 + markupDaPeca(peca, tiers) / 100) * quantidadePeca(peca);
 }
 
 /** soma dos preços finais de todas as peças. */
@@ -175,8 +188,23 @@ export function somaPecas(pecas: Peca[], tiers: MarkupTier[]): number {
   return pecas.reduce((acc, p) => acc + precoPecaItem(p, tiers), 0);
 }
 
+/** mão de obra de uma peça: valor da hora × horas de serviço. */
+export function maoDeObraPeca(peca: Peca, valorHora: number): number {
+  return valorHora * parseNum(peca.horas);
+}
+
+/** soma da mão de obra de todas as peças. */
+export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
+  return pecas.reduce((acc, p) => acc + maoDeObraPeca(p, valorHora), 0);
+}
+
 /* ---------- Histórico de orçamentos (localStorage) ---------- */
-export type PecaResumo = { nome: string; valor: number };
+export type PecaResumo = {
+  nome: string;
+  valor: number;
+  quantidade?: number;
+  maoDeObra?: number;
+};
 
 export type Orcamento = {
   id: string;
@@ -204,8 +232,6 @@ export type CalcInputs = {
   pecas: Peca[];
   nomeCliente: string;
   nomeCarro: string;
-  valorHoraInput: string;
-  horas: string;
 };
 
 export const EMPTY_INPUTS: CalcInputs = {
@@ -216,8 +242,6 @@ export const EMPTY_INPUTS: CalcInputs = {
   pecas: [novaPeca()],
   nomeCliente: "",
   nomeCarro: "",
-  valorHoraInput: "",
-  horas: "",
 };
 
 export function loadInputs(): CalcInputs {
@@ -328,19 +352,23 @@ export function buildOrcamentoMsg(o: {
   maoDeObra: number;
   total: number;
 }): string {
-  const linhas: string[] = ["*Orçamento — Diego Mensor*", ""];
-  if (o.nomeCliente.trim()) linhas.push(`Cliente: ${o.nomeCliente.trim()}`);
-  if (o.nomeCarro.trim()) linhas.push(`Veículo: ${o.nomeCarro.trim()}`);
+  const linhas: string[] = [
+    `*Orçamento - ${o.nomeCliente.trim() || "Cliente"}*`,
+    `Veículo - ${o.nomeCarro.trim() || "—"}`,
+  ];
 
-  const pecasValidas = o.pecas.filter((p) => p.valor > 0);
-  if (pecasValidas.length > 0) {
-    linhas.push("", "*Peças*");
-    for (const p of pecasValidas) {
-      linhas.push(`• ${p.nome.trim() || "Peça"}: ${brl(p.valor)}`);
-    }
+  const pecasValidas = o.pecas.filter(
+    (p) => p.valor > 0 || (p.maoDeObra ?? 0) > 0,
+  );
+  for (const p of pecasValidas) {
+    const qtd = p.quantidade ?? 1;
+    const nome = (p.nome.trim() || "Peça") + (qtd > 1 ? ` (${qtd}x)` : "");
+    linhas.push("", nome);
+    if (p.valor > 0) linhas.push(`Valor: ${brl(p.valor)}`);
+    if ((p.maoDeObra ?? 0) > 0)
+      linhas.push(`Mão de obra: ${brl(p.maoDeObra ?? 0)}`);
   }
 
-  if (o.maoDeObra > 0) linhas.push("", `Mão de obra: ${brl(o.maoDeObra)}`);
   linhas.push("", `*Total: ${brl(o.total)}*`);
   return linhas.join("\n");
 }

@@ -464,6 +464,37 @@ a:focus-visible, button:focus-visible {
   .calc-add { margin-top: 12px; width: 100%; font-family: var(--font-mono); font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--color-blue); background: rgba(4,149,240,.06); border: 1px dashed rgba(4,149,240,.4); border-radius: 12px; padding: 13px; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
   .calc-add:hover { background: rgba(4,149,240,.12); border-color: rgba(4,149,240,.6); }
 
+  /* ---------- peça: nome + quantidade ---------- */
+  .calc-peca-row { display: flex; gap: 12px; align-items: flex-end; }
+  .calc-peca-row > label:first-child { flex: 1; min-width: 0; }
+  .calc-qtd { width: 92px; flex: none; }
+  .calc-qtd .quiz-input { text-align: center; }
+
+  /* ---------- valor da hora travado (passo 03) ---------- */
+  .calc-money--locked { opacity: .9; background: rgba(143,178,204,.05); border-style: dashed; }
+  .calc-money--locked input { cursor: default; color: var(--color-offwhite); }
+  .calc-lock-tag { font-weight: 400; text-transform: none; letter-spacing: 0; font-family: var(--font-mono); font-size: 11px; color: var(--color-muted-dim); }
+
+  /* ---------- horas de serviço por peça (passo 03) ---------- */
+  .calc-pecas-horas { display: grid; gap: 10px; }
+  .calc-ph { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); }
+  .calc-ph-info { display: grid; gap: 3px; flex: 1; min-width: 0; }
+  .calc-ph-name { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: #fff; }
+  .calc-ph-qtd { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--color-blue); background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.3); border-radius: 6px; padding: 1px 6px; }
+  .calc-ph-val { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--color-blue); font-variant-numeric: tabular-nums; }
+  .calc-ph-hours { display: grid; gap: 6px; width: 140px; flex: none; }
+  .calc-ph-hours .quiz-input { padding: 9px 12px; }
+  @media (max-width: 480px) { .calc-ph-hours { width: 100%; } }
+
+  /* ---------- resumo por peça no total (passo 03) ---------- */
+  .calc-resumo { display: grid; gap: 12px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--color-line); }
+  .calc-resumo-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; }
+  .calc-resumo-name { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: #fff; }
+  .calc-resumo-name i { font-style: normal; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--color-blue); background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.3); border-radius: 6px; padding: 1px 6px; }
+  .calc-resumo-vals { display: flex; gap: 18px; flex-wrap: wrap; }
+  .calc-resumo-vals span { font-family: var(--font-mono); font-size: 13.5px; color: var(--color-offwhite); font-variant-numeric: tabular-nums; }
+  .calc-resumo-vals em { font-style: normal; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted-dim); margin-right: 7px; }
+
   /* ---------- ações do orçamento ---------- */
   .calc-actions { display: flex; flex-wrap: wrap; gap: 12px; }
   .calc-actions .btn { flex: 1; min-width: 160px; }
