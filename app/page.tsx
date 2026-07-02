@@ -11,6 +11,7 @@ import Faq from "@/components/Faq";
 import Guarantee from "@/components/Guarantee";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
+import BackRedirect from "@/components/BackRedirect";
 
 export default function Home() {
   return (
@@ -31,6 +32,8 @@ export default function Home() {
       <Footer />
       {/* interações (reveal, count-up, magnético, glow, parallax) */}
       <ClientEffects />
+      {/* back-redirect carregando UTMs */}
+      <BackRedirect />
     </>
   );
 }

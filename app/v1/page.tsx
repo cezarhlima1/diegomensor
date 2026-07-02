@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import VturbPlayer from "@/components/VturbPlayer";
 import ExpiryBanner from "@/components/ExpiryBanner";
+import BackRedirect from "@/components/BackRedirect";
 
 const ACCOUNT = "b809ca06-75c2-4eba-ae57-2f6bbda7e885";
 const PLAYER = "6a282ada1bc96b19a568dcc5";
@@ -39,6 +40,8 @@ export default function V1() {
       <link rel="dns-prefetch" href="https://license.vturb.com" />
 
       <ExpiryBanner />
+      {/* back-redirect carregando UTMs */}
+      <BackRedirect />
 
       <main className="min-h-screen flex flex-col items-center justify-center py-16 lg:py-24">
         <div className="wrap max-w-[920px] text-center flex flex-col items-center">
