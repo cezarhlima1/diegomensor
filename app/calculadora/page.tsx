@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import Calculadora from "@/components/calculadora/Calculadora";
 import Footer from "@/components/Footer";
@@ -24,7 +25,15 @@ export default async function CalculadoraPage() {
 
   return (
     <>
-      <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome} />
+      <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
+        {/* Gestão de conta é exclusiva de admin — funcionário nem vê o link
+            (e a página /conta revalida o papel no servidor de toda forma). */}
+        {sessao.empresaAtiva.papel === "admin" && (
+          <Link href="/conta" className="auth-nav-link">
+            Minha conta
+          </Link>
+        )}
+      </HeaderLogado>
       <main>
         <Calculadora />
       </main>

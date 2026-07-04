@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { registrarAdmin } from "./actions";
+import { ERRO_GENERICO } from "./authLogic";
 
 /**
  * Cadastro do admin + criação da 1ª empresa.
@@ -45,8 +46,10 @@ export default function Registrar() {
         return;
       }
       window.location.assign("/calculadora");
-    } catch {
-      setErro("Não foi possível concluir o cadastro. Tente novamente em instantes.");
+    } catch (err) {
+      // Ex.: env do Supabase ausente ou falha de rede.
+      console.error("Registrar: falha inesperada no cadastro:", err);
+      setErro(ERRO_GENERICO);
       setCarregando(false);
     }
   }

@@ -33,8 +33,9 @@ export default function Login() {
         return;
       }
       window.location.assign("/calculadora");
-    } catch {
+    } catch (err) {
       // Ex.: env do Supabase ausente ou falha de rede.
+      console.error("Login: falha inesperada ao entrar:", err);
       setErro("Não foi possível entrar. Tente novamente em instantes.");
       setCarregando(false);
     }

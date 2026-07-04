@@ -3,32 +3,26 @@
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  ERRO_GENERICO,
+  MSG_EMAIL_JA_CADASTRADO,
+  SENHA_MIN,
+  emailValido,
+  mapearErroBanco,
+} from "./authLogic";
 
 /** Resultado padrão das actions de auth ({ ok, error } — convenção do projeto). */
 export type ResultadoAuth = { ok: true } | { ok: false; error: string };
 
-/** Tamanho mínimo da senha (inclusive) exigido no registro. */
-const SENHA_MIN = 8;
-
-const ERRO_GENERICO =
-  "Não foi possível concluir o cadastro. Tente novamente em instantes.";
-
 /**
- * Traduz erros do registro para mensagens pt-BR amigáveis.
- * Os tokens LIMITE_/FUNCIONARIO_ vêm do trigger check_limites (migration 0001)
- * e têm prefixo estável justamente para este mapeamento não parsear texto livre.
+ * No contexto do REGISTRO, e-mail duplicado ganha a dica de login (a pessoa
+ * provavelmente já tem conta); nos demais contextos a mensagem fica neutra.
  */
 function mapearErroRegistro(mensagem: string): string {
-  if (/already.*(registered|exists)|email_exists/i.test(mensagem)) {
-    return "Este e-mail já está cadastrado. Faça login para continuar.";
-  }
-  if (mensagem.includes("LIMITE_MAX_EMPRESAS")) {
-    return "Limite de empresas atingido — contrate uma licença adicional.";
-  }
-  if (mensagem.includes("LIMITE_MAX_USUARIOS")) {
-    return "Limite de usuários atingido — contrate uma licença adicional.";
-  }
-  return ERRO_GENERICO;
+  const erro = mapearErroBanco(mensagem, ERRO_GENERICO);
+  return erro === MSG_EMAIL_JA_CADASTRADO
+    ? `${erro} Faça login para continuar.`
+    : erro;
 }
 
 /**
@@ -56,7 +50,7 @@ export async function registrarAdmin(dados: {
   if (!nome || !email || !senha || !nomeEmpresa) {
     return { ok: false, error: "Preencha todos os campos." };
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!emailValido(email)) {
     return { ok: false, error: "Informe um e-mail válido." };
   }
   if (senha.length < SENHA_MIN) {
@@ -104,9 +98,14 @@ export async function registrarAdmin(dados: {
 /**
  * Encerra a sessão (limpa os cookies de auth) e volta para /login.
  * Usada como action do <form> do botão Sair no HeaderLogado.
+ * Falha do signOut é logada mas não bloqueia o redirect: o usuário pediu
+ * para sair e a pior consequência é a sessão expirar sozinha depois.
  */
 export async function sair(): Promise<void> {
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error("sair: falha no signOut do Supabase:", error.message);
+  }
   redirect("/login");
 }

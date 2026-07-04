@@ -688,3 +688,77 @@ a:focus-visible, button:focus-visible {
   .auth-sair:hover { color: var(--color-brand-red); border-color: rgba(240,88,76,.5); background: rgba(240,88,76,.08); }
   .auth-sair:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
 }
+
+/* ============================================================
+   MINHA CONTA — GESTÃO DE USUÁRIOS E EMPRESAS (/conta)
+   ============================================================ */
+@layer components {
+  .conta-page { position: relative; padding-block: 40px 72px; }
+
+  /* select nativo com a mesma cara dos inputs (popup escuro onde suportado) */
+  select.quiz-input { color-scheme: dark; cursor: pointer; }
+
+  /* cabeçalho de card com contagem X/limite à direita */
+  .conta-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .conta-contagem {
+    flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 700; white-space: nowrap;
+    color: var(--color-muted); background: rgba(143,178,204,.08);
+    border: 1px solid var(--color-line); border-radius: 100px; padding: 5px 12px;
+  }
+  .conta-contagem.is-cheia { color: var(--color-brand-red); border-color: rgba(240,88,76,.4); background: rgba(240,88,76,.08); }
+
+  /* linhas de membro / empresa */
+  .conta-lista { display: grid; margin-top: 18px; }
+  .conta-item { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-top: 1px solid var(--color-line); }
+  .conta-item:last-child { border-bottom: 1px solid var(--color-line); }
+  .conta-item-info { min-width: 0; flex: 1; display: grid; gap: 2px; }
+  .conta-item-nome { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .conta-item-sub { font-size: 13px; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* selo de papel do membro (admin / funcionário) */
+  .conta-papel {
+    flex: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; border-radius: 100px; padding: 4px 10px;
+  }
+  .conta-papel--admin { color: var(--color-blue); background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.4); }
+  .conta-papel--funcionario { color: var(--color-muted); background: rgba(143,178,204,.08); border: 1px solid var(--color-line); }
+
+  /* botão discreto de ação por linha (remover / usar) — par do .auth-sair */
+  .conta-acao {
+    flex: none; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-muted); background: none; border: 1px solid var(--color-line);
+    border-radius: 10px; padding: 8px 12px; cursor: pointer;
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .conta-acao:hover:not(:disabled) { color: var(--color-blue); border-color: rgba(4,149,240,.5); background: rgba(4,149,240,.08); }
+  .conta-acao--remover:hover:not(:disabled) { color: var(--color-brand-red); border-color: rgba(240,88,76,.5); background: rgba(240,88,76,.08); }
+  .conta-acao:disabled { opacity: .5; cursor: not-allowed; }
+  .conta-acao:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
+
+  /* selo "empresa ativa" no seletor de empresas */
+  .conta-ativa {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--color-brand-green); background: rgba(47,210,122,.1);
+    border: 1px solid rgba(47,210,122,.4); border-radius: 100px; padding: 5px 11px;
+  }
+  .conta-ativa::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-brand-green); box-shadow: 0 0 8px var(--color-brand-green); }
+
+  /* confirmação de sucesso inline — contraparte verde do .auth-erro */
+  .auth-ok {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--color-brand-green);
+    background: rgba(47,210,122,.08); border: 1px solid rgba(47,210,122,.3); border-radius: 10px; padding: 11px 14px;
+  }
+
+  /* link de navegação do header logado — par visual do .auth-sair */
+  .auth-nav-link {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-muted); border: 1px solid var(--color-line); border-radius: 10px;
+    padding: 9px 14px; text-decoration: none;
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .auth-nav-link:hover { color: var(--color-blue); border-color: rgba(4,149,240,.5); background: rgba(4,149,240,.08); }
+  .auth-nav-link:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
+}
