@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Membro, Papel } from "@/lib/db/types";
+import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import { definirEmpresaAtiva } from "@/lib/auth/empresaAtiva";
 import { adicionarUsuario, criarEmpresa, removerUsuario } from "./actions";
 
@@ -81,7 +82,7 @@ export default function Conta({
       router.refresh();
     } catch (err) {
       console.error("Conta: falha inesperada ao adicionar usuário:", err);
-      setErroEquipe("Não foi possível concluir a operação. Tente novamente em instantes.");
+      setErroEquipe(ERRO_GENERICO);
     } finally {
       setAdicionando(false);
     }
@@ -109,7 +110,7 @@ export default function Conta({
       router.refresh();
     } catch (err) {
       console.error("Conta: falha inesperada ao remover usuário:", err);
-      setErroEquipe("Não foi possível concluir a operação. Tente novamente em instantes.");
+      setErroEquipe(ERRO_GENERICO);
     } finally {
       setRemovendoId(null);
     }
@@ -132,7 +133,7 @@ export default function Conta({
       router.refresh();
     } catch (err) {
       console.error("Conta: falha inesperada ao criar empresa:", err);
-      setErroEmpresas("Não foi possível concluir a operação. Tente novamente em instantes.");
+      setErroEmpresas(ERRO_GENERICO);
     } finally {
       setCriando(false);
     }

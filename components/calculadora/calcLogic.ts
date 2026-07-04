@@ -133,6 +133,19 @@ export function calcCustoHora(
   return { totalCustos, horasEfetivas, custoBase, custoFinal };
 }
 
+/* ---------- Passo #01 — dados persistidos no banco (calc_passo1) ---------- */
+/**
+ * Insumos do Passo 1 exatamente como o app os usa (strings mascaradas pt-BR,
+ * ex.: "1.500,00"). Para admin, hidratam de calc_passo1 e são gravados pela
+ * server action salvarPasso1; NUNCA são serializados para funcionário.
+ */
+export type Passo1Dados = {
+  custos: Record<string, string>;
+  horasMes: string;
+  mecanicos: string;
+  multiplicador: number;
+};
+
 /* ---------- Passo #02 — valor da peça ---------- */
 export type Peca = {
   id: string;
@@ -223,31 +236,37 @@ const STORAGE_ORCAMENTOS = "calc:orcamentos:v1";
 const STORAGE_TIERS = "calc:markupTiers:v1";
 const STORAGE_INPUTS = "calc:inputs:v1";
 
+/**
+ * Namespace por empresa: `${chave}:${empresaId}` — evita vazar dados entre
+ * empresas no mesmo navegador. Payloads antigos sem namespace (dados de
+ * teste pré-produto) são deliberadamente ignorados: as chaves antigas
+ * simplesmente nunca são lidas.
+ */
+function chaveDaEmpresa(chave: string, empresaId: string): string {
+  return `${chave}:${empresaId}`;
+}
+
 /* ---------- dados digitados pelo usuário (rascunho persistido) ---------- */
+// Só os Passos 2-3 ficam no navegador; os campos do Passo 1 moram no banco
+// (calc_passo1) e nunca entram neste payload — nem para admin.
 export type CalcInputs = {
-  custos: Record<string, string>;
-  horasMes: string;
-  mecanicos: string;
-  multiplicador: number;
   pecas: Peca[];
   nomeCliente: string;
   nomeCarro: string;
 };
 
 export const EMPTY_INPUTS: CalcInputs = {
-  custos: {},
-  horasMes: "",
-  mecanicos: "",
-  multiplicador: MULT_DEFAULT,
   pecas: [novaPeca()],
   nomeCliente: "",
   nomeCarro: "",
 };
 
-export function loadInputs(): CalcInputs {
+export function loadInputs(empresaId: string): CalcInputs {
   if (typeof window === "undefined") return EMPTY_INPUTS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_INPUTS);
+    const raw = window.localStorage.getItem(
+      chaveDaEmpresa(STORAGE_INPUTS, empresaId),
+    );
     if (!raw) return EMPTY_INPUTS;
     const saved = JSON.parse(raw) as Partial<CalcInputs>;
     if (!saved || typeof saved !== "object") return EMPTY_INPUTS;
@@ -262,13 +281,6 @@ export function loadInputs(): CalcInputs {
     return {
       ...EMPTY_INPUTS,
       ...saved,
-      custos:
-        saved.custos && typeof saved.custos === "object"
-          ? saved.custos
-          : {},
-      multiplicador: Number.isFinite(saved.multiplicador)
-        ? (saved.multiplicador as number)
-        : MULT_DEFAULT,
       pecas,
     };
   } catch {
@@ -276,28 +288,33 @@ export function loadInputs(): CalcInputs {
   }
 }
 
-export function saveInputs(inputs: CalcInputs): void {
+export function saveInputs(inputs: CalcInputs, empresaId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_INPUTS, JSON.stringify(inputs));
+    window.localStorage.setItem(
+      chaveDaEmpresa(STORAGE_INPUTS, empresaId),
+      JSON.stringify(inputs),
+    );
   } catch {
     // armazenamento indisponível: ignora
   }
 }
 
-export function clearInputs(): void {
+export function clearInputs(empresaId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_INPUTS);
+    window.localStorage.removeItem(chaveDaEmpresa(STORAGE_INPUTS, empresaId));
   } catch {
     // ignora
   }
 }
 
-export function loadOrcamentos(): Orcamento[] {
+export function loadOrcamentos(empresaId: string): Orcamento[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_ORCAMENTOS);
+    const raw = window.localStorage.getItem(
+      chaveDaEmpresa(STORAGE_ORCAMENTOS, empresaId),
+    );
     const parsed = raw ? (JSON.parse(raw) as Orcamento[]) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -305,19 +322,24 @@ export function loadOrcamentos(): Orcamento[] {
   }
 }
 
-export function saveOrcamentos(list: Orcamento[]): void {
+export function saveOrcamentos(list: Orcamento[], empresaId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_ORCAMENTOS, JSON.stringify(list));
+    window.localStorage.setItem(
+      chaveDaEmpresa(STORAGE_ORCAMENTOS, empresaId),
+      JSON.stringify(list),
+    );
   } catch {
     // armazenamento indisponível (modo privado / cota): ignora silenciosamente
   }
 }
 
-export function loadTiers(): MarkupTier[] {
+export function loadTiers(empresaId: string): MarkupTier[] {
   if (typeof window === "undefined") return DEFAULT_MARKUP_TIERS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_TIERS);
+    const raw = window.localStorage.getItem(
+      chaveDaEmpresa(STORAGE_TIERS, empresaId),
+    );
     if (!raw) return DEFAULT_MARKUP_TIERS;
     const saved = JSON.parse(raw) as { markup: number }[];
     // mantém os limites/rótulos padrão; só restaura os percentuais editados
@@ -332,11 +354,11 @@ export function loadTiers(): MarkupTier[] {
   }
 }
 
-export function saveTiers(tiers: MarkupTier[]): void {
+export function saveTiers(tiers: MarkupTier[], empresaId: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(
-      STORAGE_TIERS,
+      chaveDaEmpresa(STORAGE_TIERS, empresaId),
       JSON.stringify(tiers.map((t) => ({ markup: t.markup }))),
     );
   } catch {

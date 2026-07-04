@@ -5,6 +5,8 @@ import Calculadora from "@/components/calculadora/Calculadora";
 import Footer from "@/components/Footer";
 import HeaderLogado from "@/components/auth/HeaderLogado";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Passo1Dados } from "@/components/calculadora/calcLogic";
 
 export const metadata: Metadata = {
   title: "Calculadora de Precificação - Diego Mensor",
@@ -23,6 +25,36 @@ export default async function CalculadoraPage() {
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
 
+  // Insumos do Passo 1: consultados e serializados APENAS para admin — para
+  // funcionário nem a query acontece, então os dados nunca saem do servidor
+  // (DW-4.1). Leitura via client RLS (policy "select apenas admin da
+  // empresa"): menor privilégio — o service role fica só na escrita
+  // (salvarPasso1).
+  let passo1Inicial: Passo1Dados | undefined;
+  if (sessao.empresaAtiva.papel === "admin") {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("calc_passo1")
+      .select("custos, horas_mes, mecanicos, multiplicador")
+      .eq("empresa_id", sessao.empresaAtiva.id)
+      .maybeSingle();
+    if (error) {
+      // Falha ALTO: renderizar o Passo 1 vazio quando há dados no banco
+      // deixaria o admin sobrescrever os custos reais com um form vazio.
+      throw new Error(
+        `calculadora: falha ao carregar calc_passo1: ${error.message}`
+      );
+    }
+    if (data) {
+      passo1Inicial = {
+        custos: (data.custos ?? {}) as Record<string, string>,
+        horasMes: data.horas_mes ?? "",
+        mecanicos: data.mecanicos ?? "",
+        multiplicador: Number(data.multiplicador),
+      };
+    }
+  }
+
   return (
     <>
       <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
@@ -35,7 +67,16 @@ export default async function CalculadoraPage() {
         )}
       </HeaderLogado>
       <main>
-        <Calculadora />
+        {/* key = empresa ativa: trocar de empresa remonta o client component
+            (estado, Passo 1 e namespace do localStorage zerados p/ a nova). */}
+        <Calculadora
+          key={sessao.empresaAtiva.id}
+          papel={sessao.empresaAtiva.papel}
+          empresaId={sessao.empresaAtiva.id}
+          valorHoraInicial={sessao.empresaAtiva.valorHora}
+          passo1Inicial={passo1Inicial}
+          nomeEmpresa={sessao.empresaAtiva.nome}
+        />
       </main>
       <Footer />
     </>

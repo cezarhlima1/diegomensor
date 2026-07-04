@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import nextDynamic from "next/dynamic";
+import type { Papel } from "@/lib/db/types";
 import {
-  CUSTO_FIELDS,
-  MULT_DEFAULT,
-  MULT_MIN,
-  MULT_MAX,
+  DEFAULT_MARKUP_TIERS,
   MARKUP_MIN,
   MARKUP_MAX,
   brl,
   buildOrcamentoMsg,
-  calcCustoHora,
   clearInputs,
   formatData,
   formatMoneyBlur,
@@ -28,78 +26,24 @@ import {
   saveInputs,
   saveOrcamentos,
   saveTiers,
-  somaCustos,
   somaMaoDeObra,
   somaPecas,
   tierForCost,
   type MarkupTier,
   type Orcamento,
+  type Passo1Dados,
   type Peca,
 } from "./calcLogic";
+import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
+
+// Passo 1 é admin-only e carregado sob demanda: o chunk com o form dos
+// custos gerenciais nunca é servido quando a página renderiza para
+// funcionário (DW-4.1). Os VALORES, por sua vez, só chegam via prop
+// passo1Inicial — que a page só consulta/passa para admin.
+const Passo1 = nextDynamic(() => import("./Passo1"));
 
 type View = "calc" | "hist";
 type Step = 1 | 2 | 3;
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
-/* conta o número de forma animada até o alvo (easeOutCubic, via rAF) */
-function useCountUp(target: number, duration = 650): number {
-  const [display, setDisplay] = useState(target);
-  const currentRef = useRef(target);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (prefersReducedMotion() || duration <= 0) {
-      currentRef.current = target;
-      setDisplay(target);
-      return;
-    }
-    const from = currentRef.current;
-    const delta = target - from;
-    if (delta === 0) return;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const val = from + delta * eased;
-      currentRef.current = val;
-      setDisplay(val);
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [target, duration]);
-
-  return display;
-}
-
-/* aciona um pulso de brilho quando o valor (arredondado) muda */
-function usePulse(trigger: number): boolean {
-  const [on, setOn] = useState(false);
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    setOn(true);
-    const id = window.setTimeout(() => setOn(false), 650);
-    return () => window.clearTimeout(id);
-  }, [trigger]);
-  return on;
-}
-
-function AnimatedBRL({ value }: { value: number }) {
-  const v = useCountUp(value);
-  return <>{brl(v)}</>;
-}
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Custo da hora",
@@ -107,55 +51,37 @@ const STEP_LABELS: Record<Step, string> = {
   3: "Orçamento",
 };
 
-/* ---------- campo de moeda (R$) ---------- */
-function MoneyField({
-  label,
-  value,
-  onChange,
-  big = false,
-  idx,
+export default function Calculadora({
+  papel,
+  empresaId,
+  valorHoraInicial,
+  passo1Inicial,
+  nomeEmpresa,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  big?: boolean;
-  idx?: number;
+  /** Papel do usuário na empresa ativa — gate do Passo 1. */
+  papel: Papel;
+  /** Empresa ativa: namespace do localStorage e destino de salvarPasso1. */
+  empresaId: string;
+  /** empresas.valor_hora do servidor — única fonte p/ funcionário. */
+  valorHoraInicial: number;
+  /** Insumos do Passo 1 (presente APENAS para admin; nunca p/ funcionário). */
+  passo1Inicial?: Passo1Dados;
+  /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
+  nomeEmpresa: string;
 }) {
-  return (
-    <label
-      className="grid gap-1.5"
-      style={idx !== undefined ? ({ "--i": idx } as React.CSSProperties) : undefined}
-    >
-      <span className="quiz-label">{label}</span>
-      <span className={`calc-money ${big ? "calc-money--big" : ""}`}>
-        <span className="calc-money-prefix">R$</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          placeholder="0,00"
-          value={value}
-          onChange={(e) => onChange(maskMoneyTyping(e.target.value))}
-          onBlur={(e) => onChange(formatMoneyBlur(e.target.value))}
-        />
-      </span>
-    </label>
-  );
-}
-
-export default function Calculadora() {
+  const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
-  const [step, setStep] = useState<Step>(1);
+  // Funcionário não tem Passo 1: começa direto no valor da peça.
+  const [step, setStep] = useState<Step>(ehAdmin ? 1 : 2);
 
-  // Passo #01
-  const [custos, setCustos] = useState<Record<string, string>>({});
-  const [horasMes, setHorasMes] = useState("");
-  const [mecanicos, setMecanicos] = useState("");
-  const [multiplicador, setMultiplicador] = useState(MULT_DEFAULT);
+  // Valor da hora: admin recebe atualizações ao vivo do Passo1 (banco);
+  // funcionário usa o consolidado do servidor (empresas.valor_hora) e só.
+  const [valorHora, setValorHora] = useState(valorHoraInicial);
 
   // Passo #02
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [expandedId, setExpandedId] = useState<string>("");
-  const [tiers, setTiers] = useState<MarkupTier[]>(loadTiers);
+  const [tiers, setTiers] = useState<MarkupTier[]>(DEFAULT_MARKUP_TIERS);
 
   // Passo #03
   const [nomeCliente, setNomeCliente] = useState("");
@@ -169,19 +95,13 @@ export default function Calculadora() {
   // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
   const [hydrated, setHydrated] = useState(false);
 
-  // hidrata do localStorage no cliente (evita mismatch de SSR)
+  // hidrata do localStorage no cliente (evita mismatch de SSR); as chaves
+  // têm namespace por empresa — dados de outra empresa não vazam.
   useEffect(() => {
-    setOrcamentos(loadOrcamentos());
-    setTiers(loadTiers());
-    const saved = loadInputs();
+    setOrcamentos(loadOrcamentos(empresaId));
+    setTiers(loadTiers(empresaId));
+    const saved = loadInputs(empresaId);
     // reaplica a máscara de moeda aos valores salvos
-    const custosFmt: Record<string, string> = {};
-    for (const [k, v] of Object.entries(saved.custos))
-      custosFmt[k] = formatMoneyBlur(v);
-    setCustos(custosFmt);
-    setHorasMes(saved.horasMes);
-    setMecanicos(saved.mecanicos);
-    setMultiplicador(saved.multiplicador);
     const pecasFmt = saved.pecas.map((p) => ({
       ...p,
       custo: formatMoneyBlur(p.custo),
@@ -191,50 +111,23 @@ export default function Calculadora() {
     setNomeCliente(saved.nomeCliente);
     setNomeCarro(saved.nomeCarro);
     setHydrated(true);
-  }, []);
+  }, [empresaId]);
 
-  // persiste edições da tabela de markup
-  useEffect(() => {
-    saveTiers(tiers);
-  }, [tiers]);
-
-  // persiste os dados digitados pelo usuário
+  // persiste edições da tabela de markup (só depois de reidratar: senão o
+  // default sobrescreveria os percentuais salvos da empresa)
   useEffect(() => {
     if (!hydrated) return;
-    saveInputs({
-      custos,
-      horasMes,
-      mecanicos,
-      multiplicador,
-      pecas,
-      nomeCliente,
-      nomeCarro,
-    });
-  }, [
-    hydrated,
-    custos,
-    horasMes,
-    mecanicos,
-    multiplicador,
-    pecas,
-    nomeCliente,
-    nomeCarro,
-  ]);
+    saveTiers(tiers, empresaId);
+  }, [hydrated, tiers, empresaId]);
+
+  // persiste os dados digitados pelo usuário (Passos 2-3; o Passo 1 mora
+  // no banco e nunca entra neste payload)
+  useEffect(() => {
+    if (!hydrated) return;
+    saveInputs({ pecas, nomeCliente, nomeCarro }, empresaId);
+  }, [hydrated, pecas, nomeCliente, nomeCarro, empresaId]);
 
   /* ---------- derivados ---------- */
-  const totalCustos = useMemo(() => somaCustos(custos), [custos]);
-
-  const hora = useMemo(
-    () =>
-      calcCustoHora(
-        totalCustos,
-        parseNum(horasMes),
-        parseNum(mecanicos),
-        multiplicador,
-      ),
-    [totalCustos, horasMes, mecanicos, multiplicador],
-  );
-
   const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
 
   const expandedPeca = pecas.find((p) => p.id === expandedId) ?? pecas[0];
@@ -247,8 +140,6 @@ export default function Calculadora() {
     ? markupDaPeca(expandedPeca, tiers)
     : expandedTier.markup;
 
-  // valor da hora vem do Passo 01 e fica travado no Passo 03
-  const valorHora = hora.custoFinal;
   const pecasValidas = useMemo(
     () => pecas.filter((p) => parseNum(p.custo) > 0),
     [pecas],
@@ -259,7 +150,6 @@ export default function Calculadora() {
   );
   const totalOrcamento = maoDeObraTotal + pecasTotal;
 
-  const pulseHora = usePulse(Math.round(hora.custoFinal));
   const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
 
@@ -269,22 +159,15 @@ export default function Calculadora() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function setCusto(key: string, value: string) {
-    setCustos((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function limparCampos() {
-    setCustos({});
-    setHorasMes("");
-    setMecanicos("");
-    setMultiplicador(MULT_DEFAULT);
+  // Limpa os Passos 2-3 (peças, cliente, rascunho local). O botão fica no
+  // Passo 1: o componente Passo1 limpa os próprios campos e chama isto.
+  function limparResto() {
     const p = novaPeca();
     setPecas([p]);
     setExpandedId(p.id);
     setNomeCliente("");
     setNomeCarro("");
-    clearInputs();
-    setStep(1);
+    clearInputs(empresaId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -381,7 +264,7 @@ export default function Calculadora() {
     };
     const next = [orc, ...orcamentos];
     setOrcamentos(next);
-    saveOrcamentos(next);
+    saveOrcamentos(next, empresaId);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2600);
   }
@@ -413,10 +296,12 @@ export default function Calculadora() {
   function removerOrcamento(id: string) {
     const next = orcamentos.filter((o) => o.id !== id);
     setOrcamentos(next);
-    saveOrcamentos(next);
+    saveOrcamentos(next, empresaId);
   }
 
-  const multInteiro = Number.isInteger(multiplicador);
+  // Passos exibidos: funcionário não tem o Passo 1; a numeração da UI é o
+  // índice na lista (1..n), então para ele "Valor da peça" vira o Passo 1.
+  const stepsVisiveis: Step[] = ehAdmin ? [1, 2, 3] : [2, 3];
 
   return (
     <section className="relative min-h-[100svh] py-20 sm:py-24">
@@ -457,7 +342,7 @@ export default function Calculadora() {
           <>
             {/* stepper */}
             <div className="calc-steps mb-9">
-              {([1, 2, 3] as Step[]).map((n) => (
+              {stepsVisiveis.map((n, i) => (
                 <button
                   key={n}
                   className={`calc-step-pill ${step === n ? "is-active" : ""} ${
@@ -465,137 +350,19 @@ export default function Calculadora() {
                   }`}
                   onClick={() => goToStep(n)}
                 >
-                  <span className="calc-step-num">{n}</span>
+                  <span className="calc-step-num">{i + 1}</span>
                   <span className="calc-step-label">{STEP_LABELS[n]}</span>
                 </button>
               ))}
             </div>
 
-            {/* ============ PASSO 1 ============ */}
-            {step === 1 && (
-              <div className="cta-reveal">
-                <div className="calc-card">
-                  <p className="calc-card-kicker">Passo 01 — Custo da hora</p>
-                  <h2 className="calc-card-title">Custos fixos da oficina</h2>
-                  <p className="calc-card-sub">
-                    Preencha os custos mensais. O que estiver zerado é ignorado.
-                    Tudo é salvo automaticamente neste navegador.
-                  </p>
-
-                  <div className="calc-grid calc-stagger mt-6">
-                    {CUSTO_FIELDS.map((f, i) => (
-                      <MoneyField
-                        key={f.key}
-                        idx={i}
-                        label={f.label}
-                        value={custos[f.key] ?? ""}
-                        onChange={(v) => setCusto(f.key, v)}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="calc-divider" />
-
-                  <div className="calc-grid-2 mt-2">
-                    <label className="grid gap-1.5">
-                      <span className="quiz-label">Horas trabalhadas no mês</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className="quiz-input"
-                        placeholder="ex.: 200"
-                        value={horasMes}
-                        onChange={(e) => setHorasMes(maskIntTyping(e.target.value))}
-                      />
-                    </label>
-                    <label className="grid gap-1.5">
-                      <span className="quiz-label">Mecânicos ativos</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className="quiz-input"
-                        placeholder="ex.: 2"
-                        value={mecanicos}
-                        onChange={(e) => setMecanicos(e.target.value)}
-                      />
-                    </label>
-                  </div>
-
-                  {/* multiplicador */}
-                  <div className="calc-mult mt-6">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="quiz-label">Multiplicador</span>
-                      <span className="calc-mult-value">
-                        {multiplicador.toFixed(multInteiro ? 0 : 1)}×
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      className="calc-range"
-                      min={MULT_MIN}
-                      max={MULT_MAX}
-                      step={0.1}
-                      value={multiplicador}
-                      onChange={(e) => setMultiplicador(Number(e.target.value))}
-                    />
-                    <p className="calc-warn">
-                      <span aria-hidden="true">⚠</span> Valor variável — ajuste
-                      entre <b>1</b> e <b>2</b> conforme a margem desejada.
-                    </p>
-                  </div>
-                </div>
-
-                {/* readout do custo da hora */}
-                <div className={`calc-readout mt-6 ${pulseHora ? "is-pulsing" : ""}`}>
-                  <div className="calc-readout-breakdown">
-                    <div>
-                      <span className="calc-readout-k">Custo fixo total</span>
-                      <span className="calc-readout-v">
-                        <AnimatedBRL value={totalCustos} />
-                      </span>
-                    </div>
-                    <div>
-                      <span className="calc-readout-k">Horas efetivas</span>
-                      <span className="calc-readout-v">
-                        {hora.horasEfetivas
-                          ? hora.horasEfetivas.toLocaleString("pt-BR", {
-                              maximumFractionDigits: 1,
-                            }) + " h"
-                          : "—"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="calc-readout-k">Custo base/hora</span>
-                      <span className="calc-readout-v">
-                        <AnimatedBRL value={hora.custoBase} />
-                      </span>
-                    </div>
-                  </div>
-                  <div className="calc-readout-main">
-                    <span className="calc-readout-main-k">Custo da hora final</span>
-                    <span className="calc-readout-num">
-                      <AnimatedBRL value={hora.custoFinal} />
-                      <small>/h</small>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center mt-7 gap-3">
-                  <button className="calc-back" onClick={limparCampos}>
-                    Limpar campos
-                  </button>
-                  <button className="btn" onClick={() => goToStep(2)}>
-                    Avançar para a peça →
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* ============ PASSO 2 ============ */}
             {step === 2 && (
               <div className="cta-reveal">
                 <div className="calc-card">
-                  <p className="calc-card-kicker">Passo 02 — Valor da peça</p>
+                  <p className="calc-card-kicker">
+                    Passo {ehAdmin ? "02" : "01"} — Valor da peça
+                  </p>
                   <h2 className="calc-card-title">Precificação das peças</h2>
                   <p className="calc-card-sub">
                     Adicione as peças do orçamento. O markup é aplicado
@@ -774,9 +541,13 @@ export default function Calculadora() {
                 </div>
 
                 <div className="flex justify-between items-center mt-7">
-                  <button className="calc-back" onClick={() => goToStep(1)}>
-                    ← Voltar
-                  </button>
+                  {ehAdmin ? (
+                    <button className="calc-back" onClick={() => goToStep(1)}>
+                      ← Voltar
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                   <button className="btn" onClick={() => goToStep(3)}>
                     Montar orçamento →
                   </button>
@@ -788,11 +559,15 @@ export default function Calculadora() {
             {step === 3 && (
               <div className="cta-reveal">
                 <div className="calc-card">
-                  <p className="calc-card-kicker">Passo 03 — Orçamento</p>
+                  <p className="calc-card-kicker">
+                    Passo {ehAdmin ? "03" : "02"} — Orçamento
+                  </p>
                   <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
                   <p className="calc-card-sub">
-                    Informe o cliente e as horas de serviço de cada peça. O
-                    valor da hora vem do Passo 01 e fica travado.
+                    Informe o cliente e as horas de serviço de cada peça.{" "}
+                    {ehAdmin
+                      ? "O valor da hora vem do Passo 01 e fica travado."
+                      : "O valor da hora é definido pela sua oficina e fica travado."}
                   </p>
 
                   <div className="grid gap-4 mt-6">
@@ -823,7 +598,7 @@ export default function Calculadora() {
                       <span className="quiz-label">
                         Valor da hora{" "}
                         <span className="calc-lock-tag">
-                          🔒 definido no Passo 01
+                          🔒 {ehAdmin ? "definido no Passo 01" : `definido por ${nomeEmpresa}`}
                         </span>
                       </span>
                       <span className="calc-money calc-money--locked">
@@ -969,6 +744,27 @@ export default function Calculadora() {
               </div>
             )}
           </>
+        )}
+
+        {/* ============ PASSO 1 (admin-only) ============
+            Fica MONTADO o tempo todo (oculto por CSS fora do passo 1):
+            desmontar perderia edições ainda não salvas pelo debounce e
+            remontaria com o snapshot antigo do servidor. Para funcionário
+            este branch simplesmente não existe — nem o chunk é carregado. */}
+        {ehAdmin && (
+          <div
+            className={
+              view === "calc" && step === 1 ? "cta-reveal" : "hidden"
+            }
+          >
+            <Passo1
+              empresaId={empresaId}
+              inicial={passo1Inicial}
+              onValorHora={setValorHora}
+              onAvancar={() => goToStep(2)}
+              onLimparResto={limparResto}
+            />
+          </div>
         )}
 
         {/* ============ HISTÓRICO ============ */}
