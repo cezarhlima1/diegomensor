@@ -6,3 +6,8 @@
 .DS_Store
 .env*
 next-env.d.ts
+!.env.example
+
+# artefatos de planejamento/build do code-foundations (não commitar)
+.code-foundations/
+docs/code-standards.md
