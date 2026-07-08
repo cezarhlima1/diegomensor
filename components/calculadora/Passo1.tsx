@@ -204,16 +204,6 @@ export default function Passo1({
             </span>
           </div>
           <div>
-            <span className="calc-readout-k">Horas efetivas</span>
-            <span className="calc-readout-v">
-              {hora.horasEfetivas
-                ? hora.horasEfetivas.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 1,
-                  }) + " h"
-                : "—"}
-            </span>
-          </div>
-          <div>
             <span className="calc-readout-k">Custo base/hora</span>
             <span className="calc-readout-v">
               <AnimatedBRL value={hora.custoBase} />

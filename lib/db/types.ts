@@ -35,3 +35,15 @@ export type CalcPasso1Row = {
   multiplicador: number;
   updated_at: string;
 };
+
+/**
+ * Linha de public.calc_config — markup de peças (Passo 2) e sufixo do
+ * orçamento (Passo 3), por empresa. RLS: qualquer membro lê (não é
+ * admin-only como calc_passo1).
+ */
+export type CalcConfigRow = {
+  empresa_id: string;
+  markup_tiers: number[];
+  sufixo_orcamento: string;
+  updated_at: string;
+};

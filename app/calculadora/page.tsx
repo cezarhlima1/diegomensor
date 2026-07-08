@@ -6,7 +6,10 @@ import Footer from "@/components/Footer";
 import HeaderLogado from "@/components/auth/HeaderLogado";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Passo1Dados } from "@/components/calculadora/calcLogic";
+import type {
+  Passo1Dados,
+  Passo2ConfigDados,
+} from "@/components/calculadora/calcLogic";
 
 export const metadata: Metadata = {
   title: "Calculadora de Precificação - Diego Mensor",
@@ -55,6 +58,30 @@ export default async function CalculadoraPage() {
     }
   }
 
+  // Configuração dos Passos 2-3 (markup por faixa, sufixo do orçamento):
+  // legível por QUALQUER membro (RLS "calc_config: select se membro") — ao
+  // contrário de calc_passo1, não é gate por papel.
+  let passo2ConfigInicial: Passo2ConfigDados | undefined;
+  {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("calc_config")
+      .select("markup_tiers, sufixo_orcamento")
+      .eq("empresa_id", sessao.empresaAtiva.id)
+      .maybeSingle();
+    if (error) {
+      throw new Error(
+        `calculadora: falha ao carregar calc_config: ${error.message}`
+      );
+    }
+    if (data) {
+      passo2ConfigInicial = {
+        markupTiers: (data.markup_tiers ?? []) as number[],
+        sufixoOrcamento: data.sufixo_orcamento ?? "",
+      };
+    }
+  }
+
   return (
     <>
       <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
@@ -75,6 +102,7 @@ export default async function CalculadoraPage() {
           empresaId={sessao.empresaAtiva.id}
           valorHoraInicial={sessao.empresaAtiva.valorHora}
           passo1Inicial={passo1Inicial}
+          passo2ConfigInicial={passo2ConfigInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
         />
       </main>

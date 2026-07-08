@@ -57,7 +57,7 @@ export const MULT_MAX = 2;
 export const MULT_DEFAULT = 2;
 
 /* ---------- ajuste manual do markup da peça ---------- */
-export const MARKUP_MIN = 65;
+export const MARKUP_MIN = 0;
 export const MARKUP_MAX = 300;
 
 /* ---------- parsing / formatação (pt-BR) ---------- */
@@ -233,7 +233,6 @@ export type Orcamento = {
 };
 
 const STORAGE_ORCAMENTOS = "calc:orcamentos:v1";
-const STORAGE_TIERS = "calc:markupTiers:v1";
 const STORAGE_INPUTS = "calc:inputs:v1";
 
 /**
@@ -334,36 +333,40 @@ export function saveOrcamentos(list: Orcamento[], empresaId: string): void {
   }
 }
 
-export function loadTiers(empresaId: string): MarkupTier[] {
-  if (typeof window === "undefined") return DEFAULT_MARKUP_TIERS;
-  try {
-    const raw = window.localStorage.getItem(
-      chaveDaEmpresa(STORAGE_TIERS, empresaId),
-    );
-    if (!raw) return DEFAULT_MARKUP_TIERS;
-    const saved = JSON.parse(raw) as { markup: number }[];
-    // mantém os limites/rótulos padrão; só restaura os percentuais editados
-    if (!Array.isArray(saved) || saved.length !== DEFAULT_MARKUP_TIERS.length)
-      return DEFAULT_MARKUP_TIERS;
-    return DEFAULT_MARKUP_TIERS.map((t, i) => ({
-      ...t,
-      markup: Number.isFinite(saved[i]?.markup) ? saved[i].markup : t.markup,
-    }));
-  } catch {
-    return DEFAULT_MARKUP_TIERS;
-  }
-}
+/* ---------- Passo #02 — configuração salva no banco (calc_config) ---------- */
+/**
+ * Markup por faixa e sufixo do orçamento: diferente do Passo 1, qualquer
+ * membro da empresa (admin ou funcionário) lê e edita — persistido via
+ * server action salvarPasso2Config, não mais em localStorage.
+ */
+export type Passo2ConfigDados = {
+  /** um valor (%) por faixa, na mesma ordem/quantidade de DEFAULT_MARKUP_TIERS. */
+  markupTiers: number[];
+  sufixoOrcamento: string;
+};
 
-export function saveTiers(tiers: MarkupTier[], empresaId: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      chaveDaEmpresa(STORAGE_TIERS, empresaId),
-      JSON.stringify(tiers.map((t) => ({ markup: t.markup }))),
-    );
-  } catch {
-    // ignora
-  }
+export const DEFAULT_SUFIXO_ORCAMENTO = `Valores sujeito a alteração
+
+💰 Formas de pagamento:
+➡️ Cartões de crédito e débito (pagamento em até ?? x sem juros nos cartões de crédito, ou em até ??x com acréscimo da encargos da máquina de cartão)
+➡️ CDC Viacredi (consulte simulação)
+
+Orçamentos possui validade de 7 dias.
+
+Equipe???
+Excelência em qualidade e atendimento`;
+
+/** aplica os percentuais salvos (calc_config.markup_tiers) sobre as faixas padrão. */
+export function tiersFromMarkups(markups: number[]): MarkupTier[] {
+  if (
+    !Array.isArray(markups) ||
+    markups.length !== DEFAULT_MARKUP_TIERS.length
+  )
+    return DEFAULT_MARKUP_TIERS;
+  return DEFAULT_MARKUP_TIERS.map((t, i) => ({
+    ...t,
+    markup: Number.isFinite(markups[i]) ? markups[i] : t.markup,
+  }));
 }
 
 /* ---------- mensagem de orçamento (WhatsApp / copiar) ---------- */
@@ -373,6 +376,7 @@ export function buildOrcamentoMsg(o: {
   pecas: PecaResumo[];
   maoDeObra: number;
   total: number;
+  sufixo?: string;
 }): string {
   const linhas: string[] = [
     `*Orçamento - ${o.nomeCliente.trim() || "Cliente"}*`,
@@ -388,10 +392,11 @@ export function buildOrcamentoMsg(o: {
     linhas.push("", nome);
     if (p.valor > 0) linhas.push(`Valor: ${brl(p.valor)}`);
     if ((p.maoDeObra ?? 0) > 0)
-      linhas.push(`Mão de obra: ${brl(p.maoDeObra ?? 0)}`);
+      linhas.push(`Hora técnica: ${brl(p.maoDeObra ?? 0)}`);
   }
 
   linhas.push("", `*Total: ${brl(o.total)}*`);
+  if (o.sufixo?.trim()) linhas.push("", o.sufixo.trim());
   return linhas.join("\n");
 }
 

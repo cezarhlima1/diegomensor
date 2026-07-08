@@ -6,6 +6,9 @@ import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import type { ResultadoAuth } from "@/components/auth/actions";
 import {
   CUSTO_FIELDS,
+  DEFAULT_MARKUP_TIERS,
+  MARKUP_MAX,
+  MARKUP_MIN,
   MULT_DEFAULT,
   MULT_MAX,
   MULT_MIN,
@@ -13,13 +16,17 @@ import {
   parseNum,
   somaCustos,
   type Passo1Dados,
+  type Passo2ConfigDados,
 } from "./calcLogic";
 
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
+const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
 
 /** Teto de caracteres por campo persistido — a máscara pt-BR nunca passa disso. */
 const MAX_CHARS_CAMPO = 20;
+/** Teto de caracteres do sufixo do orçamento — texto livre, mas não ilimitado. */
+const MAX_CHARS_SUFIXO = 2000;
 
 /**
  * Persiste os insumos do Passo 1 (calc_passo1) e o resultado consolidado
@@ -101,6 +108,45 @@ export async function salvarPasso1(
       "salvarPasso1: falha ao gravar empresas.valor_hora:",
       erroValorHora.message
     );
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Persiste a configuração do Passo 2-3 (calc_config): markup por faixa e
+ * sufixo do orçamento. Diferente de salvarPasso1, QUALQUER membro da empresa
+ * (admin ou funcionário) pode salvar — os dois papéis usam e ajustam esses
+ * valores na tela. Chamado com debounce pelo componente Calculadora.
+ */
+export async function salvarPasso2Config(
+  empresaId: string,
+  dados: Passo2ConfigDados
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) {
+    return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+
+  const markupTiers = DEFAULT_MARKUP_TIERS.map((t, i) => {
+    const v = Number(dados.markupTiers?.[i]);
+    return Number.isFinite(v) ? Math.min(MARKUP_MAX, Math.max(MARKUP_MIN, v)) : t.markup;
+  });
+  const sufixoOrcamento = String(dados.sufixoOrcamento ?? "").slice(
+    0,
+    MAX_CHARS_SUFIXO
+  );
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("calc_config").upsert({
+    empresa_id: empresaId,
+    markup_tiers: markupTiers,
+    sufixo_orcamento: sufixoOrcamento,
+  });
+  if (error) {
+    console.error("salvarPasso2Config: falha ao gravar calc_config:", error.message);
     return { ok: false, error: ERRO_GENERICO };
   }
 

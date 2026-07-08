@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import nextDynamic from "next/dynamic";
 import type { Papel } from "@/lib/db/types";
 import {
-  DEFAULT_MARKUP_TIERS,
+  DEFAULT_SUFIXO_ORCAMENTO,
   MARKUP_MIN,
   MARKUP_MAX,
   brl,
@@ -14,7 +14,6 @@ import {
   formatMoneyBlur,
   loadInputs,
   loadOrcamentos,
-  loadTiers,
   maoDeObraPeca,
   markupDaPeca,
   maskIntTyping,
@@ -25,16 +24,24 @@ import {
   quantidadePeca,
   saveInputs,
   saveOrcamentos,
-  saveTiers,
   somaMaoDeObra,
   somaPecas,
   tierForCost,
+  tiersFromMarkups,
   type MarkupTier,
   type Orcamento,
   type Passo1Dados,
+  type Passo2ConfigDados,
   type Peca,
 } from "./calcLogic";
 import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
+import { salvarPasso2Config } from "./actions";
+
+/** Espera após a última edição antes de persistir no banco (ms). */
+const DEBOUNCE_SALVAR_MS = 800;
+
+/** Estado do save debounced da config do Passo 2-3 — falha nunca é silenciosa. */
+type SalvamentoConfig = "ocioso" | "salvando" | "salvo" | "erro";
 
 // Passo 1 é admin-only e carregado sob demanda: o chunk com o form dos
 // custos gerenciais nunca é servido quando a página renderiza para
@@ -56,6 +63,7 @@ export default function Calculadora({
   empresaId,
   valorHoraInicial,
   passo1Inicial,
+  passo2ConfigInicial,
   nomeEmpresa,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
@@ -66,6 +74,8 @@ export default function Calculadora({
   valorHoraInicial: number;
   /** Insumos do Passo 1 (presente APENAS para admin; nunca p/ funcionário). */
   passo1Inicial?: Passo1Dados;
+  /** Markup por faixa + sufixo do orçamento (calc_config) — qualquer membro. */
+  passo2ConfigInicial?: Passo2ConfigDados;
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
 }) {
@@ -78,14 +88,22 @@ export default function Calculadora({
   // funcionário usa o consolidado do servidor (empresas.valor_hora) e só.
   const [valorHora, setValorHora] = useState(valorHoraInicial);
 
-  // Passo #02
+  // Passo #02 — markup por faixa: vem do banco (calc_config), qualquer
+  // membro lê/edita e reutiliza os valores que a empresa definiu.
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [expandedId, setExpandedId] = useState<string>("");
-  const [tiers, setTiers] = useState<MarkupTier[]>(DEFAULT_MARKUP_TIERS);
+  const [tiers, setTiers] = useState<MarkupTier[]>(() =>
+    tiersFromMarkups(passo2ConfigInicial?.markupTiers ?? []),
+  );
 
-  // Passo #03
+  // Passo #03 — sufixo do orçamento: também vem do banco (calc_config).
   const [nomeCliente, setNomeCliente] = useState("");
   const [nomeCarro, setNomeCarro] = useState("");
+  const [sufixoOrcamento, setSufixoOrcamento] = useState(
+    passo2ConfigInicial?.sufixoOrcamento ?? DEFAULT_SUFIXO_ORCAMENTO,
+  );
+  const [salvamentoConfig, setSalvamentoConfig] =
+    useState<SalvamentoConfig>("ocioso");
 
   // Histórico
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
@@ -99,7 +117,6 @@ export default function Calculadora({
   // têm namespace por empresa — dados de outra empresa não vazam.
   useEffect(() => {
     setOrcamentos(loadOrcamentos(empresaId));
-    setTiers(loadTiers(empresaId));
     const saved = loadInputs(empresaId);
     // reaplica a máscara de moeda aos valores salvos
     const pecasFmt = saved.pecas.map((p) => ({
@@ -113,12 +130,33 @@ export default function Calculadora({
     setHydrated(true);
   }, [empresaId]);
 
-  // persiste edições da tabela de markup (só depois de reidratar: senão o
-  // default sobrescreveria os percentuais salvos da empresa)
+  // markup por faixa + sufixo do orçamento: persistidos no banco
+  // (calc_config), com debounce — o estado inicial JÁ é o que está salvo
+  // (veio via prop passo2ConfigInicial), então não salva na montagem.
+  const montadoConfigRef = useRef(false);
+  const seqConfigRef = useRef(0);
   useEffect(() => {
-    if (!hydrated) return;
-    saveTiers(tiers, empresaId);
-  }, [hydrated, tiers, empresaId]);
+    if (!montadoConfigRef.current) {
+      montadoConfigRef.current = true;
+      return;
+    }
+    setSalvamentoConfig("salvando");
+    const seq = ++seqConfigRef.current;
+    const id = window.setTimeout(() => {
+      salvarPasso2Config(empresaId, {
+        markupTiers: tiers.map((t) => t.markup),
+        sufixoOrcamento,
+      })
+        .then((r) => {
+          if (seq !== seqConfigRef.current) return;
+          setSalvamentoConfig(r.ok ? "salvo" : "erro");
+        })
+        .catch(() => {
+          if (seq === seqConfigRef.current) setSalvamentoConfig("erro");
+        });
+    }, DEBOUNCE_SALVAR_MS);
+    return () => window.clearTimeout(id);
+  }, [empresaId, tiers, sufixoOrcamento]);
 
   // persiste os dados digitados pelo usuário (Passos 2-3; o Passo 1 mora
   // no banco e nunca entra neste payload)
@@ -227,6 +265,7 @@ export default function Calculadora({
       pecas: pecasResumo(),
       maoDeObra: maoDeObraTotal,
       total: totalOrcamento,
+      sufixo: sufixoOrcamento,
     });
   }
 
@@ -285,6 +324,7 @@ export default function Calculadora({
       pecas: o.pecas ?? [],
       maoDeObra: o.maoDeObra ?? o.valorHora ?? 0,
       total: o.total,
+      sufixo: sufixoOrcamento,
     });
     window.open(
       `https://wa.me/?text=${encodeURIComponent(msg)}`,
@@ -445,7 +485,20 @@ export default function Calculadora({
                                   <span className="quiz-label">
                                     Markup da peça
                                   </span>
-                                  <span className="calc-mult-value">{mk}%</span>
+                                  <span className="calc-mult-value">
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={String(mk)}
+                                      onChange={(e) =>
+                                        setPecaMarkup(
+                                          p.id,
+                                          Number(e.target.value.replace(/\D/g, "")) || 0,
+                                        )
+                                      }
+                                    />
+                                    %
+                                  </span>
                                 </div>
                                 <input
                                   type="range"
@@ -462,7 +515,10 @@ export default function Calculadora({
                                   <span aria-hidden="true">⚠</span> Ajuste entre{" "}
                                   <b>{MARKUP_MIN}%</b> e <b>{MARKUP_MAX}%</b>.
                                   Sugestão da faixa:{" "}
-                                  <b>{tierForCost(custoNum, tiers).markup}%</b>.
+                                  <b className="calc-suggestion">
+                                    {tierForCost(custoNum, tiers).markup}%
+                                  </b>
+                                  .
                                 </p>
                               </div>
 
@@ -562,7 +618,7 @@ export default function Calculadora({
                   <p className="calc-card-kicker">
                     Passo {ehAdmin ? "03" : "02"} — Orçamento
                   </p>
-                  <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
+                  <h2 className="calc-card-title">Cliente, hora técnica e peças</h2>
                   <p className="calc-card-sub">
                     Informe o cliente e as horas de serviço de cada peça.{" "}
                     {ehAdmin
@@ -660,6 +716,36 @@ export default function Calculadora({
                       </div>
                     </>
                   )}
+
+                  <div className="calc-divider" />
+                  <label className="grid gap-1.5">
+                    <span className="quiz-label">
+                      Mensagem final do orçamento{" "}
+                      <span className="calc-edit-hint">
+                        (aparece no fim da mensagem copiada/enviada)
+                      </span>
+                    </span>
+                    <textarea
+                      className="quiz-input calc-sufixo"
+                      rows={6}
+                      value={sufixoOrcamento}
+                      onChange={(e) => setSufixoOrcamento(e.target.value)}
+                    />
+                  </label>
+                  {salvamentoConfig !== "ocioso" && (
+                    <p
+                      className={`mt-2 ${
+                        salvamentoConfig === "erro" ? "calc-warn" : "calc-saved"
+                      }`}
+                      role="status"
+                    >
+                      {salvamentoConfig === "salvando" && "Salvando…"}
+                      {salvamentoConfig === "salvo" &&
+                        "✓ Mensagem e markup salvos para a empresa."}
+                      {salvamentoConfig === "erro" &&
+                        "⚠ Não foi possível salvar. Altere um campo para tentar de novo."}
+                    </p>
+                  )}
                 </div>
 
                 <div
@@ -683,7 +769,7 @@ export default function Calculadora({
                               {brl(precoPecaItem(p, tiers))}
                             </span>
                             <span>
-                              <em>Mão de obra</em>
+                              <em>Hora técnica</em>
                               {brl(maoDeObraPeca(p, valorHora))}
                             </span>
                           </span>
@@ -693,7 +779,7 @@ export default function Calculadora({
                   )}
                   <div className="calc-readout-breakdown">
                     <div>
-                      <span className="calc-readout-k">Total mão de obra</span>
+                      <span className="calc-readout-k">Total hora técnica</span>
                       <span className="calc-readout-v">
                         <AnimatedBRL value={maoDeObraTotal} />
                       </span>
@@ -808,7 +894,7 @@ export default function Calculadora({
                       </div>
                       <div className="calc-hist-vals">
                         <span>
-                          <i>Mão de obra</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
+                          <i>Hora técnica</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
                         </span>
                         <span>
                           <i>Peças</i> {brl(o.valorPeca)}
