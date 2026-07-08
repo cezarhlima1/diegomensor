@@ -1,24 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Manrope, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 /* Fontes auto-hospedadas (sem layout shift) e expostas como CSS vars
-   que o @theme do Tailwind consome (--font-display/body/mono). */
-const archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
+   que o @theme do Tailwind consome (--font-display/body/mono).
+   Arquivos woff2 (variable) versionados em app/fonts/ para não depender
+   de fetch ao Google Fonts durante o build na Vercel. */
+const archivo = localFont({
+  src: "./fonts/archivo-variable.woff2",
+  weight: "100 900",
   variable: "--font-archivo",
   display: "swap",
 });
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const manrope = localFont({
+  src: "./fonts/manrope-variable.woff2",
+  weight: "100 900",
   variable: "--font-manrope",
   display: "swap",
 });
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500", "700"],
+const jetbrains = localFont({
+  src: "./fonts/jetbrainsmono-variable.woff2",
+  weight: "100 900",
   variable: "--font-jetbrains",
   display: "swap",
 });
