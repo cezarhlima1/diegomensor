@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import FacebookPixel from "@/components/FacebookPixel";
+import ClarityScript from "@/components/ClarityScript";
 import VturbPlayer from "@/components/VturbPlayer";
 import ExpiryBanner from "@/components/ExpiryBanner";
 import BackRedirect from "@/components/BackRedirect";
@@ -18,6 +19,7 @@ export default function V1() {
   return (
     <>
       <FacebookPixel />
+      <ClarityScript projectId="xjetvzvdqx" />
       {/* Preload/prefetch do player VSL — o React 19 eleva estas tags ao <head>.
          Espelha o snippet de performance do embed da ConverteAI. */}
       <link

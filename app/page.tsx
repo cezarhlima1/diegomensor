@@ -1,4 +1,5 @@
 import FacebookPixel from "@/components/FacebookPixel";
+import ClarityScript from "@/components/ClarityScript";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ForWho from "@/components/ForWho";
@@ -18,6 +19,7 @@ export default function Home() {
   return (
     <>
       <FacebookPixel />
+      <ClarityScript projectId="xbomd0cmow" />
       <Header />
       <main>
         <Hero />

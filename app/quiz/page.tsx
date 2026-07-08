@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Quiz from "@/components/quiz/Quiz";
 import Footer from "@/components/Footer";
+import ClarityScript from "@/components/ClarityScript";
 
 export const metadata: Metadata = {
   title: "Diagnóstico da sua Oficina - Diego Mensor",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function QuizPage() {
   return (
     <>
+      <ClarityScript projectId="xjeuhpvk1z" />
       <main>
         <Quiz />
       </main>
