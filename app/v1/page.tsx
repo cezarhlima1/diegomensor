@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FacebookPixel from "@/components/FacebookPixel";
 import VturbPlayer from "@/components/VturbPlayer";
 import ExpiryBanner from "@/components/ExpiryBanner";
 import BackRedirect from "@/components/BackRedirect";
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export default function V1() {
   return (
     <>
+      <FacebookPixel />
       {/* Preload/prefetch do player VSL — o React 19 eleva estas tags ao <head>.
          Espelha o snippet de performance do embed da ConverteAI. */}
       <link

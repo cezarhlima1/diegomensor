@@ -1,3 +1,4 @@
+import FacebookPixel from "@/components/FacebookPixel";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ForWho from "@/components/ForWho";
@@ -16,6 +17,7 @@ import BackRedirect from "@/components/BackRedirect";
 export default function Home() {
   return (
     <>
+      <FacebookPixel />
       <Header />
       <main>
         <Hero />
