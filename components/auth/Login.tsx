@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
@@ -86,10 +85,6 @@ export default function Login() {
           {carregando ? "Entrando…" : "Entrar"}
         </button>
       </form>
-
-      <p className="auth-alt">
-        Ainda não tem conta? <Link href="/registrar">Criar conta</Link>
-      </p>
     </div>
   );
 }

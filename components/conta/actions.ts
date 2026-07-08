@@ -38,7 +38,7 @@ const ERRO_SEM_PERMISSAO =
  *     limite não cria nada em lugar nenhum;
  *  3. cria o usuário no Auth (e-mail já confirmado) e insere o vínculo;
  *     se o vínculo falhar (ex.: trigger de limite em corrida), o usuário
- *     do Auth é apagado (compensação, mesmo padrão de registrarAdmin).
+ *     do Auth é apagado (compensação).
  */
 export async function adicionarUsuario(dados: {
   nome: string;
