@@ -211,7 +211,7 @@ export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
   return pecas.reduce((acc, p) => acc + maoDeObraPeca(p, valorHora), 0);
 }
 
-/* ---------- Histórico de orçamentos (localStorage) ---------- */
+/* ---------- Histórico de orçamentos (banco: tabela orcamentos) ---------- */
 export type PecaResumo = {
   nome: string;
   valor: number;
@@ -219,20 +219,24 @@ export type PecaResumo = {
   maoDeObra?: number;
 };
 
+/** Únicas duas opções aceitas pelo CHECK da coluna orcamentos.status. */
+export type StatusOrcamento = "Aguardando aprovação" | "Aprovado";
+
 export type Orcamento = {
   id: string;
   nomeCliente: string;
   nomeCarro: string;
+  placa: string;
   valorHora: number;
   horas: number;
   maoDeObra: number;
   pecas: PecaResumo[];
   valorPeca: number;
   total: number;
+  status: StatusOrcamento;
   data: string; // ISO
 };
 
-const STORAGE_ORCAMENTOS = "calc:orcamentos:v1";
 const STORAGE_INPUTS = "calc:inputs:v1";
 
 /**
@@ -252,12 +256,14 @@ export type CalcInputs = {
   pecas: Peca[];
   nomeCliente: string;
   nomeCarro: string;
+  placa: string;
 };
 
 export const EMPTY_INPUTS: CalcInputs = {
   pecas: [novaPeca()],
   nomeCliente: "",
   nomeCarro: "",
+  placa: "",
 };
 
 export function loadInputs(empresaId: string): CalcInputs {
@@ -305,31 +311,6 @@ export function clearInputs(empresaId: string): void {
     window.localStorage.removeItem(chaveDaEmpresa(STORAGE_INPUTS, empresaId));
   } catch {
     // ignora
-  }
-}
-
-export function loadOrcamentos(empresaId: string): Orcamento[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(
-      chaveDaEmpresa(STORAGE_ORCAMENTOS, empresaId),
-    );
-    const parsed = raw ? (JSON.parse(raw) as Orcamento[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveOrcamentos(list: Orcamento[], empresaId: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      chaveDaEmpresa(STORAGE_ORCAMENTOS, empresaId),
-      JSON.stringify(list),
-    );
-  } catch {
-    // armazenamento indisponível (modo privado / cota): ignora silenciosamente
   }
 }
 

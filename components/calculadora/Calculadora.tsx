@@ -13,7 +13,6 @@ import {
   formatData,
   formatMoneyBlur,
   loadInputs,
-  loadOrcamentos,
   maoDeObraPeca,
   markupDaPeca,
   maskIntTyping,
@@ -23,7 +22,6 @@ import {
   precoPecaItem,
   quantidadePeca,
   saveInputs,
-  saveOrcamentos,
   somaMaoDeObra,
   somaPecas,
   tierForCost,
@@ -33,9 +31,15 @@ import {
   type Passo1Dados,
   type Passo2ConfigDados,
   type Peca,
+  type StatusOrcamento,
 } from "./calcLogic";
 import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
-import { salvarPasso2Config } from "./actions";
+import {
+  atualizarStatusOrcamento,
+  criarOrcamento,
+  excluirOrcamento,
+  salvarPasso2Config,
+} from "./actions";
 
 /** Espera após a última edição antes de persistir no banco (ms). */
 const DEBOUNCE_SALVAR_MS = 800;
@@ -64,6 +68,7 @@ export default function Calculadora({
   valorHoraInicial,
   passo1Inicial,
   passo2ConfigInicial,
+  orcamentosIniciais,
   nomeEmpresa,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
@@ -76,6 +81,8 @@ export default function Calculadora({
   passo1Inicial?: Passo1Dados;
   /** Markup por faixa + sufixo do orçamento (calc_config) — qualquer membro. */
   passo2ConfigInicial?: Passo2ConfigDados;
+  /** Histórico de orçamentos da empresa (banco, tabela orcamentos), mais recente primeiro. */
+  orcamentosIniciais: Orcamento[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
 }) {
@@ -99,24 +106,30 @@ export default function Calculadora({
   // Passo #03 — sufixo do orçamento: também vem do banco (calc_config).
   const [nomeCliente, setNomeCliente] = useState("");
   const [nomeCarro, setNomeCarro] = useState("");
+  const [placa, setPlaca] = useState("");
   const [sufixoOrcamento, setSufixoOrcamento] = useState(
     passo2ConfigInicial?.sufixoOrcamento ?? DEFAULT_SUFIXO_ORCAMENTO,
   );
   const [salvamentoConfig, setSalvamentoConfig] =
     useState<SalvamentoConfig>("ocioso");
 
-  // Histórico
-  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+  // Histórico — vem do banco (tabela orcamentos), compartilhado entre os
+  // membros da empresa; o estado local só reflete as mudanças desta sessão.
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosIniciais);
+  const [salvandoOrcamento, setSalvandoOrcamento] = useState(false);
+  const [erroOrcamento, setErroOrcamento] = useState("");
+  const [atualizandoStatusId, setAtualizandoStatusId] = useState("");
   const [justSaved, setJustSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
   const [hydrated, setHydrated] = useState(false);
 
-  // hidrata do localStorage no cliente (evita mismatch de SSR); as chaves
-  // têm namespace por empresa — dados de outra empresa não vazam.
+  // hidrata o rascunho (Passos 2-3) do localStorage no cliente (evita
+  // mismatch de SSR); as chaves têm namespace por empresa — dados de outra
+  // empresa não vazam. O histórico de orçamentos já chega pronto do
+  // servidor via orcamentosIniciais (banco), não precisa hidratar aqui.
   useEffect(() => {
-    setOrcamentos(loadOrcamentos(empresaId));
     const saved = loadInputs(empresaId);
     // reaplica a máscara de moeda aos valores salvos
     const pecasFmt = saved.pecas.map((p) => ({
@@ -127,6 +140,7 @@ export default function Calculadora({
     setExpandedId(pecasFmt[pecasFmt.length - 1]?.id ?? "");
     setNomeCliente(saved.nomeCliente);
     setNomeCarro(saved.nomeCarro);
+    setPlaca(saved.placa);
     setHydrated(true);
   }, [empresaId]);
 
@@ -162,8 +176,8 @@ export default function Calculadora({
   // no banco e nunca entra neste payload)
   useEffect(() => {
     if (!hydrated) return;
-    saveInputs({ pecas, nomeCliente, nomeCarro }, empresaId);
-  }, [hydrated, pecas, nomeCliente, nomeCarro, empresaId]);
+    saveInputs({ pecas, nomeCliente, nomeCarro, placa }, empresaId);
+  }, [hydrated, pecas, nomeCliente, nomeCarro, placa, empresaId]);
 
   /* ---------- derivados ---------- */
   const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
@@ -191,6 +205,23 @@ export default function Calculadora({
   const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
 
+  // Totais do histórico por status — soma o valor total de cada orçamento
+  // conforme está aguardando aprovação ou já foi aprovado.
+  const totalPendente = useMemo(
+    () =>
+      orcamentos
+        .filter((o) => o.status === "Aguardando aprovação")
+        .reduce((acc, o) => acc + o.total, 0),
+    [orcamentos],
+  );
+  const totalAprovado = useMemo(
+    () =>
+      orcamentos
+        .filter((o) => o.status === "Aprovado")
+        .reduce((acc, o) => acc + o.total, 0),
+    [orcamentos],
+  );
+
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
     setStep(next);
@@ -205,6 +236,7 @@ export default function Calculadora({
     setExpandedId(p.id);
     setNomeCliente("");
     setNomeCarro("");
+    setPlaca("");
     clearInputs(empresaId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -284,26 +316,26 @@ export default function Calculadora({
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  function salvarOrcamento() {
-    const resumo = pecasResumo();
-    const orc: Orcamento = {
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : String(Date.now()),
+  async function salvarOrcamento() {
+    setSalvandoOrcamento(true);
+    setErroOrcamento("");
+    const resultado = await criarOrcamento(empresaId, {
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
+      placa: placa.trim(),
       valorHora,
       horas: pecasValidas.reduce((acc, p) => acc + parseNum(p.horas), 0),
       maoDeObra: maoDeObraTotal,
-      pecas: resumo,
+      pecas: pecasResumo(),
       valorPeca: pecasTotal,
       total: totalOrcamento,
-      data: new Date().toISOString(),
-    };
-    const next = [orc, ...orcamentos];
-    setOrcamentos(next);
-    saveOrcamentos(next, empresaId);
+    });
+    setSalvandoOrcamento(false);
+    if (!resultado.ok) {
+      setErroOrcamento(resultado.error);
+      return;
+    }
+    setOrcamentos((prev) => [resultado.orcamento, ...prev]);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2600);
   }
@@ -311,6 +343,7 @@ export default function Calculadora({
   function novoOrcamento() {
     setNomeCliente("");
     setNomeCarro("");
+    setPlaca("");
     setPecas((prev) => prev.map((p) => ({ ...p, horas: "" })));
     setView("calc");
     setStep(3);
@@ -333,10 +366,22 @@ export default function Calculadora({
     );
   }
 
-  function removerOrcamento(id: string) {
-    const next = orcamentos.filter((o) => o.id !== id);
-    setOrcamentos(next);
-    saveOrcamentos(next, empresaId);
+  async function removerOrcamento(id: string) {
+    const anterior = orcamentos;
+    setOrcamentos((prev) => prev.filter((o) => o.id !== id));
+    const resultado = await excluirOrcamento(empresaId, id);
+    if (!resultado.ok) setOrcamentos(anterior);
+  }
+
+  async function aprovarOrcamento(id: string) {
+    const anterior = orcamentos;
+    setAtualizandoStatusId(id);
+    setOrcamentos((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status: "Aprovado" as StatusOrcamento } : o)),
+    );
+    const resultado = await atualizarStatusOrcamento(empresaId, id, "Aprovado");
+    setAtualizandoStatusId("");
+    if (!resultado.ok) setOrcamentos(anterior);
   }
 
   // Passos exibidos: funcionário não tem o Passo 1; a numeração da UI é o
@@ -650,26 +695,41 @@ export default function Calculadora({
                       </label>
                     </div>
 
-                    <label className="grid gap-1.5">
-                      <span className="quiz-label">
-                        Valor da hora{" "}
-                        <span className="calc-lock-tag">
-                          🔒 {ehAdmin ? "definido no Passo 01" : `definido por ${nomeEmpresa}`}
-                        </span>
-                      </span>
-                      <span className="calc-money calc-money--locked">
-                        <span className="calc-money-prefix">R$</span>
+                    <div className="calc-grid-2">
+                      <label className="grid gap-1.5">
+                        <span className="quiz-label">Placa do veículo</span>
                         <input
                           type="text"
-                          readOnly
-                          tabIndex={-1}
-                          value={valorHora.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                          className="quiz-input"
+                          placeholder="ex.: ABC1D23"
+                          value={placa}
+                          maxLength={8}
+                          onChange={(e) =>
+                            setPlaca(e.target.value.toUpperCase())
+                          }
                         />
-                      </span>
-                    </label>
+                      </label>
+                      <label className="grid gap-1.5">
+                        <span className="quiz-label">
+                          Valor da hora{" "}
+                          <span className="calc-lock-tag">
+                            🔒 {ehAdmin ? "definido no Passo 01" : `definido por ${nomeEmpresa}`}
+                          </span>
+                        </span>
+                        <span className="calc-money calc-money--locked">
+                          <span className="calc-money-prefix">R$</span>
+                          <input
+                            type="text"
+                            readOnly
+                            tabIndex={-1}
+                            value={valorHora.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          />
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {pecasValidas.length > 0 && (
@@ -806,6 +866,11 @@ export default function Calculadora({
                       : "✓ Orçamento salvo no histórico."}
                   </p>
                 )}
+                {erroOrcamento && (
+                  <p className="calc-warn cta-reveal mt-4">
+                    <span aria-hidden="true">⚠</span> {erroOrcamento}
+                  </p>
+                )}
 
                 <div className="calc-actions mt-6">
                   <button
@@ -817,8 +882,12 @@ export default function Calculadora({
                   <button className="btn btn--wa" onClick={enviarWhatsApp}>
                     Enviar no WhatsApp
                   </button>
-                  <button className="btn" onClick={salvarOrcamento}>
-                    Salvar orçamento
+                  <button
+                    className="btn"
+                    onClick={salvarOrcamento}
+                    disabled={salvandoOrcamento}
+                  >
+                    {salvandoOrcamento ? "Salvando…" : "Salvar orçamento"}
                   </button>
                 </div>
 
@@ -869,6 +938,17 @@ export default function Calculadora({
               </div>
             ) : (
               <>
+                <div className="calc-totais">
+                  <div className="calc-totais-item calc-totais-item--pendente">
+                    <span className="calc-totais-k">Total pendente</span>
+                    <span className="calc-totais-v">{brl(totalPendente)}</span>
+                  </div>
+                  <div className="calc-totais-item calc-totais-item--aprovado">
+                    <span className="calc-totais-k">Total aprovado</span>
+                    <span className="calc-totais-v">{brl(totalAprovado)}</span>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                   <p className="quiz-label">
                     {orcamentos.length}{" "}
@@ -885,7 +965,12 @@ export default function Calculadora({
                     <div key={o.id} className="calc-hist">
                       <div className="calc-hist-main">
                         <span className="calc-hist-name">
-                          {o.nomeCliente || o.nomeCarro}
+                          <span className="calc-hist-name-text">
+                            {o.nomeCliente || o.nomeCarro}
+                          </span>
+                          {o.placa && (
+                            <span className="calc-hist-placa">{o.placa}</span>
+                          )}
                         </span>
                         <span className="calc-hist-date">
                           {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
@@ -903,6 +988,23 @@ export default function Calculadora({
                           <i>Total</i> {brl(o.total)}
                         </span>
                       </div>
+                      {o.status === "Aprovado" ? (
+                        <span className="calc-hist-status calc-hist-status--aprovado">
+                          Aprovado
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="calc-hist-status calc-hist-status--pendente"
+                          onClick={() => aprovarOrcamento(o.id)}
+                          disabled={atualizandoStatusId === o.id}
+                          aria-label={`Aprovar orçamento ${o.nomeCarro}`}
+                        >
+                          {atualizandoStatusId === o.id
+                            ? "Aprovando…"
+                            : "Aguardando aprovação"}
+                        </button>
+                      )}
                       <button
                         className="calc-hist-wa"
                         onClick={() => reenviarWhatsApp(o)}

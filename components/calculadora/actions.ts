@@ -15,8 +15,11 @@ import {
   calcCustoHora,
   parseNum,
   somaCustos,
+  type Orcamento,
+  type PecaResumo,
   type Passo1Dados,
   type Passo2ConfigDados,
+  type StatusOrcamento,
 } from "./calcLogic";
 
 const ERRO_SEM_PERMISSAO =
@@ -27,6 +30,14 @@ const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
 const MAX_CHARS_CAMPO = 20;
 /** Teto de caracteres do sufixo do orçamento — texto livre, mas não ilimitado. */
 const MAX_CHARS_SUFIXO = 2000;
+/** Teto de caracteres de nome de cliente/veículo do orçamento. */
+const MAX_CHARS_NOME = 120;
+/** Teto de caracteres da placa (formato Mercosul cabe em 7; sobra folga). */
+const MAX_CHARS_PLACA = 10;
+/** Teto de peças por orçamento — evita payload arbitrário no jsonb. */
+const MAX_PECAS = 100;
+
+const STATUS_VALIDOS: StatusOrcamento[] = ["Aguardando aprovação", "Aprovado"];
 
 /**
  * Persiste os insumos do Passo 1 (calc_passo1) e o resultado consolidado
@@ -147,6 +158,174 @@ export async function salvarPasso2Config(
   });
   if (error) {
     console.error("salvarPasso2Config: falha ao gravar calc_config:", error.message);
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true };
+}
+
+/** Sanitiza o snapshot de peças antes de gravar — nunca confia no shape recebido do client. */
+function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
+  return pecas.slice(0, MAX_PECAS).map((p) => ({
+    nome: String(p?.nome ?? "").slice(0, MAX_CHARS_NOME),
+    valor: Number.isFinite(Number(p?.valor)) ? Number(p.valor) : 0,
+    quantidade:
+      p?.quantidade != null && Number.isFinite(Number(p.quantidade))
+        ? Number(p.quantidade)
+        : undefined,
+    maoDeObra:
+      p?.maoDeObra != null && Number.isFinite(Number(p.maoDeObra))
+        ? Number(p.maoDeObra)
+        : undefined,
+  }));
+}
+
+function paraOrcamento(row: {
+  id: string;
+  nome_cliente: string;
+  nome_carro: string;
+  placa: string;
+  valor_hora: number;
+  horas: number;
+  mao_de_obra: number;
+  pecas: unknown;
+  valor_peca: number;
+  total: number;
+  status: string;
+  created_at: string;
+}): Orcamento {
+  return {
+    id: row.id,
+    nomeCliente: row.nome_cliente,
+    nomeCarro: row.nome_carro,
+    placa: row.placa,
+    valorHora: Number(row.valor_hora),
+    horas: Number(row.horas),
+    maoDeObra: Number(row.mao_de_obra),
+    pecas: (row.pecas ?? []) as PecaResumo[],
+    valorPeca: Number(row.valor_peca),
+    total: Number(row.total),
+    status: row.status as StatusOrcamento,
+    data: row.created_at,
+  };
+}
+
+const SELECT_ORCAMENTO =
+  "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
+
+export type ResultadoCriarOrcamento =
+  | { ok: true; orcamento: Orcamento }
+  | { ok: false; error: string };
+
+/**
+ * Cria um orçamento no histórico da empresa, sempre com status inicial
+ * "Aguardando aprovação" — o client nunca escolhe o status na criação.
+ * Qualquer membro da empresa (admin ou funcionário) pode salvar.
+ */
+export async function criarOrcamento(
+  empresaId: string,
+  dados: {
+    nomeCliente: string;
+    nomeCarro: string;
+    placa: string;
+    valorHora: number;
+    horas: number;
+    maoDeObra: number;
+    pecas: PecaResumo[];
+    valorPeca: number;
+    total: number;
+  }
+): Promise<ResultadoCriarOrcamento> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) {
+    return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("orcamentos")
+    .insert({
+      empresa_id: empresaId,
+      nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
+      nome_carro:
+        dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
+      placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
+      valor_hora: Number.isFinite(dados.valorHora) ? dados.valorHora : 0,
+      horas: Number.isFinite(dados.horas) ? dados.horas : 0,
+      mao_de_obra: Number.isFinite(dados.maoDeObra) ? dados.maoDeObra : 0,
+      pecas: sanitizarPecas(dados.pecas ?? []),
+      valor_peca: Number.isFinite(dados.valorPeca) ? dados.valorPeca : 0,
+      total: Number.isFinite(dados.total) ? dados.total : 0,
+    })
+    .select(SELECT_ORCAMENTO)
+    .single();
+
+  if (error || !data) {
+    console.error("criarOrcamento: falha ao gravar orcamentos:", error?.message);
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true, orcamento: paraOrcamento(data) };
+}
+
+/**
+ * Muda o status de um orçamento existente entre as duas únicas opções
+ * (Aguardando aprovação / Aprovado). Qualquer membro da empresa pode mudar —
+ * não é restrito a admin.
+ */
+export async function atualizarStatusOrcamento(
+  empresaId: string,
+  orcamentoId: string,
+  status: StatusOrcamento
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) {
+    return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+  if (!STATUS_VALIDOS.includes(status)) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("orcamentos")
+    .update({ status })
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId);
+
+  if (error) {
+    console.error(
+      "atualizarStatusOrcamento: falha ao gravar orcamentos:",
+      error.message
+    );
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true };
+}
+
+/** Remove um orçamento do histórico da empresa. */
+export async function excluirOrcamento(
+  empresaId: string,
+  orcamentoId: string
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) {
+    return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("orcamentos")
+    .delete()
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId);
+
+  if (error) {
+    console.error("excluirOrcamento: falha ao remover orcamentos:", error.message);
     return { ok: false, error: ERRO_GENERICO };
   }
 

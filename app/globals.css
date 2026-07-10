@@ -543,15 +543,31 @@ a:focus-visible, button:focus-visible {
   .calc-hist { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); transition: border-color .2s ease, transform .2s ease; }
   .calc-hist:hover { border-color: rgba(4,149,240,.4); transform: translateY(-2px); }
   .calc-hist-main { display: grid; gap: 2px; min-width: 0; flex: 1; }
-  .calc-hist-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .calc-hist-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; }
+  .calc-hist-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .calc-hist-placa { flex: none; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--color-blue); background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.3); border-radius: 6px; padding: 1px 6px; }
   .calc-hist-date { font-family: var(--font-mono); font-size: 11px; color: var(--color-muted-dim); }
   .calc-hist-vals { display: flex; gap: 18px; flex-wrap: wrap; }
   .calc-hist-vals span { font-family: var(--font-mono); font-size: 14px; color: var(--color-offwhite); }
   .calc-hist-vals i { display: block; font-style: normal; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted-dim); }
   .calc-hist-total span, .calc-hist-total { color: var(--color-brand-green); font-weight: 700; }
+  .calc-hist-status { flex: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
+  .calc-hist-status--pendente { color: var(--color-amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.32); cursor: pointer; }
+  .calc-hist-status--pendente:hover:not(:disabled) { background: rgba(245,166,35,.18); border-color: rgba(245,166,35,.55); }
+  .calc-hist-status--pendente:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+  .calc-hist-status--pendente:disabled { opacity: .6; cursor: default; }
+  .calc-hist-status--aprovado { color: var(--color-brand-green); background: rgba(47,210,122,.1); border-color: rgba(47,210,122,.32); cursor: default; }
   .calc-hist-del { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; line-height: 1; color: var(--color-muted); background: rgba(143,178,204,.06); border: 1px solid var(--color-line); cursor: pointer; transition: color .2s ease, background .2s ease, border-color .2s ease; }
   .calc-hist-del:hover { color: var(--color-brand-red); background: rgba(240,88,76,.1); border-color: rgba(240,88,76,.4); }
   @media (max-width: 560px) { .calc-hist { flex-wrap: wrap; } .calc-hist-vals { width: 100%; } }
+
+  /* ---------- histórico: totais por status ---------- */
+  .calc-totais { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .calc-totais-item { flex: 1; min-width: 170px; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); }
+  .calc-totais-k { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
+  .calc-totais-v { display: block; font-family: var(--font-mono); font-weight: 700; font-size: 19px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .calc-totais-item--pendente .calc-totais-v { color: var(--color-amber); }
+  .calc-totais-item--aprovado .calc-totais-v { color: var(--color-brand-green); }
 
   /* ---------- overdrive: cascata de campos ---------- */
   .calc-stagger > * { opacity: 0; animation: calcFieldIn .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 22ms); }

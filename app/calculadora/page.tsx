@@ -7,14 +7,17 @@ import HeaderLogado from "@/components/auth/HeaderLogado";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
+  Orcamento,
+  PecaResumo,
   Passo1Dados,
   Passo2ConfigDados,
+  StatusOrcamento,
 } from "@/components/calculadora/calcLogic";
 
 export const metadata: Metadata = {
   title: "Calculadora de Precificação - Diego Mensor",
   description:
-    "Calcule o custo real da sua hora, precifique peças com o markup certo e monte orçamentos para a sua oficina. Histórico salvo no navegador.",
+    "Calcule o custo real da sua hora, precifique peças com o markup certo e monte orçamentos para a sua oficina. Histórico compartilhado com a equipe.",
 };
 
 // Página por trás de login: nunca pode ser pré-renderizada. Sem isto, o
@@ -82,6 +85,40 @@ export default async function CalculadoraPage() {
     }
   }
 
+  // Histórico de orçamentos: legível por QUALQUER membro (RLS "orcamentos:
+  // select se membro") — admin e funcionário veem e acompanham o mesmo
+  // histórico compartilhado da empresa, incluindo o status de aprovação.
+  let orcamentosIniciais: Orcamento[] = [];
+  {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("orcamentos")
+      .select(
+        "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
+      )
+      .eq("empresa_id", sessao.empresaAtiva.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      throw new Error(
+        `calculadora: falha ao carregar orcamentos: ${error.message}`
+      );
+    }
+    orcamentosIniciais = (data ?? []).map((o) => ({
+      id: o.id,
+      nomeCliente: o.nome_cliente,
+      nomeCarro: o.nome_carro,
+      placa: o.placa,
+      valorHora: Number(o.valor_hora),
+      horas: Number(o.horas),
+      maoDeObra: Number(o.mao_de_obra),
+      pecas: (o.pecas ?? []) as PecaResumo[],
+      valorPeca: Number(o.valor_peca),
+      total: Number(o.total),
+      status: o.status as StatusOrcamento,
+      data: o.created_at,
+    }));
+  }
+
   return (
     <>
       <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
@@ -103,6 +140,7 @@ export default async function CalculadoraPage() {
           valorHoraInicial={sessao.empresaAtiva.valorHora}
           passo1Inicial={passo1Inicial}
           passo2ConfigInicial={passo2ConfigInicial}
+          orcamentosIniciais={orcamentosIniciais}
           nomeEmpresa={sessao.empresaAtiva.nome}
         />
       </main>
