@@ -788,6 +788,41 @@ a:focus-visible, button:focus-visible {
 }
 
 /* ============================================================
+   ADMIN GERAL — GESTÃO GLOBAL DE EMPRESAS E LICENÇAS (/admin)
+   ============================================================ */
+@layer components {
+  .admin-page { position: relative; padding-block: 40px 72px; }
+
+  /* selo de status da licença de uma pessoa — par visual do .conta-papel */
+  .licenca-badge {
+    flex: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; white-space: nowrap; border-radius: 100px; padding: 4px 10px;
+    border: 1px solid var(--color-line);
+  }
+  .licenca-badge--eterna { color: var(--color-muted); background: rgba(143,178,204,.08); }
+  .licenca-badge--ativa { color: var(--color-brand-green); background: rgba(47,210,122,.12); border-color: rgba(47,210,122,.35); }
+  .licenca-badge--expirada { color: var(--color-brand-red); background: rgba(240,88,76,.12); border-color: rgba(240,88,76,.35); }
+
+  /* linha de membro do admin: nome/e-mail + papel + status + editor de data */
+  .admin-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 13px 2px; border-top: 1px solid var(--color-line); }
+  .admin-item:last-child { border-bottom: 1px solid var(--color-line); }
+
+  /* editor inline da data de vencimento (input + salvar), lado a lado */
+  .admin-licenca-editor { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .admin-licenca-editor .quiz-input { width: 168px; padding: 9px 12px; font-size: 13px; }
+
+  /* botão para abrir/fechar o form de "adicionar usuário" de uma empresa */
+  .admin-toggle {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-blue); background: rgba(4,149,240,.08); border: 1px solid rgba(4,149,240,.35);
+    border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .admin-toggle:hover { background: rgba(4,149,240,.16); }
+  .admin-toggle:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
+}
+
+/* ============================================================
    IMERSÃO DESTRAVE — PÁGINAS DE CAPTURA (/destrave/lp1, /destrave/lp2)
    Identidade "oficina premium de alta performance": preto/grafite/azul-petróleo
    dominando ~80% da composição, concreto/metal desgastado como textura,

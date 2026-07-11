@@ -84,7 +84,23 @@ export async function adicionarUsuario(dados: {
     .from("empresa_usuarios")
     .select("*", { count: "exact", head: true })
     .eq("empresa_id", empresaId);
-  if (erroEmpresa || erroContagem || !empresa || totalMembros === null) {
+  // Licença do admin que está criando o usuário: o novo usuário herda a
+  // mesma data de vencimento (DW da licença por pessoa) — só o super admin
+  // define expiração "do zero"; quem cria dentro de uma empresa propaga a
+  // que já existe para o próprio admin.
+  const { data: adminProfile, error: erroAdminProfile } = await admin
+    .from("profiles")
+    .select("license_expiry_at")
+    .eq("id", sessao.userId)
+    .single();
+  if (
+    erroEmpresa ||
+    erroContagem ||
+    !empresa ||
+    totalMembros === null ||
+    erroAdminProfile ||
+    !adminProfile
+  ) {
     return { ok: false, error: ERRO_GENERICO };
   }
   if (totalMembros >= empresa.max_usuarios) {
@@ -123,6 +139,19 @@ export async function adicionarUsuario(dados: {
       );
     }
     return { ok: false, error: mapearErroBanco(erroVinculo.message, ERRO_GENERICO) };
+  }
+
+  if (adminProfile.license_expiry_at) {
+    const { error: erroLicenca } = await admin
+      .from("profiles")
+      .update({ license_expiry_at: adminProfile.license_expiry_at })
+      .eq("id", criado.user.id);
+    if (erroLicenca) {
+      console.error(
+        `adicionarUsuario: usuário criado, mas falhou propagar a licença para ${criado.user.id}:`,
+        erroLicenca.message
+      );
+    }
   }
 
   revalidatePath("/conta");

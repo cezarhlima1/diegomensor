@@ -45,6 +45,39 @@ export async function middleware(request: NextRequest) {
     return redirectParaLogin(request);
   }
 
+  const { data: profile, error: erroProfile } = await supabase
+    .from("profiles")
+    .select("is_super_admin, license_expiry_at")
+    .eq("id", user.id)
+    .single();
+
+  const ehRotaAdmin = request.nextUrl.pathname.startsWith("/admin");
+
+  if (ehRotaAdmin) {
+    // /admin é sensível: sem certeza de que o usuário é super admin, nega.
+    if (erroProfile || !profile?.is_super_admin) {
+      const destino = request.nextUrl.clone();
+      destino.pathname = "/calculadora";
+      destino.search = "";
+      return NextResponse.redirect(destino);
+    }
+    return response;
+  }
+
+  // Licença vencida bloqueia /calculadora e /conta. Falha ao buscar o
+  // profile não bloqueia (regra de negócio, não de segurança — os dados
+  // continuam protegidos pelo RLS) para não derrubar a área logada por um
+  // erro transitório de leitura.
+  if (!erroProfile && profile?.license_expiry_at) {
+    const venceu = new Date(profile.license_expiry_at).getTime() < Date.now();
+    if (venceu) {
+      const destino = request.nextUrl.clone();
+      destino.pathname = "/licenca-expirada";
+      destino.search = "";
+      return NextResponse.redirect(destino);
+    }
+  }
+
   return response;
 }
 
@@ -57,6 +90,7 @@ function redirectParaLogin(request: NextRequest) {
 
 export const config = {
   // Somente a área logada passa pelo middleware; todas as rotas públicas
-  // (/, /quiz, /cadastro, /bio, /v1, /obrigado, /api/lead, ...) são ignoradas.
-  matcher: ["/calculadora/:path*", "/conta/:path*"],
+  // (/, /quiz, /cadastro, /bio, /v1, /obrigado, /api/lead, /licenca-expirada, ...)
+  // são ignoradas.
+  matcher: ["/calculadora/:path*", "/conta/:path*", "/admin/:path*"],
 };
