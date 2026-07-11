@@ -22,7 +22,7 @@ export default function Login() {
     setCarregando(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
@@ -31,7 +31,15 @@ export default function Login() {
         setCarregando(false);
         return;
       }
-      window.location.assign("/calculadora");
+      // Admin geral não pertence a nenhuma empresa — /calculadora e /conta
+      // exigem uma empresa (getSessaoComEmpresa) e o mandariam de volta pro
+      // login. O destino depende do papel de quem acabou de entrar.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_super_admin")
+        .eq("id", data.user.id)
+        .single();
+      window.location.assign(profile?.is_super_admin ? "/admin" : "/calculadora");
     } catch (err) {
       // Ex.: env do Supabase ausente ou falha de rede.
       console.error("Login: falha inesperada ao entrar:", err);
