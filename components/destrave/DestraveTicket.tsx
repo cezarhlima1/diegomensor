@@ -1,3 +1,5 @@
+import { Lock } from "@/components/icons";
+
 /** Visual de "ingresso" (ticket) picotado — reforça que a oferta é um lote limitado de vagas. */
 export default function DestraveTicket({
   eventLine,
@@ -11,16 +13,16 @@ export default function DestraveTicket({
   return (
     <div className="reveal d3 mx-auto max-w-[380px] lg:mr-0 lg:ml-auto">
       <div
-        className="relative rounded-[22px] border border-[rgba(4,149,240,.4)] bg-[linear-gradient(165deg,#102634,var(--color-card))] shadow-[0_30px_70px_-24px_rgba(4,149,240,.5)] overflow-hidden"
+        className="relative rounded-[10px] border border-[rgba(180,199,212,.4)] bg-[linear-gradient(165deg,#232c33,var(--color-card))] shadow-[0_30px_70px_-24px_rgba(0,0,0,.6)] overflow-hidden"
         data-glow
       >
         <span className="pointer-glow" aria-hidden="true" />
 
         <div className="relative z-[1] px-7 pt-8 pb-6 text-center">
-          <span className="font-mono text-[10.5px] tracking-[.28em] uppercase text-blue">Ingresso · Imersão</span>
-          <div className="font-display font-black text-[30px] text-white mt-1.5 leading-none tracking-[-.01em]">
-            DESTRAVE
-          </div>
+          <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] tracking-[.28em] uppercase text-blue">
+            <Lock className="w-[11px] h-[11px]" /> Ingresso · Imersão
+          </span>
+          <div className="dest-wordmark text-[32px] mt-1.5 leading-none">DESTRAVE</div>
           <div className="font-mono text-[11px] text-muted mt-3 leading-relaxed">{eventLine}</div>
         </div>
 
@@ -34,7 +36,7 @@ export default function DestraveTicket({
           <div className="font-mono text-[12px] text-muted">
             de <s className="[text-decoration-color:var(--color-brand-red)]">{priceOld}</s> por
           </div>
-          <div className="dest-ticket-price font-display font-black text-[44px] text-blue leading-none mt-1">
+          <div className="dest-ticket-price font-display font-black text-[44px] leading-none mt-1">
             {priceNew}
           </div>
           <div className="font-mono text-[10px] tracking-[.18em] uppercase text-muted-dim mt-3">

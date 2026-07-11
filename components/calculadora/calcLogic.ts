@@ -354,6 +354,7 @@ export function tiersFromMarkups(markups: number[]): MarkupTier[] {
 export function buildOrcamentoMsg(o: {
   nomeCliente: string;
   nomeCarro: string;
+  placa?: string;
   pecas: PecaResumo[];
   maoDeObra: number;
   total: number;
@@ -363,6 +364,7 @@ export function buildOrcamentoMsg(o: {
     `*Orçamento - ${o.nomeCliente.trim() || "Cliente"}*`,
     `Veículo - ${o.nomeCarro.trim() || "—"}`,
   ];
+  if (o.placa?.trim()) linhas.push(`Placa - ${o.placa.trim()}`);
 
   const pecasValidas = o.pecas.filter(
     (p) => p.valor > 0 || (p.maoDeObra ?? 0) > 0,

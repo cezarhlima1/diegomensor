@@ -551,12 +551,15 @@ a:focus-visible, button:focus-visible {
   .calc-hist-vals span { font-family: var(--font-mono); font-size: 14px; color: var(--color-offwhite); }
   .calc-hist-vals i { display: block; font-style: normal; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted-dim); }
   .calc-hist-total span, .calc-hist-total { color: var(--color-brand-green); font-weight: 700; }
-  .calc-hist-status { flex: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
-  .calc-hist-status--pendente { color: var(--color-amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.32); cursor: pointer; }
+  .calc-hist-status { flex: none; appearance: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+  .calc-hist-status--pendente { color: var(--color-amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.32); }
   .calc-hist-status--pendente:hover:not(:disabled) { background: rgba(245,166,35,.18); border-color: rgba(245,166,35,.55); }
   .calc-hist-status--pendente:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
-  .calc-hist-status--pendente:disabled { opacity: .6; cursor: default; }
-  .calc-hist-status--aprovado { color: var(--color-brand-green); background: rgba(47,210,122,.1); border-color: rgba(47,210,122,.32); cursor: default; }
+  .calc-hist-status:disabled { opacity: .6; cursor: default; }
+  .calc-hist-status--aprovado { color: var(--color-brand-green); background: rgba(47,210,122,.1); border-color: rgba(47,210,122,.32); }
+  .calc-hist-status--aprovado:hover:not(:disabled) { background: rgba(47,210,122,.18); border-color: rgba(47,210,122,.55); }
+  .calc-hist-status--aprovado:focus-visible { outline: 2px solid var(--color-brand-green); outline-offset: 2px; }
+  .calc-hist-status option { background: var(--color-card); color: var(--color-offwhite); text-transform: none; }
   .calc-hist-del { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; line-height: 1; color: var(--color-muted); background: rgba(143,178,204,.06); border: 1px solid var(--color-line); cursor: pointer; transition: color .2s ease, background .2s ease, border-color .2s ease; }
   .calc-hist-del:hover { color: var(--color-brand-red); background: rgba(240,88,76,.1); border-color: rgba(240,88,76,.4); }
   @media (max-width: 560px) { .calc-hist { flex-wrap: wrap; } .calc-hist-vals { width: 100%; } }
@@ -786,13 +789,161 @@ a:focus-visible, button:focus-visible {
 
 /* ============================================================
    IMERSÃO DESTRAVE — PÁGINAS DE CAPTURA (/destrave/lp1, /destrave/lp2)
+   Identidade "oficina premium de alta performance": preto/grafite/azul-petróleo
+   dominando ~80% da composição, concreto/metal desgastado como textura,
+   tipografia monumental condensada e o azul elétrico só como acento pontual
+   (nunca dominante). Escopado em .destrave-theme para não vazar para o
+   resto do site (calculadora, bio, conta seguem com os tokens originais).
    ============================================================ */
 @layer components {
+
+  /* ---------- tema: sobrescreve os tokens de cor só dentro do escopo ---------- */
+  .destrave-theme {
+    --color-bg: #0a0d10;
+    --color-bg-deep: #040506;
+    --color-card: #10151a;
+    --color-card-2: #161c22;
+    --color-navy: #0a1b26;        /* azul petróleo quase preto */
+
+    --color-blue: #7c8d99;        /* grafite/aço fosco — cromo estrutural (tags, bordas, ícones) */
+    --color-blue-soft: #a7b6c0;
+    --color-blue-deep: #4c5860;
+
+    --color-offwhite: #e7ebed;    /* branco gelo, levemente acinzentado */
+    --color-muted: #7c8a93;
+    --color-muted-dim: #4b565c;
+
+    --color-line: rgba(255, 255, 255, .07);
+    --radius: 4px;
+    --radius-lg: 6px;
+
+    --dest-accent: #0EA5F0;       /* azul elétrico — único acento, usado com muita parcimônia */
+    --dest-accent-soft: #5CC4F5;
+    --dest-accent-deep: #0A6FAE;
+
+    position: relative;
+    isolation: isolate;
+    background: var(--color-bg);
+  }
+  .destrave-theme > * { position: relative; z-index: 1; }
+
+  /* textura de concreto/metal desgastado — grão fino + arranhões + vinheta petróleo, tudo numa camada só */
+  .destrave-theme::before {
+    content: "";
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E") 0 0/160px 160px,
+      repeating-linear-gradient(107deg, rgba(255,255,255,.03) 0 1px, transparent 1px 7px),
+      radial-gradient(120% 65% at 50% 0%, rgba(10,27,38,.9), transparent 62%),
+      radial-gradient(90% 60% at 50% 100%, rgba(0,0,0,.6), transparent 60%),
+      linear-gradient(180deg, var(--color-bg-deep), var(--color-bg));
+  }
+
+  /* palavra gigante em segundo plano — textura tipográfica, quase ilegível de propósito */
+  .dest-giant-word {
+    position: absolute; z-index: 0; pointer-events: none; user-select: none;
+    font-family: var(--font-display); font-weight: 900; text-transform: uppercase;
+    letter-spacing: -.045em; line-height: .78; white-space: nowrap;
+    color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.05);
+    font-size: clamp(120px, 30vw, 460px);
+  }
+
+  /* wordmark "DESTRAVE" — chapa metálica gravada, tipografia condensada e pesada */
+  .dest-wordmark {
+    font-family: var(--font-display); font-weight: 900; text-transform: uppercase;
+    letter-spacing: -.03em;
+    background: linear-gradient(180deg, #f4f6f7 0%, #cfd6da 55%, #98a3ab 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 0 rgba(0,0,0,.5)) drop-shadow(0 8px 16px rgba(0,0,0,.5));
+  }
+
+  /* corrente decorativa (SVG inline, herda a cor via currentColor) */
+  .dest-chain-motif { color: var(--color-blue-deep); }
+
+  /* tratamento cinematográfico das fotos: dessaturado, contraste alto, vinheta fria */
+  .dest-photo { position: relative; }
+  .dest-photo img { filter: grayscale(.25) saturate(.75) contrast(1.15) brightness(.94); }
+  .dest-photo::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(0deg, rgba(4,5,6,.7) 0%, transparent 45%),
+      linear-gradient(200deg, rgba(10,27,38,.3), transparent 55%);
+  }
+
+  /* acento elétrico pontual em palavras-chave (título e FAQ) — nunca em áreas grandes */
+  .text-dest-accent { color: var(--dest-accent); }
+
+  /* ---------- CTA: único elemento sólido em azul elétrico — o "botão de ignição" ---------- */
+  .destrave-theme .btn {
+    background: linear-gradient(180deg, var(--dest-accent-soft), var(--dest-accent));
+    color: #04141c;
+    box-shadow: 0 10px 28px -8px rgba(10,111,174,.55), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .destrave-theme .btn:hover {
+    box-shadow: 0 16px 40px -8px rgba(10,111,174,.75), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .destrave-theme .btn::after {
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+  }
+
+  /* preços e números de destaque — acento elétrico, como um marcador de painel */
+  .destrave-theme .price-main,
+  .destrave-theme .dest-ticket-price,
+  .destrave-theme .step-big { color: var(--dest-accent); text-shadow: 0 0 30px rgba(10,111,174,.45); }
+
+  .destrave-theme .check-ic,
+  .destrave-theme .price-feat-ck {
+    color: var(--dest-accent);
+    background: rgba(14,165,240,.1);
+    border: 1px solid rgba(14,165,240,.35);
+  }
+
+  .destrave-theme .limited {
+    color: var(--dest-accent); background: rgba(14,165,240,.08); border-color: rgba(14,165,240,.3);
+  }
+
+  .destrave-theme .dest-bar-fill {
+    background: linear-gradient(90deg, var(--dest-accent-soft), var(--dest-accent)) !important;
+  }
+
+  /* tags, badges e ícones estruturais — cromo/grafite, sem tingir de azul */
+  .destrave-theme .tag,
+  .destrave-theme .hero-badge {
+    color: var(--color-blue-soft); border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.04);
+  }
+  .destrave-theme .tag::before,
+  .destrave-theme .hero-badge .dot { background: var(--dest-accent); box-shadow: 0 0 10px rgba(14,165,240,.7); }
+
+  .destrave-theme .hero-bg {
+    background:
+      radial-gradient(70% 90% at 100% 20%, rgba(10,27,38,.95), transparent 60%),
+      radial-gradient(45% 55% at 88% 8%, rgba(14,165,240,.1), transparent 70%);
+  }
+
+  .destrave-theme .final-card,
+  .destrave-theme .price-card {
+    background: linear-gradient(170deg, #141a1f, var(--color-card));
+    border-color: rgba(255,255,255,.12);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px -24px rgba(0,0,0,.75);
+  }
+  .destrave-theme .price-card::before,
+  .destrave-theme .price-card .pointer-glow {
+    background: radial-gradient(circle, rgba(14,165,240,.2), transparent 70%);
+  }
+
+  .destrave-theme .author-card {
+    background: linear-gradient(150deg, #10171c, #0c1215 55%, #06090b);
+    border-color: rgba(255,255,255,.1);
+  }
+
+  .destrave-theme .testi,
+  .destrave-theme .faq-item { border-color: var(--color-line); }
+
   /* pulso sutil no preço do ticket — puxa o olho sem gritar */
   .dest-ticket-price { animation: destPricePulse 2.6s ease-in-out infinite; }
   @keyframes destPricePulse {
-    0%, 100% { text-shadow: 0 0 32px rgba(4,149,240,.45); }
-    50% { text-shadow: 0 0 46px rgba(4,149,240,.8); }
+    0%, 100% { text-shadow: 0 0 32px rgba(10,111,174,.4); }
+    50% { text-shadow: 0 0 46px rgba(10,111,174,.8); }
   }
 
   /* barra "% do lote vendido" — enche de 0 até o valor real ao entrar na tela */

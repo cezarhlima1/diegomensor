@@ -1,9 +1,11 @@
 import Cta from "@/components/Cta";
-import { Check } from "@/components/icons";
+import { Check, Lock } from "@/components/icons";
 import { DESTRAVE_CHECKOUT_URL } from "@/lib/links";
 import DestravePriceBar from "./DestravePriceBar";
 import DestraveTicket from "./DestraveTicket";
 import DestraveFaq from "./DestraveFaq";
+import DestraveChainMotif from "./DestraveChainMotif";
+import DestraveGiantWord from "./DestraveGiantWord";
 import type { DestraveCopy } from "./types";
 
 const testimonials = [
@@ -13,21 +15,23 @@ const testimonials = [
 
 export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
-    <>
+    <div className="destrave-theme">
       {/* 1º BLOCO — herói */}
       <section data-hero className="relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20">
         <div className="hero-bg" aria-hidden="true" />
+        <DestraveGiantWord word="OFICINA" className="-left-6 -bottom-[6%] hidden md:block" />
+        <DestraveChainMotif className="dest-chain-motif pointer-events-none absolute -top-2 right-[-40px] w-[420px] max-w-none opacity-[.35] rotate-[-4deg] hidden sm:block" />
         <div className="wrap grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-14 items-center">
           <div>
             <span className="hero-badge reveal">
-              <span className="dot" />
+              <Lock className="w-[13px] h-[13px]" />
               {copy.eventLine}
             </span>
 
             <h1 className="reveal d1 font-display font-black text-[clamp(30px,4.6vw,52px)] my-6 max-w-[18ch]">
               {copy.headline.map((seg, i) =>
                 seg.blue ? (
-                  <span key={i} className="text-blue">
+                  <span key={i} className="text-dest-accent">
                     {seg.text}
                   </span>
                 ) : (
@@ -95,7 +99,9 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-10 items-start">
             {testimonials.map((t, i) => (
               <figure key={i} className={`testi reveal d${i + 1} !p-0 overflow-hidden`}>
-                <img src={t.src} alt={t.alt} className="block w-full h-auto" />
+                <div className="dest-photo overflow-hidden">
+                  <img src={t.src} alt={t.alt} className="block w-full h-auto" />
+                </div>
                 <figcaption className="flex items-center gap-2 px-4 py-3 border-t border-line">
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-brand-green">
                     <Check className="w-[13px] h-[13px]" /> {t.caption}
@@ -118,7 +124,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       <section className="py-[72px] md:py-24">
         <div className="wrap">
           <div className="author-card reveal grid grid-cols-1 lg:grid-cols-[.85fr_1.15fr]">
-            <div className="author-photo relative min-h-[280px] lg:min-h-[380px] border-b lg:border-b-0 lg:border-r border-blue/20 overflow-hidden">
+            <div className="author-photo dest-photo relative min-h-[280px] lg:min-h-[380px] border-b lg:border-b-0 lg:border-r border-blue/20 overflow-hidden">
               <img src="/diego.jpeg" alt="Diego Mensor" className="absolute inset-0 w-full h-full object-cover object-top" />
             </div>
 
@@ -137,7 +143,8 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* BLOCO FINAL — oferta */}
-      <section className="py-[72px] md:py-24 text-center bg-[linear-gradient(180deg,transparent,rgba(1,57,97,.25))]">
+      <section className="relative overflow-hidden py-[72px] md:py-24 text-center bg-[linear-gradient(180deg,transparent,rgba(10,27,38,.5))]">
+        <DestraveGiantWord word="DESTRAVE" className="left-1/2 -translate-x-1/2 -bottom-[10%] hidden md:block" />
         <div className="wrap">
           <span className="tag reveal">Oferta especial</span>
           <h2 className="reveal d1 font-display font-black text-[clamp(26px,3.6vw,42px)] mt-[18px] mb-[30px] mx-auto max-w-[26ch]">
@@ -179,6 +186,6 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       <DestraveFaq />
-    </>
+    </div>
   );
 }

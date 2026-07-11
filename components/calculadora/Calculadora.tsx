@@ -294,6 +294,7 @@ export default function Calculadora({
     return buildOrcamentoMsg({
       nomeCliente,
       nomeCarro,
+      placa,
       pecas: pecasResumo(),
       maoDeObra: maoDeObraTotal,
       total: totalOrcamento,
@@ -354,6 +355,7 @@ export default function Calculadora({
     const msg = buildOrcamentoMsg({
       nomeCliente: o.nomeCliente,
       nomeCarro: o.nomeCarro,
+      placa: o.placa,
       pecas: o.pecas ?? [],
       maoDeObra: o.maoDeObra ?? o.valorHora ?? 0,
       total: o.total,
@@ -373,13 +375,13 @@ export default function Calculadora({
     if (!resultado.ok) setOrcamentos(anterior);
   }
 
-  async function aprovarOrcamento(id: string) {
+  async function alterarStatusOrcamento(id: string, status: StatusOrcamento) {
     const anterior = orcamentos;
     setAtualizandoStatusId(id);
     setOrcamentos((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: "Aprovado" as StatusOrcamento } : o)),
+      prev.map((o) => (o.id === id ? { ...o, status } : o)),
     );
-    const resultado = await atualizarStatusOrcamento(empresaId, id, "Aprovado");
+    const resultado = await atualizarStatusOrcamento(empresaId, id, status);
     setAtualizandoStatusId("");
     if (!resultado.ok) setOrcamentos(anterior);
   }
@@ -988,23 +990,27 @@ export default function Calculadora({
                           <i>Total</i> {brl(o.total)}
                         </span>
                       </div>
-                      {o.status === "Aprovado" ? (
-                        <span className="calc-hist-status calc-hist-status--aprovado">
-                          Aprovado
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="calc-hist-status calc-hist-status--pendente"
-                          onClick={() => aprovarOrcamento(o.id)}
-                          disabled={atualizandoStatusId === o.id}
-                          aria-label={`Aprovar orçamento ${o.nomeCarro}`}
-                        >
-                          {atualizandoStatusId === o.id
-                            ? "Aprovando…"
-                            : "Aguardando aprovação"}
-                        </button>
-                      )}
+                      <select
+                        className={`calc-hist-status ${
+                          o.status === "Aprovado"
+                            ? "calc-hist-status--aprovado"
+                            : "calc-hist-status--pendente"
+                        }`}
+                        value={o.status}
+                        onChange={(e) =>
+                          alterarStatusOrcamento(
+                            o.id,
+                            e.target.value as StatusOrcamento,
+                          )
+                        }
+                        disabled={atualizandoStatusId === o.id}
+                        aria-label={`Status do orçamento ${o.nomeCarro}`}
+                      >
+                        <option value="Aguardando aprovação">
+                          Aguardando aprovação
+                        </option>
+                        <option value="Aprovado">Aprovado</option>
+                      </select>
                       <button
                         className="calc-hist-wa"
                         onClick={() => reenviarWhatsApp(o)}

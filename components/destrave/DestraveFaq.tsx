@@ -12,7 +12,7 @@ export default function DestraveFaq() {
         <div className="text-center">
           <span className="tag reveal">Perguntas frequentes</span>
           <h2 className="section-title reveal d1 mt-[18px] mx-auto">
-            Ficou alguma <span className="text-blue">dúvida?</span>
+            Ficou alguma <span className="text-dest-accent">dúvida?</span>
           </h2>
         </div>
 
