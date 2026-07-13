@@ -254,7 +254,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
         <section className="destrave-offer-hero text-center">
           <div className="destrave-offer-hero__inner reveal">
             <div className="destrave-offer-eyebrow">
-              <span aria-hidden="true">⚡</span> COMPRE SEU INGRESSO AGORA
+              <span aria-hidden="true">⚡</span> COMPRANDO AGORA VOCÊ LEVA
             </div>
 
             <h2 className="destrave-offer-title">

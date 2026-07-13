@@ -1026,10 +1026,15 @@ a:focus-visible, button:focus-visible {
     letter-spacing: .14em; text-transform: uppercase;
   }
   .destrave-theme .destrave-offer-title {
-    display: grid; gap: .08em; margin: 20px auto 22px;
+    display: grid; gap: .16em; margin: 20px auto 22px;
     color: #0d1419; font-family: var(--font-display); font-size: clamp(36px, 5.2vw, 62px);
     font-weight: 900; letter-spacing: -.045em; line-height: .98;
   }
+  .destrave-theme .destrave-offer-title span { display: block; color: #0d1419; }
+  .destrave-theme .destrave-offer-title span:first-child {
+    font-size: .58em; font-weight: 800; letter-spacing: -.035em; line-height: 1.08;
+  }
+  .destrave-theme .destrave-offer-title span:last-child { font-size: .9em; }
   .destrave-theme .destrave-live-badge {
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
     border: 1px solid #ffc7b9; border-radius: 999px; background: rgba(255,255,255,.82);
