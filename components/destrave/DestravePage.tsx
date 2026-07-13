@@ -1,5 +1,5 @@
 import Cta from "@/components/Cta";
-import { Check, Lock } from "@/components/icons";
+import { ArrowRight, Calendar, Check, Clock, Lock } from "@/components/icons";
 import { DESTRAVE_CHECKOUT_URL } from "@/lib/links";
 import DestravePriceBar from "./DestravePriceBar";
 import DestraveTicket from "./DestraveTicket";
@@ -250,55 +250,80 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* BLOCO FINAL — oferta */}
-      <section
-        className={`relative overflow-hidden py-[72px] md:py-24 text-center ${
-          copy.heroTitle ? "destrave-final--lp1" : "bg-[linear-gradient(180deg,transparent,rgba(10,27,38,.5))]"
-        }`}
-      >
-        <DestraveGiantWord word="DESTRAVE" className="left-1/2 -translate-x-1/2 -bottom-[10%] hidden md:block" />
-        <div className="wrap">
-          <span className="tag reveal">Oferta especial</span>
-          <h2
-            className={`reveal d1 font-display font-black mt-[18px] mb-[30px] mx-auto max-w-[26ch] ${
-              copy.heroTitle ? "text-[clamp(34px,4.8vw,56px)] leading-[.98] tracking-[-.03em]" : "text-[clamp(26px,3.6vw,42px)]"
-            }`}
-          >
-            {copy.finalBlock.heading}
-          </h2>
-
-          <div className="final-card reveal d2 max-w-[520px] mx-auto text-center" data-glow>
-            <span className="pointer-glow" aria-hidden="true" />
-            <span className="limited mx-auto">⚡ Lote por tempo limitado</span>
-
-            <div className="flex items-baseline justify-center gap-3 mt-2">
-              <span className="font-mono text-[16px] text-muted">
-                de <s className="[text-decoration-color:var(--color-brand-red)]">{copy.finalBlock.priceOld}</s>
-              </span>
-              <span className="font-mono text-[13px] text-muted">por</span>
-            </div>
-            <div className="price-main !text-[clamp(34px,6.4vw,58px)] mx-auto leading-none mt-1">
-              {copy.finalBlock.priceNew}
-            </div>
-            <p className="text-muted text-[14px] mt-2 mb-7 max-w-[38ch] mx-auto">{copy.finalBlock.priceNote}</p>
-
-            <div className="grid gap-[11px] max-w-sm mx-auto text-left mb-7">
-              {copy.finalBlock.items.map((it, i) => (
-                <div key={i} className="flex items-start gap-[11px] text-[15px] font-semibold text-offwhite">
-                  <span className="price-feat-ck">
-                    <Check className="w-[13px] h-[13px]" />
-                  </span>
-                  {it}
-                </div>
-              ))}
+      {copy.heroTitle ? (
+        <section className="destrave-offer-hero text-center">
+          <div className="destrave-offer-hero__inner reveal">
+            <div className="destrave-offer-eyebrow">
+              <span aria-hidden="true">⚡</span> COMPRE SEU INGRESSO AGORA
             </div>
 
-            <Cta variant="wide" href={DESTRAVE_CHECKOUT_URL}>
-              {copy.finalBlock.ctaLabel}
-            </Cta>
-            <DestravePriceBar label={copy.finalBlock.priceBarLabel} />
+            <h2 className="destrave-offer-title">
+              <span>01 ingresso para a Imersão</span>
+              <span>DESTRAVE o próximo nível da sua oficina</span>
+            </h2>
+
+            <span className="destrave-live-badge"><span aria-hidden="true" /> AO VIVO</span>
+
+            <div className="destrave-event-info">
+              <span><Calendar className="w-[18px] h-[18px]" /> 01 de agosto de 2026</span>
+              <span><Clock className="w-[18px] h-[18px]" /> A partir das 8h</span>
+            </div>
+
+            <a className="destrave-offer-cta" href={DESTRAVE_CHECKOUT_URL}>
+              QUERO DESTRAVAR A GESTÃO DA MINHA OFICINA <ArrowRight className="w-5 h-5" />
+            </a>
+
+            <div className="destrave-offer-price">
+              <p>Valor total: <s>{copy.finalBlock.priceOld}</s></p>
+              <span>SEU INGRESSO HOJE</span>
+              <strong>{copy.finalBlock.priceNew}</strong>
+              <em>Por menos de 1 litro de óleo, você começa a destravar tudo o que está travando o crescimento da sua oficina.</em>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="relative overflow-hidden py-[72px] md:py-24 text-center bg-[linear-gradient(180deg,transparent,rgba(10,27,38,.5))]">
+          <DestraveGiantWord word="DESTRAVE" className="left-1/2 -translate-x-1/2 -bottom-[10%] hidden md:block" />
+          <div className="wrap">
+            <span className="tag reveal">Oferta especial</span>
+            <h2 className="reveal d1 font-display font-black text-[clamp(26px,3.6vw,42px)] mt-[18px] mb-[30px] mx-auto max-w-[26ch]">
+              {copy.finalBlock.heading}
+            </h2>
+
+            <div className="final-card reveal d2 max-w-[520px] mx-auto text-center" data-glow>
+              <span className="pointer-glow" aria-hidden="true" />
+              <span className="limited mx-auto">⚡ Lote por tempo limitado</span>
+
+              <div className="flex items-baseline justify-center gap-3 mt-2">
+                <span className="font-mono text-[16px] text-muted">
+                  de <s className="[text-decoration-color:var(--color-brand-red)]">{copy.finalBlock.priceOld}</s>
+                </span>
+                <span className="font-mono text-[13px] text-muted">por</span>
+              </div>
+              <div className="price-main !text-[clamp(34px,6.4vw,58px)] mx-auto leading-none mt-1">
+                {copy.finalBlock.priceNew}
+              </div>
+              <p className="text-muted text-[14px] mt-2 mb-7 max-w-[38ch] mx-auto">{copy.finalBlock.priceNote}</p>
+
+              <div className="grid gap-[11px] max-w-sm mx-auto text-left mb-7">
+                {copy.finalBlock.items.map((it, i) => (
+                  <div key={i} className="flex items-start gap-[11px] text-[15px] font-semibold text-offwhite">
+                    <span className="price-feat-ck">
+                      <Check className="w-[13px] h-[13px]" />
+                    </span>
+                    {it}
+                  </div>
+                ))}
+              </div>
+
+              <Cta variant="wide" href={DESTRAVE_CHECKOUT_URL}>
+                {copy.finalBlock.ctaLabel}
+              </Cta>
+              <DestravePriceBar label={copy.finalBlock.priceBarLabel} />
+            </div>
+          </div>
+        </section>
+      )}
 
       <DestraveFaq />
     </div>

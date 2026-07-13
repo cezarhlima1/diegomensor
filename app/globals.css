@@ -1009,12 +1009,64 @@ a:focus-visible, button:focus-visible {
     background-blend-mode: luminosity;
   }
 
-  /* fundo exclusivo da quinta dobra da LP1 */
-  .destrave-theme .destrave-final--lp1 {
-    background-color: #0495f0;
-    background-image: var(--destrave-distressed-texture);
-    background-blend-mode: luminosity;
+  /* hero de oferta exclusivo da quinta dobra da LP1 */
+  .destrave-theme .destrave-offer-hero {
+    padding: clamp(76px, 10vw, 132px) 20px;
+    color: #0d1419;
+    background:
+      radial-gradient(70% 55% at 50% 0%, rgba(29,161,255,.2), transparent 72%),
+      radial-gradient(38% 38% at 8% 85%, rgba(4,149,240,.1), transparent 76%),
+      radial-gradient(38% 38% at 92% 72%, rgba(4,149,240,.1), transparent 76%),
+      #fff;
   }
+  .destrave-theme .destrave-offer-hero__inner { width: min(100%, 680px); margin-inline: auto; }
+  .destrave-theme .destrave-offer-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: #0495f0; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+  }
+  .destrave-theme .destrave-offer-title {
+    display: grid; gap: .08em; margin: 20px auto 22px;
+    color: #0d1419; font-family: var(--font-display); font-size: clamp(36px, 5.2vw, 62px);
+    font-weight: 900; letter-spacing: -.045em; line-height: .98;
+  }
+  .destrave-theme .destrave-live-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+    border: 1px solid #ffc7b9; border-radius: 999px; background: rgba(255,255,255,.82);
+    color: #d84a32; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .13em;
+  }
+  .destrave-theme .destrave-live-badge > span {
+    width: 7px; height: 7px; border-radius: 50%; background: #e84431; box-shadow: 0 0 0 3px rgba(232,68,49,.13);
+  }
+  .destrave-theme .destrave-event-info {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; margin: 24px 0 30px;
+    color: #344653; font-size: clamp(14px,1.7vw,16px); font-weight: 600;
+  }
+  .destrave-theme .destrave-event-info span { display: inline-flex; align-items: center; gap: 7px; }
+  .destrave-theme .destrave-event-info svg { color: #0495f0; }
+  .destrave-theme .destrave-offer-cta {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 60px;
+    padding: 14px 18px; border-radius: 14px; background: #1da1ff; color: #fff;
+    box-shadow: 0 14px 28px -12px rgba(4,149,240,.65); font-size: clamp(13px,1.7vw,16px);
+    font-weight: 800; letter-spacing: .01em; line-height: 1.2; transition: filter .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .destrave-theme .destrave-offer-cta:hover {
+    filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 19px 34px -12px rgba(4,149,240,.78);
+  }
+  .destrave-theme .destrave-offer-price { margin: 29px auto 0; color: #0d1419; }
+  .destrave-theme .destrave-offer-price p { margin: 0 0 22px; color: #53636d; font-size: 14px; }
+  .destrave-theme .destrave-offer-price s { color: #25343e; text-decoration-color: #ef6d57; text-decoration-thickness: 1.5px; }
+  .destrave-theme .destrave-offer-price > span {
+    display: block; color: #5e6c74; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .16em;
+  }
+  .destrave-theme .destrave-offer-price strong {
+    display: block; margin: 2px 0 13px; color: #0495f0; font-family: var(--font-display);
+    font-size: clamp(56px,9vw,86px); font-weight: 900; letter-spacing: -.06em; line-height: .9;
+    text-shadow: 0 10px 24px rgba(4,149,240,.18);
+  }
+  .destrave-theme .destrave-offer-price em { display: block; max-width: 48ch; margin-inline: auto; color: #465761; font-size: 14px; line-height: 1.55; }
 
   .destrave-theme .final-card,
   .destrave-theme .price-card {
