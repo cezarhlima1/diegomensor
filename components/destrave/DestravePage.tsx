@@ -145,7 +145,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       )}
 
       {/* 2º BLOCO */}
-      <section className="py-[72px] md:py-24">
+      <section className={`py-[72px] md:py-24 ${copy.heroTitle ? "destrave-block2--lp1" : ""}`}>
         <div className="wrap text-center max-w-[760px]">
           <h2 className="section-title reveal mx-auto">
             {renderHighlightedText(copy.block2.title, copy.block2.highlightedWords)}

@@ -991,6 +991,9 @@ a:focus-visible, button:focus-visible {
     to { transform: translate3d(-50%, 0, 0); }
   }
 
+  /* fundo exclusivo da segunda dobra da LP1 */
+  .destrave-theme .destrave-block2--lp1 { background: #151515; }
+
   .destrave-theme .final-card,
   .destrave-theme .price-card {
     background: linear-gradient(170deg, #141a1f, var(--color-card));
