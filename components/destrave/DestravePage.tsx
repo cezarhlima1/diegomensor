@@ -250,11 +250,19 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* BLOCO FINAL — oferta */}
-      <section className="relative overflow-hidden py-[72px] md:py-24 text-center bg-[linear-gradient(180deg,transparent,rgba(10,27,38,.5))]">
+      <section
+        className={`relative overflow-hidden py-[72px] md:py-24 text-center ${
+          copy.heroTitle ? "destrave-final--lp1" : "bg-[linear-gradient(180deg,transparent,rgba(10,27,38,.5))]"
+        }`}
+      >
         <DestraveGiantWord word="DESTRAVE" className="left-1/2 -translate-x-1/2 -bottom-[10%] hidden md:block" />
         <div className="wrap">
           <span className="tag reveal">Oferta especial</span>
-          <h2 className="reveal d1 font-display font-black text-[clamp(26px,3.6vw,42px)] mt-[18px] mb-[30px] mx-auto max-w-[26ch]">
+          <h2
+            className={`reveal d1 font-display font-black mt-[18px] mb-[30px] mx-auto max-w-[26ch] ${
+              copy.heroTitle ? "text-[clamp(34px,4.8vw,56px)] leading-[.98] tracking-[-.03em]" : "text-[clamp(26px,3.6vw,42px)]"
+            }`}
+          >
             {copy.finalBlock.heading}
           </h2>
 
