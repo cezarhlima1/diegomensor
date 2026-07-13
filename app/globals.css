@@ -975,12 +975,13 @@ a:focus-visible, button:focus-visible {
     display: flex;
     width: max-content;
     will-change: transform;
-    animation: destraveTicker 18s linear infinite;
+    animation: destraveTicker 16s linear infinite;
+    animation-play-state: running;
   }
   .destrave-theme .destrave-ticker__group {
     flex: none;
     padding: 14px 2.5rem 14px 0;
-    color: #0495F0;
+    color: #fff;
     font-family: var(--font-mono);
     font-size: clamp(11px, 1.4vw, 14px);
     font-weight: 700;
@@ -988,6 +989,7 @@ a:focus-visible, button:focus-visible {
     white-space: nowrap;
   }
   @keyframes destraveTicker {
+    from { transform: translate3d(0, 0, 0); }
     to { transform: translate3d(-50%, 0, 0); }
   }
 
