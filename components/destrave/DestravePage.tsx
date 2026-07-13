@@ -171,9 +171,17 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       {/* 3º BLOCO — prova social */}
       <section className="py-[72px] md:py-24">
         <div className="wrap text-center">
-          <h2 className="section-title reveal mx-auto max-w-[26ch]">{copy.block3.title}</h2>
+          <h2
+            className={
+              copy.block3.subtitle
+                ? "reveal mx-auto max-w-[20ch] font-display font-black text-[clamp(36px,5.2vw,60px)] leading-[.98] tracking-[-.03em]"
+                : "section-title reveal mx-auto max-w-[26ch]"
+            }
+          >
+            {copy.block3.title}
+          </h2>
           {copy.block3.subtitle && (
-            <p className="reveal d1 mx-auto mt-4 max-w-[42ch] text-[clamp(14px,1.2vw,16px)] leading-[1.5] text-muted">
+            <p className="reveal d1 mx-auto mt-5 max-w-[34ch] font-display font-light text-[clamp(18px,2.2vw,25px)] leading-[1.3] text-offwhite">
               {copy.block3.subtitle}
             </p>
           )}
