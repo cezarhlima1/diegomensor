@@ -172,6 +172,9 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       <section className="py-[72px] md:py-24">
         <div className="wrap text-center">
           <h2 className="section-title reveal mx-auto max-w-[26ch]">{copy.block3.title}</h2>
+          {copy.block3.subtitle && (
+            <p className="lead reveal d1 mx-auto mt-4 max-w-[42ch]">{copy.block3.subtitle}</p>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-10 items-start">
             {testimonials.map((t, i) => (

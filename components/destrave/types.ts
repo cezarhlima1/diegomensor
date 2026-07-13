@@ -20,6 +20,7 @@ export type DestraveCopy = {
   };
   block3: {
     title: string;
+    subtitle?: string;
     ctaLabel: string;
   };
   authorBlock: {

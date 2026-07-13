@@ -31,8 +31,8 @@ export const lp1Copy: DestraveCopy = {
     ],
   },
   block3: {
-    title:
-      "Você não precisa acreditar só no que eu estou dizendo. Veja o que aconteceu com quem decidiu organizar a gestão da própria oficina.",
+    title: "Você não precisa acreditar só no que eu estou dizendo.",
+    subtitle: "Veja o que aconteceu com quem decidiu organizar a gestão da própria oficina.",
     ctaLabel: "Quero destravar a gestão da minha oficina",
   },
   authorBlock: {
