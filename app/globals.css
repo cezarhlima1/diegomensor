@@ -834,8 +834,8 @@ a:focus-visible, button:focus-visible {
 
   /* ---------- tema: sobrescreve os tokens de cor só dentro do escopo ---------- */
   .destrave-theme {
-    --color-bg: #151f28;
-    --color-bg-deep: #151f28;
+    --color-bg: #0d1419;
+    --color-bg-deep: #0d1419;
     --color-card: #10151a;
     --color-card-2: #161c22;
     --color-navy: #0a1b26;        /* azul petróleo quase preto */
@@ -968,7 +968,7 @@ a:focus-visible, button:focus-visible {
   .destrave-theme .destrave-ticker {
     overflow: hidden;
     border-block: 1px solid #0495F0;
-    background-color: #151f28;
+    background-color: #0d1419;
     background-image: var(--destrave-distressed-texture);
     background-blend-mode: luminosity;
   }
@@ -997,7 +997,7 @@ a:focus-visible, button:focus-visible {
 
   /* fundo exclusivo da segunda dobra da LP1 */
   .destrave-theme .destrave-block2--lp1 {
-    background-color: #151f28;
+    background-color: #0d1419;
     background-image: var(--destrave-distressed-texture);
     background-blend-mode: luminosity;
   }
