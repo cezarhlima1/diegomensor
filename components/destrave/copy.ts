@@ -36,9 +36,14 @@ export const lp1Copy: DestraveCopy = {
     ctaLabel: "Quero destravar a gestão da minha oficina",
   },
   authorBlock: {
-    title: "Se eu quero te ensinar isso é porque eu VIVI isso!",
-    paragraph:
-      "Eu sou Diego Mensor, dono de oficina há mais de 14 anos! Assim como você, eu também já vivi uma oficina onde tudo dependia de mim. Trabalhava o dia inteiro, resolvia um problema atrás do outro e, no fim do mês, sentia que o esforço não aparecia nos resultados. Foi organizando a gestão da minha própria oficina, ajustando processos e aprendendo na prática que as coisas começaram a mudar. É exatamente esse caminho que eu quero mostrar pra você na Imersão DESTRAVE.",
+    title: "Se eu quero te ensinar isso é porque eu VIVI isso.",
+    subtitle: "Eu sou, Diego Mensor dono de oficina a mais de 14 anos!",
+    paragraphs: [
+      "Assim como você, eu também já vivi uma oficina onde tudo dependia de mim.",
+      "Trabalhava o dia inteiro, resolvia um problema atrás do outro e, no fim do mês, sentia que o esforço não aparecia nos resultados.",
+      "Foi organizando a gestão da minha própria oficina, ajustando processos e aprendendo na prática que as coisas começaram a mudar.",
+      "É exatamente esse caminho que eu quero mostrar pra você na Imersão DESTRAVE.",
+    ],
     ctaLabel: "Quero destravar a gestão da minha oficina",
   },
   finalBlock: {

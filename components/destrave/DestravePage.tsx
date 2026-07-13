@@ -220,10 +220,27 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
 
             <div className="self-center px-8 py-10 lg:px-[42px] lg:py-11">
               <span className="tag">Quem é Diego Mensor</span>
-              <h3 className="font-display font-extrabold text-[clamp(20px,2.6vw,26px)] text-white mt-4 mb-3 leading-snug">
+              <h3
+                className={`font-display text-white mt-4 leading-[1.04] ${
+                  copy.authorBlock.subtitle
+                    ? "font-black text-[clamp(28px,3.4vw,38px)] tracking-[-.03em] mb-4"
+                    : "font-extrabold text-[clamp(20px,2.6vw,26px)] mb-3 leading-snug"
+                }`}
+              >
                 {copy.authorBlock.title}
               </h3>
-              <p className="text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] mb-6">{copy.authorBlock.paragraph}</p>
+              {copy.authorBlock.subtitle ? (
+                <>
+                  <p className="font-display font-light text-[clamp(18px,2vw,23px)] leading-[1.3] text-offwhite mb-6">
+                    {copy.authorBlock.subtitle}
+                  </p>
+                  <div className="grid gap-4 text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] leading-relaxed mb-6">
+                    {copy.authorBlock.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                  </div>
+                </>
+              ) : (
+                <p className="text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] mb-6">{copy.authorBlock.paragraph}</p>
+              )}
               <Cta variant="lg" href={DESTRAVE_CHECKOUT_URL}>
                 {copy.authorBlock.ctaLabel}
               </Cta>

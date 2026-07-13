@@ -25,7 +25,9 @@ export type DestraveCopy = {
   };
   authorBlock: {
     title: string;
-    paragraph: string;
+    subtitle?: string;
+    paragraph?: string;
+    paragraphs?: string[];
     ctaLabel: string;
   };
   finalBlock: {
