@@ -30,10 +30,10 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
 
             {copy.heroTitle ? (
               <>
-                <h1 className="reveal d1 font-display font-black text-[clamp(36px,5.4vw,60px)] mt-6 mb-4 max-w-[18ch]">
+                <h1 className="reveal d1 font-display font-black text-[clamp(42px,5.8vw,66px)] leading-[.98] tracking-[-.03em] mt-7 mb-5 max-w-[15ch]">
                   {copy.heroTitle}
                 </h1>
-                <p className="reveal d1 font-display font-black text-[clamp(26px,3.8vw,42px)] mb-6 max-w-[22ch]">
+                <p className="reveal d2 font-display font-semibold text-[clamp(20px,2.4vw,28px)] leading-[1.28] text-offwhite mb-8 max-w-[27ch]">
                   {copy.headline.map((seg, i) =>
                     seg.blue ? (
                       <span key={i} className="text-dest-accent">
