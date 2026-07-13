@@ -984,7 +984,7 @@ a:focus-visible, button:focus-visible {
     color: #fff;
     font-family: var(--font-mono);
     font-size: clamp(11px, 1.4vw, 14px);
-    font-weight: 700;
+    font-weight: 300;
     letter-spacing: .16em;
     white-space: nowrap;
   }
