@@ -856,9 +856,7 @@ a:focus-visible, button:focus-visible {
     --dest-accent-soft: #5CC4F5;
     --dest-accent-deep: #0A6FAE;
 
-    --destrave-distressed-texture:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.18'/%3E%3C/svg%3E") 0 0 / 180px 180px,
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='240' viewBox='0 0 360 240'%3E%3Cg fill='none' stroke='%23dce8ed' stroke-linecap='round'%3E%3Cpath d='M12 42l32-4m55 97 18-3m76-88 50-8m32 148 26-2M70 218l54-7m88-74 15-2' opacity='.10' stroke-width='.7'/%3E%3Cpath d='M42 101l14-2m97 91 37-5m45-67 68-9M8 172l21-3m128-120 23-4' opacity='.06' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 360px 240px;
+    --destrave-distressed-texture: url("/destrave-concrete-aged.png") center / 627px 627px repeat;
 
     position: relative;
     isolation: isolate;
@@ -871,6 +869,7 @@ a:focus-visible, button:focus-visible {
     content: "";
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background:
+      linear-gradient(rgba(21,31,40,.3), rgba(21,31,40,.3)),
       var(--destrave-distressed-texture),
       radial-gradient(120% 65% at 50% 0%, rgba(10,27,38,.42), transparent 62%),
       radial-gradient(90% 60% at 50% 100%, rgba(0,0,0,.28), transparent 60%),
