@@ -169,7 +169,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* 3º BLOCO — prova social */}
-      <section className="py-[72px] md:py-24">
+      <section className={`py-[72px] md:py-24 ${copy.block3.subtitle ? "destrave-block3--lp1" : ""}`}>
         <div className="wrap text-center">
           <h2
             className={

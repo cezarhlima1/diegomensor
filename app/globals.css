@@ -1002,6 +1002,13 @@ a:focus-visible, button:focus-visible {
     background-blend-mode: luminosity;
   }
 
+  /* fundo exclusivo da terceira dobra da LP1 */
+  .destrave-theme .destrave-block3--lp1 {
+    background-color: #013961;
+    background-image: var(--destrave-distressed-texture);
+    background-blend-mode: luminosity;
+  }
+
   .destrave-theme .final-card,
   .destrave-theme .price-card {
     background: linear-gradient(170deg, #141a1f, var(--color-card));
