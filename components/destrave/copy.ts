@@ -21,6 +21,7 @@ export const lp1Copy: DestraveCopy = {
   priceBarLabel: "75% do LOTE 01 vendido | De: R$87,00 por R$37,00",
   block2: {
     title: "Os resultados da sua oficina HOJE são consequência da forma como ela é gerenciada.",
+    highlightedWords: ["resultados", "consequência", "gerenciada."],
     intro: "Depois da imersão você vai:",
     checks: [
       "Ter mais controle de cada processo dentro da sua oficina.",

@@ -14,6 +14,7 @@ export type DestraveCopy = {
   priceBarLabel: string;
   block2: {
     title: string;
+    highlightedWords?: string[];
     intro: string;
     checks: string[];
   };

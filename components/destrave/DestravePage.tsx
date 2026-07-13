@@ -16,6 +16,24 @@ const testimonials = [
 const tickerText = "IMERSÃO ONLINE | AO VIVO | 01 DE AGOSTO |";
 const tickerLine = `${tickerText} ${tickerText} ${tickerText}`;
 
+function renderHighlightedText(text: string, highlightedWords?: string[]) {
+  if (!highlightedWords?.length) return text;
+
+  const escapedWords = highlightedWords.map((word) =>
+    word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  );
+  const pattern = new RegExp(`(${escapedWords.join("|")})`, "g");
+  return text.split(pattern).map((part, index) =>
+    highlightedWords.includes(part) ? (
+      <span key={index} className="text-[#0495F0]">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
     <div className="destrave-theme">
@@ -129,7 +147,9 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       {/* 2º BLOCO */}
       <section className="py-[72px] md:py-24">
         <div className="wrap text-center max-w-[760px]">
-          <h2 className="section-title reveal mx-auto">{copy.block2.title}</h2>
+          <h2 className="section-title reveal mx-auto">
+            {renderHighlightedText(copy.block2.title, copy.block2.highlightedWords)}
+          </h2>
           <p className="lead reveal d1 mt-4 mb-8">{copy.block2.intro}</p>
 
           <ul className="grid gap-3 max-w-[560px] mx-auto text-left list-none">
