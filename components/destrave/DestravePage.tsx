@@ -36,7 +36,7 @@ function renderHighlightedText(text: string, highlightedWords?: string[]) {
 
 export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
-    <div className="destrave-theme">
+    <div className={`destrave-theme ${copy.heroTitle ? "destrave-theme--lp1" : ""}`}>
       {/* 1º BLOCO — herói */}
       <section
         data-hero
