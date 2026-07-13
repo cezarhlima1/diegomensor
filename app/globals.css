@@ -834,8 +834,8 @@ a:focus-visible, button:focus-visible {
 
   /* ---------- tema: sobrescreve os tokens de cor só dentro do escopo ---------- */
   .destrave-theme {
-    --color-bg: #0a0d10;
-    --color-bg-deep: #040506;
+    --color-bg: #0d1419;
+    --color-bg-deep: #0d1419;
     --color-card: #10151a;
     --color-card-2: #161c22;
     --color-navy: #0a1b26;        /* azul petróleo quase preto */
@@ -969,7 +969,7 @@ a:focus-visible, button:focus-visible {
   .destrave-theme .destrave-ticker {
     overflow: hidden;
     border-block: 1px solid #0495F0;
-    background: #151515;
+    background: #0d1419;
   }
   .destrave-theme .destrave-ticker__track {
     display: flex;
@@ -994,7 +994,7 @@ a:focus-visible, button:focus-visible {
   }
 
   /* fundo exclusivo da segunda dobra da LP1 */
-  .destrave-theme .destrave-block2--lp1 { background: #151515; }
+  .destrave-theme .destrave-block2--lp1 { background: #0d1419; }
 
   .destrave-theme .final-card,
   .destrave-theme .price-card {
