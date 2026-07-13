@@ -70,6 +70,25 @@ export function Lock({ className }: { className?: string }) {
   );
 }
 
+export function Eye({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.7" />
+    </svg>
+  );
+}
+
+export function EyeOff({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.7 5.3A10.8 10.8 0 0 1 12 5.2c6 0 9.5 6.8 9.5 6.8a18.2 18.2 0 0 1-3.25 4.1M6.15 6.15C3.95 7.8 2.5 12 2.5 12S6 18.8 12 18.8c1.15 0 2.2-.25 3.15-.65" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </svg>
+  );
+}
+
 export function User({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="#4FB6F6" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">

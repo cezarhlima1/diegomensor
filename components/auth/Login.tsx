@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "@/components/icons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
@@ -12,6 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [senhaVisivel, setSenhaVisivel] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
@@ -72,15 +74,26 @@ export default function Login() {
 
         <label className="grid gap-1.5">
           <span className="quiz-label">Senha</span>
-          <input
-            type="password"
-            autoComplete="current-password"
-            className="quiz-input"
-            placeholder="Sua senha"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-          />
+          <div className="password-field">
+            <input
+              type={senhaVisivel ? "text" : "password"}
+              autoComplete="current-password"
+              className="quiz-input"
+              placeholder="Sua senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setSenhaVisivel((visivel) => !visivel)}
+              aria-label={senhaVisivel ? "Ocultar senha" : "Mostrar senha"}
+              aria-pressed={senhaVisivel}
+            >
+              {senhaVisivel ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
         </label>
 
         {erro && (
