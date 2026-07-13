@@ -22,17 +22,18 @@ export default function DestraveFaq() {
             return (
               <div key={i} className={`faq-item reveal d${Math.min(Math.floor(i / 2) + 1, 3)} ${isOpen ? "open" : ""}`}>
                 <button
+                  type="button"
                   className="faq-q"
                   aria-expanded={isOpen}
+                  aria-controls={`destrave-faq-answer-${i}`}
                   onClick={() => setOpen(isOpen ? null : i)}
                 >
                   {item.q}
                   <span className="faq-ic" aria-hidden="true" />
                 </button>
                 <div
-                  className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                  }`}
+                  id={`destrave-faq-answer-${i}`}
+                  className="faq-answer"
                 >
                   <div className="overflow-hidden">
                     <p className="px-[22px] pb-[22px] text-muted text-[15.5px]">{item.a}</p>

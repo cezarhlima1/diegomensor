@@ -280,6 +280,8 @@ a:focus-visible, button:focus-visible {
   .faq-item { background: linear-gradient(160deg, var(--color-card), #10171f); border: 1px solid var(--color-line); border-radius: 14px; overflow: hidden; transition: border-color .25s ease; }
   .faq-item.open { border-color: rgba(4,149,240,.45); }
   .faq-q { width: 100%; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; background: none; border: none; color: #fff; font-family: var(--font-display); font-weight: 700; font-size: clamp(15px,1.8vw,18px); }
+  .faq-answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease-out; }
+  .faq-item.open .faq-answer { grid-template-rows: 1fr; }
   .faq-ic { flex:none; width: 28px; height: 28px; border-radius: 8px; background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.35); display:grid; place-items:center; position: relative; }
   .faq-ic::before, .faq-ic::after { content:""; position:absolute; background: var(--color-blue); border-radius: 2px; }
   .faq-ic::before { width: 13px; height: 2.5px; }
