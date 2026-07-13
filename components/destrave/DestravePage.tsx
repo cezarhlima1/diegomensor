@@ -14,7 +14,7 @@ const testimonials = [
 ];
 
 const tickerText = "IMERSÃO ONLINE | AO VIVO | 01 DE AGOSTO |";
-const tickerLine = `${tickerText} ${tickerText} ${tickerText}`;
+const tickerLine = `${tickerText} ${tickerText} ${tickerText} `;
 
 function renderHighlightedText(text: string, highlightedWords?: string[]) {
   if (!highlightedWords?.length) return text;
