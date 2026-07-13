@@ -9,8 +9,8 @@ import DestraveGiantWord from "./DestraveGiantWord";
 import type { DestraveCopy } from "./types";
 
 const testimonials = [
-  { src: "/depoimento.jpeg", alt: "Print de WhatsApp com relato de dono de oficina", caption: "resultado real no grupo" },
-  { src: "/depoimento1.jpeg", alt: "Print de WhatsApp com relato de aluno sobre a gestão da oficina", caption: "relato após aplicar o método" },
+  { src: "/depoimentocaptura1.png", alt: "Depoimento de participante da imersão", caption: "resultado real no grupo" },
+  { src: "/depoimentocaptura2.png", alt: "Depoimento de participante da imersão", caption: "relato após aplicar o método" },
 ];
 
 const tickerText = "IMERSÃO ONLINE | AO VIVO | 01 DE AGOSTO |";

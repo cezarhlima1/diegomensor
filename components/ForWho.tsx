@@ -9,13 +9,13 @@ const items = [
 
 const testimonials = [
   {
-    src: "/depoimento.jpeg",
-    alt: "Print de WhatsApp com o faturamento da oficina antes e depois do método",
+    src: "/depoimentocaptura1.png",
+    alt: "Depoimento de participante sobre o método",
     caption: "resultado real no grupo",
   },
   {
-    src: "/depoimento1.jpeg",
-    alt: "Print de WhatsApp com relato de aluno sobre a precificação",
+    src: "/depoimentocaptura2.png",
+    alt: "Depoimento de participante sobre o método",
     caption: "relato após aplicar o método",
   },
 ];
