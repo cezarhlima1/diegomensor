@@ -965,6 +965,31 @@ a:focus-visible, button:focus-visible {
       url("/CAPA%20DOBRA1.png") center / cover no-repeat;
   }
 
+  /* faixa de reforço da proposta, logo após a primeira dobra da LP1 */
+  .destrave-theme .destrave-ticker {
+    overflow: hidden;
+    border-block: 1px solid rgba(14,165,240,.35);
+    background: #07131b;
+  }
+  .destrave-theme .destrave-ticker__track {
+    display: flex;
+    width: max-content;
+    animation: destraveTicker 18s linear infinite;
+  }
+  .destrave-theme .destrave-ticker__group {
+    flex: none;
+    padding: 14px 2.5rem 14px 0;
+    color: var(--dest-accent-soft);
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 1.4vw, 14px);
+    font-weight: 700;
+    letter-spacing: .16em;
+    white-space: nowrap;
+  }
+  @keyframes destraveTicker {
+    to { transform: translateX(-50%); }
+  }
+
   .destrave-theme .final-card,
   .destrave-theme .price-card {
     background: linear-gradient(170deg, #141a1f, var(--color-card));
@@ -999,4 +1024,5 @@ a:focus-visible, button:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .dest-ticket-price { animation: none; }
   .dest-bar-fill { transition: none; width: var(--dest-bar-w, 75%) !important; }
+  .destrave-ticker__track { animation: none !important; }
 }

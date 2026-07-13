@@ -13,6 +13,9 @@ const testimonials = [
   { src: "/depoimento1.jpeg", alt: "Print de WhatsApp com relato de aluno sobre a gestão da oficina", caption: "relato após aplicar o método" },
 ];
 
+const tickerText = "IMERSÃO ONLINE | AO VIVO | 01 DE AGOSTO |";
+const tickerLine = `${tickerText} ${tickerText} ${tickerText}`;
+
 export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
     <div className="destrave-theme">
@@ -111,6 +114,15 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
           )}
         </div>
       </section>
+
+      {copy.heroTitle && (
+        <section className="destrave-ticker" aria-label={tickerText}>
+          <div className="destrave-ticker__track" aria-hidden="true">
+            <div className="destrave-ticker__group">{tickerLine}</div>
+            <div className="destrave-ticker__group">{tickerLine}</div>
+          </div>
+        </section>
+      )}
 
       {/* 2º BLOCO */}
       <section className="py-[72px] md:py-24">
