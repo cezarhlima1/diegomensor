@@ -67,7 +67,14 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
                   <span className="check-ic">
                     <Check className="w-[14px] h-[14px]" />
                   </span>
-                  {b}
+                  {typeof b === "string" ? (
+                    b
+                  ) : (
+                    <span>
+                      {b.firstLine}
+                      <br className="hidden md:block" /> {b.secondLine}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

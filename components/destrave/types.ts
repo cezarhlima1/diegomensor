@@ -1,13 +1,14 @@
 /** Tipos do conteúdo (copy) das páginas de captura da Imersão DESTRAVE. */
 
 export type HeadlineSegment = { text: string; blue?: boolean };
+export type HeroBullet = string | { firstLine: string; secondLine: string };
 
 export type DestraveCopy = {
   eventLine: string;
   heroTitle?: string;
   headline: HeadlineSegment[];
   bulletsIntro: string;
-  bullets: string[];
+  bullets: HeroBullet[];
   ctaLabel: string;
   priceBarLabel: string;
   block2: {
