@@ -375,7 +375,7 @@ export function buildOrcamentoMsg(o: {
     linhas.push("", nome);
     if (p.valor > 0) linhas.push(`Valor: ${brl(p.valor)}`);
     if ((p.maoDeObra ?? 0) > 0)
-      linhas.push(`Hora técnica: ${brl(p.maoDeObra ?? 0)}`);
+      linhas.push(`Mão de obra: ${brl(p.maoDeObra ?? 0)}`);
   }
 
   linhas.push("", `*Total: ${brl(o.total)}*`);

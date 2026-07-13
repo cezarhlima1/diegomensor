@@ -665,7 +665,7 @@ export default function Calculadora({
                   <p className="calc-card-kicker">
                     Passo {ehAdmin ? "03" : "02"} — Orçamento
                   </p>
-                  <h2 className="calc-card-title">Cliente, hora técnica e peças</h2>
+                  <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
                   <p className="calc-card-sub">
                     Informe o cliente e as horas de serviço de cada peça.{" "}
                     {ehAdmin
@@ -831,7 +831,7 @@ export default function Calculadora({
                               {brl(precoPecaItem(p, tiers))}
                             </span>
                             <span>
-                              <em>Hora técnica</em>
+                              <em>Mão de obra</em>
                               {brl(maoDeObraPeca(p, valorHora))}
                             </span>
                           </span>
@@ -841,7 +841,7 @@ export default function Calculadora({
                   )}
                   <div className="calc-readout-breakdown">
                     <div>
-                      <span className="calc-readout-k">Total hora técnica</span>
+                      <span className="calc-readout-k">Total de mão de obra</span>
                       <span className="calc-readout-v">
                         <AnimatedBRL value={maoDeObraTotal} />
                       </span>
@@ -981,7 +981,7 @@ export default function Calculadora({
                       </div>
                       <div className="calc-hist-vals">
                         <span>
-                          <i>Hora técnica</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
+                          <i>Mão de obra</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
                         </span>
                         <span>
                           <i>Peças</i> {brl(o.valorPeca)}
