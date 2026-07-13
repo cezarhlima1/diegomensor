@@ -24,7 +24,11 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
         <div className="hero-bg" aria-hidden="true" />
         <DestraveGiantWord word="OFICINA" className="-left-6 -bottom-[6%] hidden md:block" />
         <DestraveChainMotif className="dest-chain-motif pointer-events-none absolute -top-2 right-[-40px] w-[420px] max-w-none opacity-[.35] rotate-[-4deg] hidden sm:block" />
-        <div className="wrap grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-14 items-center">
+        <div
+          className={`wrap grid grid-cols-1 items-center ${
+            copy.heroTitle ? "" : "lg:grid-cols-[1.15fr_.85fr] gap-14"
+          }`}
+        >
           <div>
             <span className="hero-badge reveal">
               <Lock className="w-[13px] h-[13px]" />
@@ -98,11 +102,13 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
             </div>
           </div>
 
-          <DestraveTicket
-            eventLine={copy.eventLine}
-            priceOld={copy.finalBlock.priceOld}
-            priceNew={copy.finalBlock.priceNew}
-          />
+          {!copy.heroTitle && (
+            <DestraveTicket
+              eventLine={copy.eventLine}
+              priceOld={copy.finalBlock.priceOld}
+              priceNew={copy.finalBlock.priceNew}
+            />
+          )}
         </div>
       </section>
 
