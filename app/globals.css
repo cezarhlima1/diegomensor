@@ -962,7 +962,7 @@ a:focus-visible, button:focus-visible {
     background:
       linear-gradient(90deg, rgba(4,5,6,.22) 0%, rgba(4,5,6,.08) 48%, rgba(4,5,6,.38) 100%),
       linear-gradient(0deg, rgba(4,5,6,.5) 0%, transparent 45%),
-      url("/Capa%20pa%CC%81gina%20de%20venda.png") center / cover no-repeat;
+      url("/Capa%20p%C3%A1gina%20de%20venda.png") center / cover no-repeat;
   }
 
   .destrave-theme .final-card,
