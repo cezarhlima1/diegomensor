@@ -864,16 +864,13 @@ a:focus-visible, button:focus-visible {
   }
   .destrave-theme > * { position: relative; z-index: 1; }
 
-  /* textura desgastada: grão irregular, marcas de uso e microfissuras sutis */
+  /* textura desgastada neutra: a luminosidade se mistura à cor de fundo */
   .destrave-theme::before {
     content: "";
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      linear-gradient(rgba(21,31,40,.3), rgba(21,31,40,.3)),
-      var(--destrave-distressed-texture),
-      radial-gradient(120% 65% at 50% 0%, rgba(10,27,38,.42), transparent 62%),
-      radial-gradient(90% 60% at 50% 100%, rgba(0,0,0,.28), transparent 60%),
-      linear-gradient(180deg, var(--color-bg-deep), var(--color-bg));
+    background: var(--destrave-distressed-texture);
+    mix-blend-mode: luminosity;
+    opacity: .48;
   }
 
   /* palavra gigante em segundo plano — textura tipográfica, quase ilegível de propósito */
@@ -973,6 +970,7 @@ a:focus-visible, button:focus-visible {
     border-block: 1px solid #0495F0;
     background-color: #151f28;
     background-image: var(--destrave-distressed-texture);
+    background-blend-mode: luminosity;
   }
   .destrave-theme .destrave-ticker__track {
     display: flex;
@@ -1001,6 +999,7 @@ a:focus-visible, button:focus-visible {
   .destrave-theme .destrave-block2--lp1 {
     background-color: #151f28;
     background-image: var(--destrave-distressed-texture);
+    background-blend-mode: luminosity;
   }
 
   .destrave-theme .final-card,
