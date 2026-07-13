@@ -234,7 +234,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
                   <p className="font-display font-light text-[clamp(18px,2vw,23px)] leading-[1.3] text-offwhite mb-6">
                     {copy.authorBlock.subtitle}
                   </p>
-                  <div className="grid gap-4 text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] leading-relaxed mb-6">
+                  <div className="grid gap-3 text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] leading-[1.55] mb-6">
                     {copy.authorBlock.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
                   </div>
                 </>
