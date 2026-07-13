@@ -879,6 +879,16 @@ a:focus-visible, button:focus-visible {
     --dest-accent-deep: #013961;
   }
 
+  .destrave-theme--lp1::before {
+    display: none;
+  }
+
+  .destrave-theme--lp1 .destrave-ticker,
+  .destrave-theme--lp1 .destrave-block2--lp1,
+  .destrave-theme--lp1 .destrave-block3--lp1 {
+    background-image: none;
+  }
+
   .destrave-theme--lp1 > section:not([data-hero]) {
     isolation: isolate;
     overflow: hidden;
@@ -1113,6 +1123,15 @@ a:focus-visible, button:focus-visible {
   }
   .destrave-theme .destrave-offer-cta:hover {
     filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 19px 34px -12px rgba(4,149,240,.78);
+  }
+  .destrave-theme--lp1 .btn,
+  .destrave-theme--lp1 .destrave-offer-cta {
+    background: linear-gradient(135deg, #0495f0 0%, #28a7ef 54%, #67c5f3 100%);
+    box-shadow: 0 14px 30px -12px rgba(4,149,240,.7), 0 0 24px -12px rgba(4,149,240,.5), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .destrave-theme--lp1 .btn:hover,
+  .destrave-theme--lp1 .destrave-offer-cta:hover {
+    box-shadow: 0 18px 36px -12px rgba(4,149,240,.78), 0 0 30px -10px rgba(4,149,240,.58), inset 0 1px 0 rgba(255,255,255,.45);
   }
   .destrave-theme .destrave-offer-price { margin: 29px auto 0; color: #0d1419; }
   .destrave-theme .destrave-offer-price p { margin: 0 0 22px; color: #53636d; font-size: 14px; }
