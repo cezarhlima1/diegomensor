@@ -62,25 +62,33 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
               </h1>
             )}
 
-            <p className="reveal d2 lead mb-5">{copy.bulletsIntro}</p>
+            <div
+              className={`reveal d2 text-left mb-8 ${
+                copy.heroTitle
+                  ? "max-w-[34rem] border-t border-white/25 pt-5"
+                  : "max-w-[520px]"
+              }`}
+            >
+              <p className="lead mb-4">{copy.bulletsIntro}</p>
 
-            <ul className="reveal d2 grid gap-3 max-w-[520px] text-left list-none mb-8">
-              {copy.bullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-3 text-[15.5px] font-medium text-offwhite">
-                  <span className="check-ic">
-                    <Check className="w-[14px] h-[14px]" />
-                  </span>
-                  {typeof b === "string" ? (
-                    b
-                  ) : (
-                    <span>
-                      {b.firstLine}
-                      <br className="hidden md:block" /> {b.secondLine}
+              <ul className="grid gap-3 list-none">
+                {copy.bullets.map((b, i) => (
+                  <li key={i} className="flex items-start gap-3 text-[15.5px] leading-[1.38] font-medium text-offwhite">
+                    <span className="check-ic">
+                      <Check className="w-[14px] h-[14px]" />
                     </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+                    {typeof b === "string" ? (
+                      b
+                    ) : (
+                      <span>
+                        {b.firstLine}
+                        <br className="hidden md:block" /> {b.secondLine}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
             <div className="reveal d3 flex flex-col items-start">
               <Cta variant="lg" href={DESTRAVE_CHECKOUT_URL}>
