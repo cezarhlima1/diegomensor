@@ -279,6 +279,26 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
               <strong>{copy.finalBlock.priceNew}</strong>
               <em>Por menos de 1 litro de óleo, você começa a destravar tudo o que está travando o crescimento da sua oficina.</em>
             </div>
+
+            <div className="destrave-offer-benefits">
+              {[
+                "Slides da imersão",
+                "8 horas de conteúdo prático",
+                "Bônus surpresa para quem estiver ao vivo",
+              ].map((benefit) => (
+                <div key={benefit} className="destrave-offer-benefit">
+                  <Check className="w-[18px] h-[18px]" aria-hidden="true" />
+                  <span>{benefit}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="destrave-offer-sales">
+              <div className="destrave-offer-progress" aria-hidden="true"><span /></div>
+              <p>75% do LOTE 01 vendido <span aria-hidden="true">|</span> De R$ 87,00 por R$ 37,00</p>
+            </div>
+
+            <div className="destrave-offer-secure"><Lock className="w-4 h-4" aria-hidden="true" /> PAGAMENTO 100% SEGURO</div>
           </div>
         </section>
       ) : (
