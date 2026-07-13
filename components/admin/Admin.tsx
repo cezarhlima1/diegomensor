@@ -6,8 +6,11 @@ import type { Papel } from "@/lib/db/types";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import {
   adicionarUsuarioEmpresa,
-  atualizarLicenca,
+  atualizarEmpresa,
+  atualizarUsuarioEmpresa,
   criarEmpresaComAdmin,
+  excluirEmpresa,
+  excluirUsuarioEmpresa,
   type EmpresaAdmin,
   type MembroAdmin,
 } from "./actions";
@@ -217,6 +220,11 @@ function EmpresaCard({
   onMudou: () => void;
 }) {
   const [formAberto, setFormAberto] = useState(false);
+  const [editandoEmpresa, setEditandoEmpresa] = useState(false);
+  const [nomeEmpresa, setNomeEmpresa] = useState(empresa.nome);
+  const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+  const [excluindoEmpresa, setExcluindoEmpresa] = useState(false);
+  const [erroEmpresa, setErroEmpresa] = useState<string | null>(null);
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -228,6 +236,51 @@ function EmpresaCard({
   const [adicionando, setAdicionando] = useState(false);
 
   const cheia = empresa.membros.length >= empresa.maxUsuarios;
+
+  async function salvarEmpresa(e: React.FormEvent) {
+    e.preventDefault();
+    if (salvandoEmpresa) return;
+    setErroEmpresa(null);
+    setSalvandoEmpresa(true);
+    try {
+      const resultado = await atualizarEmpresa(empresa.id, nomeEmpresa);
+      if (!resultado.ok) {
+        setErroEmpresa(resultado.error);
+        return;
+      }
+      setEditandoEmpresa(false);
+      onMudou();
+    } catch (err) {
+      console.error("EmpresaCard: falha ao editar empresa:", err);
+      setErroEmpresa(ERRO_GENERICO);
+    } finally {
+      setSalvandoEmpresa(false);
+    }
+  }
+
+  async function removerEmpresa() {
+    if (excluindoEmpresa) return;
+    const confirmou = window.confirm(
+      `Excluir a empresa "${empresa.nome}" e todos os seus dados? Os usuários sem outro vínculo também perderão o acesso.`
+    );
+    if (!confirmou) return;
+
+    setErroEmpresa(null);
+    setExcluindoEmpresa(true);
+    try {
+      const resultado = await excluirEmpresa(empresa.id);
+      if (!resultado.ok) {
+        setErroEmpresa(resultado.error);
+        return;
+      }
+      onMudou();
+    } catch (err) {
+      console.error("EmpresaCard: falha ao excluir empresa:", err);
+      setErroEmpresa(ERRO_GENERICO);
+    } finally {
+      setExcluindoEmpresa(false);
+    }
+  }
 
   async function adicionar(e: React.FormEvent) {
     e.preventDefault();
@@ -272,10 +325,39 @@ function EmpresaCard({
             {empresa.nome}
           </h2>
         </div>
-        <span className={`conta-contagem${cheia ? " is-cheia" : ""}`}>
-          {empresa.membros.length}/{empresa.maxUsuarios} usuários
-        </span>
+        <div className="admin-company-tools">
+          <span className={`conta-contagem${cheia ? " is-cheia" : ""}`}>
+            {empresa.membros.length}/{empresa.maxUsuarios} usuários
+          </span>
+          <button
+            type="button"
+            className="conta-acao"
+            onClick={() => {
+              setNomeEmpresa(empresa.nome);
+              setEditandoEmpresa((aberto) => !aberto);
+            }}
+          >
+            {editandoEmpresa ? "Cancelar" : "Editar"}
+          </button>
+          <button type="button" className="conta-acao conta-acao--remover" onClick={removerEmpresa} disabled={excluindoEmpresa}>
+            {excluindoEmpresa ? "Excluindo…" : "Excluir"}
+          </button>
+        </div>
       </div>
+
+      {editandoEmpresa && (
+        <form onSubmit={salvarEmpresa} className="admin-edit-form" noValidate>
+          <label className="grid gap-1.5">
+            <span className="quiz-label">Nome da empresa</span>
+            <input className="quiz-input" value={nomeEmpresa} onChange={(e) => setNomeEmpresa(e.target.value)} required />
+          </label>
+          <button type="submit" className="conta-acao" disabled={salvandoEmpresa}>
+            {salvandoEmpresa ? "Salvando…" : "Salvar empresa"}
+          </button>
+        </form>
+      )}
+
+      {erroEmpresa && <p className="auth-erro mt-4" role="alert">{erroEmpresa}</p>}
 
       <ul className="conta-lista">
         {empresa.membros.map((membro) => (
@@ -387,27 +469,62 @@ function LinhaMembro({
   membro: MembroAdmin;
   onMudou: () => void;
 }) {
+  const [editando, setEditando] = useState(false);
+  const [nome, setNome] = useState(membro.nome ?? "");
+  const [email, setEmail] = useState(membro.email);
+  const [senha, setSenha] = useState("");
   const [data, setData] = useState(paraInputDate(membro.licencaAte));
   const [salvando, setSalvando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const status = statusLicenca(membro.licencaAte);
 
-  async function salvar() {
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
     if (salvando) return;
     setErro(null);
     setSalvando(true);
     try {
-      const resultado = await atualizarLicenca(membro.userId, data || null);
+      const resultado = await atualizarUsuarioEmpresa({
+        userId: membro.userId,
+        nome,
+        email,
+        senha,
+        licencaAte: data || null,
+      });
+      if (!resultado.ok) {
+        setErro(resultado.error);
+        return;
+      }
+      setSenha("");
+      setEditando(false);
+      onMudou();
+    } catch (err) {
+      console.error("LinhaMembro: falha inesperada ao editar usuário:", err);
+      setErro(ERRO_GENERICO);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function remover() {
+    if (excluindo) return;
+    if (!window.confirm(`Excluir o acesso de ${membro.nome ?? membro.email}? Esta ação não pode ser desfeita.`)) return;
+
+    setErro(null);
+    setExcluindo(true);
+    try {
+      const resultado = await excluirUsuarioEmpresa(membro.userId);
       if (!resultado.ok) {
         setErro(resultado.error);
         return;
       }
       onMudou();
     } catch (err) {
-      console.error("LinhaMembro: falha inesperada ao salvar licença:", err);
+      console.error("LinhaMembro: falha inesperada ao excluir usuário:", err);
       setErro(ERRO_GENERICO);
     } finally {
-      setSalvando(false);
+      setExcluindo(false);
     }
   }
 
@@ -421,18 +538,49 @@ function LinhaMembro({
         {PAPEL_LABEL[membro.papel]}
       </span>
       <span className={`licenca-badge ${status.classe}`}>{status.label}</span>
-      <div className="admin-licenca-editor">
-        <input
-          type="date"
-          className="quiz-input"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          aria-label={`Data de vencimento da licença de ${membro.nome ?? membro.email}`}
-        />
-        <button type="button" className="conta-acao" onClick={salvar} disabled={salvando}>
-          {salvando ? "Salvando…" : "Salvar"}
+      <div className="admin-member-actions">
+        <button
+          type="button"
+          className="conta-acao"
+          onClick={() => {
+            setNome(membro.nome ?? "");
+            setEmail(membro.email);
+            setData(paraInputDate(membro.licencaAte));
+            setSenha("");
+            setEditando((aberto) => !aberto);
+          }}
+        >
+          {editando ? "Cancelar" : "Editar"}
+        </button>
+        <button type="button" className="conta-acao conta-acao--remover" onClick={remover} disabled={excluindo}>
+          {excluindo ? "Excluindo…" : "Excluir"}
         </button>
       </div>
+      {editando && (
+        <form onSubmit={salvar} className="admin-member-form" noValidate>
+          <div className="calc-grid-2">
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Nome</span>
+              <input className="quiz-input" value={nome} onChange={(e) => setNome(e.target.value)} required />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">E-mail</span>
+              <input type="email" className="quiz-input" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Nova senha (opcional)</span>
+              <input type="text" className="quiz-input" value={senha} onChange={(e) => setSenha(e.target.value)} minLength={8} />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Licença até (opcional)</span>
+              <input type="date" className="quiz-input" value={data} onChange={(e) => setData(e.target.value)} />
+            </label>
+          </div>
+          <button type="submit" className="conta-acao" disabled={salvando}>
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+        </form>
+      )}
       {erro && (
         <p className="auth-erro w-full" role="alert">
           {erro}

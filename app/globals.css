@@ -820,6 +820,16 @@ a:focus-visible, button:focus-visible {
   .admin-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 13px 2px; border-top: 1px solid var(--color-line); }
   .admin-item:last-child { border-bottom: 1px solid var(--color-line); }
 
+  .admin-company-tools,
+  .admin-member-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+  .admin-edit-form,
+  .admin-member-form {
+    display: grid; gap: 14px; margin-top: 16px; padding: 16px;
+    background: rgba(4,149,240,.045); border: 1px solid rgba(4,149,240,.2); border-radius: 12px;
+  }
+  .admin-edit-form { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+  .admin-member-form { width: 100%; }
+
   /* editor inline da data de vencimento (input + salvar), lado a lado */
   .admin-licenca-editor { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; }
   .admin-licenca-editor .quiz-input { width: 168px; padding: 9px 12px; font-size: 13px; }
@@ -833,6 +843,13 @@ a:focus-visible, button:focus-visible {
   }
   .admin-toggle:hover { background: rgba(4,149,240,.16); }
   .admin-toggle:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
+
+  @media (max-width: 640px) {
+    .admin-company-tools { justify-content: flex-start; width: 100%; }
+    .admin-edit-form { grid-template-columns: 1fr; }
+    .admin-edit-form .conta-acao,
+    .admin-member-form .conta-acao { justify-self: start; }
+  }
 }
 
 /* ============================================================

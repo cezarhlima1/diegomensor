@@ -335,3 +335,117 @@ export async function atualizarLicenca(
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/** Atualiza o nome de uma empresa existente. */
+export async function atualizarEmpresa(
+  empresaId: string,
+  nome: string
+): Promise<ResultadoAuth> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
+
+  const nomeEmpresa = nome.trim();
+  if (!nomeEmpresa) return { ok: false, error: "Informe o nome da empresa." };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("empresas").update({ nome: nomeEmpresa }).eq("id", empresaId);
+  if (error) return { ok: false, error: ERRO_GENERICO };
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/** Atualiza os dados cadastrais de um usuário/admin de uma empresa. */
+export async function atualizarUsuarioEmpresa(dados: {
+  userId: string;
+  nome: string;
+  email: string;
+  senha: string;
+  licencaAte: string | null;
+}): Promise<ResultadoAuth> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
+  if (dados.userId === superAdminId) {
+    return { ok: false, error: "O cadastro do super admin não pode ser alterado aqui." };
+  }
+
+  const nome = dados.nome.trim();
+  const email = dados.email.trim().toLowerCase();
+  if (!nome || !email) return { ok: false, error: "Preencha nome e e-mail." };
+  if (!emailValido(email)) return { ok: false, error: "Informe um e-mail válido." };
+  if (dados.senha && dados.senha.length < SENHA_MIN) {
+    return { ok: false, error: `A nova senha precisa ter pelo menos ${SENHA_MIN} caracteres.` };
+  }
+  if (dados.licencaAte && Number.isNaN(Date.parse(dados.licencaAte))) {
+    return { ok: false, error: "Data de vencimento inválida." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error: erroAuth } = await admin.auth.admin.updateUserById(dados.userId, {
+    email,
+    ...(dados.senha ? { password: dados.senha } : {}),
+    user_metadata: { nome },
+  });
+  if (erroAuth) return { ok: false, error: mapearErroBanco(erroAuth.message, ERRO_GENERICO) };
+
+  const { error: erroProfile } = await admin
+    .from("profiles")
+    .update({
+      nome,
+      email,
+      license_expiry_at: dados.licencaAte ? new Date(dados.licencaAte).toISOString() : null,
+    })
+    .eq("id", dados.userId);
+  if (erroProfile) return { ok: false, error: ERRO_GENERICO };
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/** Exclui um usuário e todos os vínculos dele, inclusive o acesso de login. */
+export async function excluirUsuarioEmpresa(userId: string): Promise<ResultadoAuth> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
+  if (userId === superAdminId) {
+    return { ok: false, error: "O super admin não pode ser excluído por esta tela." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) return { ok: false, error: ERRO_GENERICO };
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/** Exclui a empresa, seus dados da calculadora e os acessos sem outro vínculo. */
+export async function excluirEmpresa(empresaId: string): Promise<ResultadoAuth> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
+
+  const admin = createSupabaseAdminClient();
+  const { data: vinculos, error: erroVinculos } = await admin
+    .from("empresa_usuarios")
+    .select("user_id")
+    .eq("empresa_id", empresaId);
+  if (erroVinculos) return { ok: false, error: ERRO_GENERICO };
+
+  const { error: erroEmpresa } = await admin.from("empresas").delete().eq("id", empresaId);
+  if (erroEmpresa) return { ok: false, error: ERRO_GENERICO };
+
+  for (const vinculo of vinculos ?? []) {
+    if (vinculo.user_id === superAdminId) continue;
+    const { count, error: erroContagem } = await admin
+      .from("empresa_usuarios")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", vinculo.user_id);
+    if (erroContagem || count !== 0) continue;
+    const { error: erroExcluirUsuario } = await admin.auth.admin.deleteUser(vinculo.user_id);
+    if (erroExcluirUsuario) {
+      console.error("excluirEmpresa: empresa removida, mas falhou ao remover usuário órfão:", erroExcluirUsuario.message);
+    }
+  }
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
