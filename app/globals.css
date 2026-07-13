@@ -975,8 +975,9 @@ a:focus-visible, button:focus-visible {
     display: flex;
     width: max-content;
     will-change: transform;
-    animation: destraveTicker 16s linear infinite;
-    animation-play-state: running;
+    backface-visibility: hidden;
+    animation: destraveTicker 14s linear infinite !important;
+    animation-play-state: running !important;
   }
   .destrave-theme .destrave-ticker__group {
     flex: none;
@@ -989,8 +990,8 @@ a:focus-visible, button:focus-visible {
     white-space: nowrap;
   }
   @keyframes destraveTicker {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
   }
 
   /* fundo exclusivo da segunda dobra da LP1 */
