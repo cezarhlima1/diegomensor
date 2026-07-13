@@ -17,7 +17,7 @@ export const lp1Copy: DestraveCopy = {
     { firstLine: "Construir um plano de ação personalizado", secondLine: "para aumentar seu faturamento na oficina." },
   ],
   ctaLabel: "Quero destravar a gestão da minha oficina",
-  priceBarLabel: "75% do LOTE 01 vendido de R$87,00 por R$37,00",
+  priceBarLabel: "75% do LOTE 01 vendido | De: R$87,00 por R$37,00",
   block2: {
     title: "Os resultados da sua oficina HOJE são consequência da forma como ela é gerenciada.",
     intro: "Depois da imersão você vai:",
