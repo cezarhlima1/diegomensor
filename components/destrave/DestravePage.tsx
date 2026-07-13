@@ -28,17 +28,36 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
               {copy.eventLine}
             </span>
 
-            <h1 className="reveal d1 font-display font-black text-[clamp(30px,4.6vw,52px)] my-6 max-w-[18ch]">
-              {copy.headline.map((seg, i) =>
-                seg.blue ? (
-                  <span key={i} className="text-dest-accent">
-                    {seg.text}
-                  </span>
-                ) : (
-                  <span key={i}>{seg.text}</span>
-                )
-              )}
-            </h1>
+            {copy.heroTitle ? (
+              <>
+                <h1 className="reveal d1 font-display font-black text-[clamp(36px,5.4vw,60px)] mt-6 mb-4 max-w-[18ch]">
+                  {copy.heroTitle}
+                </h1>
+                <p className="reveal d1 font-display font-black text-[clamp(26px,3.8vw,42px)] mb-6 max-w-[22ch]">
+                  {copy.headline.map((seg, i) =>
+                    seg.blue ? (
+                      <span key={i} className="text-dest-accent">
+                        {seg.text}
+                      </span>
+                    ) : (
+                      <span key={i}>{seg.text}</span>
+                    )
+                  )}
+                </p>
+              </>
+            ) : (
+              <h1 className="reveal d1 font-display font-black text-[clamp(30px,4.6vw,52px)] my-6 max-w-[18ch]">
+                {copy.headline.map((seg, i) =>
+                  seg.blue ? (
+                    <span key={i} className="text-dest-accent">
+                      {seg.text}
+                    </span>
+                  ) : (
+                    <span key={i}>{seg.text}</span>
+                  )
+                )}
+              </h1>
+            )}
 
             <p className="reveal d2 lead mb-5">{copy.bulletsIntro}</p>
 

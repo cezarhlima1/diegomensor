@@ -4,6 +4,7 @@ export type HeadlineSegment = { text: string; blue?: boolean };
 
 export type DestraveCopy = {
   eventLine: string;
+  heroTitle?: string;
   headline: HeadlineSegment[];
   bulletsIntro: string;
   bullets: string[];
