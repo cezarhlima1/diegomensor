@@ -40,7 +40,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       {/* 1º BLOCO — herói */}
       <section
         data-hero
-        className={`relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20 ${copy.heroBackgroundImage ? "destrave-hero--with-cover" : ""}`}
+        className={`relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20 lg:pt-28 lg:pb-28 xl:pt-36 xl:pb-32 ${copy.heroBackgroundImage ? "destrave-hero--with-cover" : ""}`}
       >
         <div className="hero-bg" aria-hidden="true" />
         <DestraveGiantWord word="OFICINA" className="-left-6 -bottom-[6%] hidden md:block" />
@@ -49,7 +49,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
         )}
         <div
           className={`wrap grid grid-cols-1 items-center ${
-            copy.heroTitle ? "" : "lg:grid-cols-[1.15fr_.85fr] gap-14"
+            copy.heroTitle ? "lg:min-h-[540px] xl:min-h-[640px] lg:flex lg:items-center" : "lg:grid-cols-[1.15fr_.85fr] gap-14"
           }`}
         >
           <div>
@@ -145,7 +145,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       )}
 
       {/* 2º BLOCO */}
-      <section className={`py-[72px] md:py-24 ${copy.heroTitle ? "destrave-block2--lp1" : ""}`}>
+      <section className={`py-[72px] md:py-24 lg:py-28 xl:py-32 ${copy.heroTitle ? "destrave-block2--lp1" : ""}`}>
         <div className="wrap text-center max-w-[760px]">
           <h2 className="section-title reveal mx-auto">
             {renderHighlightedText(copy.block2.title, copy.block2.highlightedWords)}
@@ -169,7 +169,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* 3º BLOCO — prova social */}
-      <section className={`py-[72px] md:py-24 ${copy.block3.subtitle ? "destrave-block3--lp1" : ""}`}>
+      <section className={`py-[72px] md:py-24 lg:py-28 xl:py-32 ${copy.block3.subtitle ? "destrave-block3--lp1" : ""}`}>
         <div className="wrap text-center">
           <h2
             className={
@@ -186,7 +186,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
             </p>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-10 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 xl:gap-8 max-w-[820px] xl:max-w-[980px] mx-auto mt-10 xl:mt-12 items-start">
             {testimonials.map((t, i) => (
               <figure key={i} className={`testi reveal d${i + 1} !p-0 overflow-hidden`}>
                 <div className="dest-photo overflow-hidden">
@@ -211,14 +211,14 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       </section>
 
       {/* ÚLTIMO BLOCO — autor */}
-      <section className="py-[72px] md:py-24">
+      <section className="py-[72px] md:py-24 lg:py-28 xl:py-32">
         <div className="wrap">
-          <div className="author-card reveal grid grid-cols-1 lg:grid-cols-[.85fr_1.15fr]">
-            <div className="author-photo dest-photo relative min-h-[280px] lg:min-h-[380px] border-b lg:border-b-0 lg:border-r border-blue/20 overflow-hidden">
+          <div className="author-card reveal grid grid-cols-1 xl:grid-cols-[.85fr_1.15fr]">
+            <div className="author-photo dest-photo relative min-h-[280px] lg:min-h-[360px] xl:min-h-[420px] border-b xl:border-b-0 xl:border-r border-blue/20 overflow-hidden">
               <img src="/diego.jpeg" alt="Diego Mensor" className="absolute inset-0 w-full h-full object-cover object-top" />
             </div>
 
-            <div className="self-center px-8 py-10 lg:px-[42px] lg:py-11">
+            <div className="self-center px-8 py-10 lg:px-11 lg:py-12 xl:px-[52px] xl:py-14">
               <span className="tag">Quem é Diego Mensor</span>
               <h3
                 className={`font-display text-white mt-4 leading-[1.04] ${
