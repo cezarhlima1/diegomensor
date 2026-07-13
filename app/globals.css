@@ -955,6 +955,16 @@ a:focus-visible, button:focus-visible {
       radial-gradient(45% 55% at 88% 8%, rgba(14,165,240,.1), transparent 70%);
   }
 
+  /* Capa exclusiva da primeira dobra da LP1: o degradê mantém a copy legível
+     enquanto a imagem ocupa toda a área do herói. */
+  .destrave-theme .destrave-hero--with-cover .hero-bg {
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(4,5,6,.22) 0%, rgba(4,5,6,.08) 48%, rgba(4,5,6,.38) 100%),
+      linear-gradient(0deg, rgba(4,5,6,.5) 0%, transparent 45%),
+      url("/Capa%20pa%CC%81gina%20de%20venda.png") center / cover no-repeat;
+  }
+
   .destrave-theme .final-card,
   .destrave-theme .price-card {
     background: linear-gradient(170deg, #141a1f, var(--color-card));

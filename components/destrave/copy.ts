@@ -4,6 +4,7 @@ import type { DestraveCopy } from "./types";
 export const lp1Copy: DestraveCopy = {
   eventLine: "Imersão - 01 de agosto · 8h às 18h",
   heroTitle: "DESTRAVE o próximo nível da sua oficina",
+  heroBackgroundImage: true,
   headline: [
     { text: "Em um dia vamos construir um plano de ação para " },
     { text: "destravar a gestão da sua oficina", blue: true },

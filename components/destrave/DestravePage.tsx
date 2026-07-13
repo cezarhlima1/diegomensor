@@ -17,7 +17,10 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
     <div className="destrave-theme">
       {/* 1º BLOCO — herói */}
-      <section data-hero className="relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20">
+      <section
+        data-hero
+        className={`relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20 ${copy.heroBackgroundImage ? "destrave-hero--with-cover" : ""}`}
+      >
         <div className="hero-bg" aria-hidden="true" />
         <DestraveGiantWord word="OFICINA" className="-left-6 -bottom-[6%] hidden md:block" />
         <DestraveChainMotif className="dest-chain-motif pointer-events-none absolute -top-2 right-[-40px] w-[420px] max-w-none opacity-[.35] rotate-[-4deg] hidden sm:block" />
