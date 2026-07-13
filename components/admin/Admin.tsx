@@ -62,6 +62,7 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
   const [emailAdmin, setEmailAdmin] = useState("");
   const [senhaAdmin, setSenhaAdmin] = useState("");
   const [licencaAdmin, setLicencaAdmin] = useState("");
+  const [usarEmailExistente, setUsarEmailExistente] = useState(false);
   const [erroCriacao, setErroCriacao] = useState<string | null>(null);
   const [okCriacao, setOkCriacao] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
@@ -79,19 +80,22 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
         emailAdmin,
         senhaAdmin,
         licencaAte: licencaAdmin || null,
+        usarEmailExistente,
       });
       if (!resultado.ok) {
         setErroCriacao(resultado.error);
         return;
       }
-      setOkCriacao(
-        `Empresa "${nomeEmpresa}" criada. Senha do admin: ${senhaAdmin} — copie agora, ela não será mostrada de novo.`
+      setOkCriacao(resultado.cadastroExistente
+        ? `Empresa "${nomeEmpresa}" criada e vinculada ao acesso já cadastrado.`
+        : `Empresa "${nomeEmpresa}" criada. Senha do admin: ${senhaAdmin} — copie agora, ela não será mostrada de novo.`
       );
       setNomeEmpresa("");
       setNomeAdmin("");
       setEmailAdmin("");
       setSenhaAdmin("");
       setLicencaAdmin("");
+      setUsarEmailExistente(false);
       router.refresh();
     } catch (err) {
       console.error("Admin: falha inesperada ao criar empresa:", err);
@@ -156,11 +160,11 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
                   type="text"
                   autoComplete="off"
                   className="quiz-input"
-                  placeholder="Mínimo de 8 caracteres"
+                  placeholder={usarEmailExistente ? "Não é necessária para acesso já cadastrado" : "Mínimo de 8 caracteres"}
                   value={senhaAdmin}
                   onChange={(e) => setSenhaAdmin(e.target.value)}
-                  required
-                  minLength={8}
+                  required={!usarEmailExistente}
+                  minLength={usarEmailExistente ? undefined : 8}
                 />
                 <button
                   type="button"
@@ -170,6 +174,16 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
                   Gerar
                 </button>
               </div>
+            </label>
+            <label className="admin-existing-email-option">
+              <input
+                type="checkbox"
+                checked={usarEmailExistente}
+                onChange={(e) => setUsarEmailExistente(e.target.checked)}
+              />
+              <span>
+                E-mail já cadastrado? Vincular este mesmo acesso como administrador da nova empresa.
+              </span>
             </label>
             <label className="grid gap-1.5">
               <span className="quiz-label">Licença até (opcional)</span>

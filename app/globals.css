@@ -829,6 +829,12 @@ a:focus-visible, button:focus-visible {
   }
   .admin-edit-form { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .admin-member-form { width: 100%; }
+  .admin-existing-email-option {
+    grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+    color: var(--color-muted); background: rgba(4,149,240,.05); border: 1px solid rgba(4,149,240,.2); border-radius: 10px;
+    font-size: 13px; line-height: 1.45; cursor: pointer;
+  }
+  .admin-existing-email-option input { flex: none; width: 16px; height: 16px; margin-top: 2px; accent-color: var(--color-blue); }
 
   /* editor inline da data de vencimento (input + salvar), lado a lado */
   .admin-licenca-editor { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; }

@@ -56,6 +56,8 @@ export type EmpresaAdmin = {
   membros: MembroAdmin[];
 };
 
+type ResultadoCriarEmpresa = ResultadoAuth & { cadastroExistente?: boolean };
+
 /**
  * Lista TODAS as empresas do produto com seus membros e a licença de cada
  * pessoa — visão que nenhum admin de empresa tem (cada um só vê a própria
@@ -129,7 +131,8 @@ export async function criarEmpresaComAdmin(dados: {
   emailAdmin: string;
   senhaAdmin: string;
   licencaAte: string | null;
-}): Promise<ResultadoAuth> {
+  usarEmailExistente: boolean;
+}): Promise<ResultadoCriarEmpresa> {
   const superAdminId = await exigirSuperAdmin();
   if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
 
@@ -138,23 +141,79 @@ export async function criarEmpresaComAdmin(dados: {
   const emailAdmin = dados.emailAdmin.trim().toLowerCase();
   const senhaAdmin = dados.senhaAdmin;
 
-  if (!nomeEmpresa || !nomeAdmin || !emailAdmin || !senhaAdmin) {
+  if (!nomeEmpresa || !nomeAdmin || !emailAdmin) {
     return { ok: false, error: "Preencha todos os campos." };
   }
   if (!emailValido(emailAdmin)) {
     return { ok: false, error: "Informe um e-mail válido." };
-  }
-  if (senhaAdmin.length < SENHA_MIN) {
-    return {
-      ok: false,
-      error: `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`,
-    };
   }
   if (dados.licencaAte && Number.isNaN(Date.parse(dados.licencaAte))) {
     return { ok: false, error: "Data de vencimento inválida." };
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: perfilExistente, error: erroPerfilExistente } = await admin
+    .from("profiles")
+    .select("id, max_empresas")
+    .eq("email", emailAdmin)
+    .maybeSingle();
+  if (erroPerfilExistente) return { ok: false, error: ERRO_GENERICO };
+
+  if (perfilExistente) {
+    if (!dados.usarEmailExistente) {
+      return {
+        ok: false,
+        error: "Este e-mail já está cadastrado. Marque a opção abaixo para vincular o mesmo acesso como administrador desta nova empresa.",
+      };
+    }
+
+    const { count: empresasAdmin, error: erroContagem } = await admin
+      .from("empresa_usuarios")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", perfilExistente.id)
+      .eq("papel", "admin");
+    if (erroContagem || empresasAdmin === null) return { ok: false, error: ERRO_GENERICO };
+
+    if (empresasAdmin >= perfilExistente.max_empresas) {
+      const { error: erroLimite } = await admin
+        .from("profiles")
+        .update({ max_empresas: empresasAdmin + 1 })
+        .eq("id", perfilExistente.id);
+      if (erroLimite) return { ok: false, error: ERRO_GENERICO };
+    }
+
+    const { data: empresa, error: erroEmpresa } = await admin
+      .from("empresas")
+      .insert({ nome: nomeEmpresa })
+      .select("id")
+      .single();
+    if (erroEmpresa || !empresa) return { ok: false, error: mapearErroBanco(erroEmpresa?.message ?? "", ERRO_GENERICO) };
+
+    const { error: erroVinculo } = await admin.from("empresa_usuarios").insert({
+      empresa_id: empresa.id,
+      user_id: perfilExistente.id,
+      papel: "admin",
+    });
+    if (erroVinculo) {
+      await admin.from("empresas").delete().eq("id", empresa.id);
+      return { ok: false, error: mapearErroBanco(erroVinculo.message, ERRO_GENERICO) };
+    }
+
+    if (dados.licencaAte) {
+      await admin
+        .from("profiles")
+        .update({ license_expiry_at: new Date(dados.licencaAte).toISOString() })
+        .eq("id", perfilExistente.id);
+    }
+
+    revalidatePath("/admin");
+    return { ok: true, cadastroExistente: true };
+  }
+
+  if (!senhaAdmin) return { ok: false, error: "Informe uma senha para o novo administrador." };
+  if (senhaAdmin.length < SENHA_MIN) {
+    return { ok: false, error: `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.` };
+  }
 
   const { data: criado, error: erroUsuario } = await admin.auth.admin.createUser({
     email: emailAdmin,
