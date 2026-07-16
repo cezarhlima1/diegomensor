@@ -146,6 +146,25 @@ export type Passo1Dados = {
   multiplicador: number;
 };
 
+/* ---------- Passo #01 — histórico de valor hora (valor_hora_historico) ---------- */
+/** Status de um valor hora salvo (espelha o CHECK de valor_hora_historico.status). */
+export type StatusValorHora = "ativo" | "inativo" | "padrao";
+
+export const STATUS_VALOR_HORA_LABEL: Record<StatusValorHora, string> = {
+  padrao: "Padrão",
+  ativo: "Ativo",
+  inativo: "Inativo",
+};
+
+/** Um valor hora salvo no histórico da empresa (tabela valor_hora_historico). */
+export type ValorHoraSalvo = {
+  id: string;
+  nome: string;
+  valorHora: number;
+  status: StatusValorHora;
+  data: string; // ISO (created_at)
+};
+
 /* ---------- Passo #02 — valor da peça ---------- */
 export type Peca = {
   id: string;
@@ -219,8 +238,8 @@ export type PecaResumo = {
   maoDeObra?: number;
 };
 
-/** Únicas duas opções aceitas pelo CHECK da coluna orcamentos.status. */
-export type StatusOrcamento = "Aguardando aprovação" | "Aprovado";
+/** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
+export type StatusOrcamento = "Aguardando aprovação" | "Aprovado" | "Não aprovado";
 
 export type Orcamento = {
   id: string;

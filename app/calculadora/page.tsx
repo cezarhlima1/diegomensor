@@ -12,6 +12,8 @@ import type {
   Passo1Dados,
   Passo2ConfigDados,
   StatusOrcamento,
+  StatusValorHora,
+  ValorHoraSalvo,
 } from "@/components/calculadora/calcLogic";
 
 export const metadata: Metadata = {
@@ -119,6 +121,31 @@ export default async function CalculadoraPage() {
     }));
   }
 
+  // Histórico de valores hora: legível por QUALQUER membro (RLS "select se
+  // membro") — o funcionário também seleciona o valor no orçamento; a
+  // ESCRITA continua restrita a admin (server actions do Passo 1).
+  let valorHoraHistoricoInicial: ValorHoraSalvo[] = [];
+  {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("valor_hora_historico")
+      .select("id, nome, valor_hora, status, created_at")
+      .eq("empresa_id", sessao.empresaAtiva.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      throw new Error(
+        `calculadora: falha ao carregar valor_hora_historico: ${error.message}`
+      );
+    }
+    valorHoraHistoricoInicial = (data ?? []).map((h) => ({
+      id: h.id,
+      nome: h.nome,
+      valorHora: Number(h.valor_hora),
+      status: h.status as StatusValorHora,
+      data: h.created_at,
+    }));
+  }
+
   return (
     <>
       <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
@@ -141,6 +168,7 @@ export default async function CalculadoraPage() {
           passo1Inicial={passo1Inicial}
           passo2ConfigInicial={passo2ConfigInicial}
           orcamentosIniciais={orcamentosIniciais}
+          valorHoraHistoricoInicial={valorHoraHistoricoInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
         />
       </main>

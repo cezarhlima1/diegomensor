@@ -6,14 +6,24 @@ import {
   MULT_DEFAULT,
   MULT_MIN,
   MULT_MAX,
+  STATUS_VALOR_HORA_LABEL,
+  brl,
   calcCustoHora,
+  formatData,
   maskIntTyping,
+  maskMoneyTyping,
   parseNum,
   somaCustos,
   type Passo1Dados,
+  type StatusValorHora,
+  type ValorHoraSalvo,
 } from "./calcLogic";
 import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
-import { salvarPasso1 } from "./actions";
+import {
+  atualizarStatusValorHora,
+  salvarPasso1,
+  salvarValorHora,
+} from "./actions";
 
 /** Espera após a última edição antes de persistir no banco (ms). */
 const DEBOUNCE_SALVAR_MS = 800;
@@ -39,6 +49,8 @@ export default function Passo1({
   onValorHora,
   onAvancar,
   onLimparResto,
+  historico,
+  onHistoricoChange,
 }: {
   /** Empresa dona dos dados — a server action revalida o papel/vínculo nela. */
   empresaId: string;
@@ -50,6 +62,10 @@ export default function Passo1({
   onAvancar: () => void;
   /** Pede ao pai para limpar os Passos 2-3 (peças, cliente, rascunho local). */
   onLimparResto: () => void;
+  /** Histórico de valores hora salvos (estado mora no pai — o Passo 3 usa). */
+  historico: ValorHoraSalvo[];
+  /** Publica o histórico atualizado após salvar/mudar status. */
+  onHistoricoChange: (historico: ValorHoraSalvo[]) => void;
 }) {
   // Estado hidratado do banco (prop). As strings já vêm mascaradas pelo
   // próprio app (salvarPasso1 grava o que a UI produz) — sem reformatação.
@@ -63,6 +79,18 @@ export default function Passo1({
   );
   const [salvamento, setSalvamento] = useState<Salvamento>("ocioso");
 
+  // Edição manual do valor hora: guarda o texto digitado até o blur/Enter,
+  // quando o fator correspondente (valor ÷ custo base) é aplicado na régua,
+  // limitado ao intervalo 1-2 — o valor exibido volta a ser derivado.
+  const [valorHoraEdit, setValorHoraEdit] = useState<string | null>(null);
+
+  // Form "salvar valor hora no histórico".
+  const [nomeValorHora, setNomeValorHora] = useState("");
+  const [salvandoValorHora, setSalvandoValorHora] = useState(false);
+  const [erroValorHora, setErroValorHora] = useState("");
+  const [okValorHora, setOkValorHora] = useState(false);
+  const [mudandoStatusId, setMudandoStatusId] = useState("");
+
   const totalCustos = useMemo(() => somaCustos(custos), [custos]);
   const hora = useMemo(
     () =>
@@ -75,6 +103,12 @@ export default function Passo1({
     [totalCustos, horasMes, mecanicos, multiplicador],
   );
   const pulseHora = usePulse(Math.round(hora.custoFinal));
+  const valorHoraExibido =
+    valorHoraEdit ??
+    hora.custoFinal.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   // Passos 2-3 usam o valor da hora ao vivo (mesmo comportamento de quando
   // o cálculo morava no pai).
@@ -107,6 +141,67 @@ export default function Passo1({
     return () => window.clearTimeout(id);
   }, [empresaId, custos, horasMes, mecanicos, multiplicador]);
 
+  function aplicarValorHoraManual() {
+    if (valorHoraEdit === null) return;
+    const alvo = parseNum(valorHoraEdit);
+    setValorHoraEdit(null);
+    if (hora.custoBase <= 0 || alvo <= 0) return;
+    const fator = Math.min(
+      MULT_MAX,
+      Math.max(MULT_MIN, alvo / hora.custoBase),
+    );
+    setMultiplicador(Math.round(fator * 100) / 100);
+  }
+
+  async function salvarNoHistorico() {
+    if (salvandoValorHora) return;
+    setErroValorHora("");
+    setOkValorHora(false);
+    setSalvandoValorHora(true);
+    try {
+      const r = await salvarValorHora(empresaId, {
+        nome: nomeValorHora.trim(),
+        valorHora: hora.custoFinal,
+      });
+      if (!r.ok) {
+        setErroValorHora(r.error);
+        return;
+      }
+      onHistoricoChange([r.registro, ...historico]);
+      setNomeValorHora("");
+      setOkValorHora(true);
+      window.setTimeout(() => setOkValorHora(false), 2600);
+    } catch {
+      setErroValorHora(
+        "Não foi possível salvar o valor hora. Tente de novo.",
+      );
+    } finally {
+      setSalvandoValorHora(false);
+    }
+  }
+
+  async function mudarStatusHistorico(id: string, status: StatusValorHora) {
+    const anterior = historico;
+    setErroValorHora("");
+    setMudandoStatusId(id);
+    // Otimista: promover a padrão rebaixa o padrão anterior para ativo,
+    // espelhando o que a server action faz no banco.
+    onHistoricoChange(
+      historico.map((h) => {
+        if (h.id === id) return { ...h, status };
+        if (status === "padrao" && h.status === "padrao")
+          return { ...h, status: "ativo" };
+        return h;
+      }),
+    );
+    const r = await atualizarStatusValorHora(empresaId, id, status);
+    setMudandoStatusId("");
+    if (!r.ok) {
+      onHistoricoChange(anterior);
+      setErroValorHora(r.error);
+    }
+  }
+
   function setCusto(key: string, value: string) {
     setCustos((prev) => ({ ...prev, [key]: value }));
   }
@@ -120,6 +215,11 @@ export default function Passo1({
   }
 
   const multInteiro = Number.isInteger(multiplicador);
+  const multCasas = multInteiro
+    ? 0
+    : Math.round(multiplicador * 10) / 10 === multiplicador
+      ? 1
+      : 2;
 
   return (
     <>
@@ -175,7 +275,7 @@ export default function Passo1({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="quiz-label">Multiplicador</span>
             <span className="calc-mult-value">
-              {multiplicador.toFixed(multInteiro ? 0 : 1)}×
+              {multiplicador.toFixed(multCasas)}×
             </span>
           </div>
           <input
@@ -188,8 +288,9 @@ export default function Passo1({
             onChange={(e) => setMultiplicador(Number(e.target.value))}
           />
           <p className="calc-warn">
-            <span aria-hidden="true">⚠</span> Valor variável — ajuste
-            entre <b>1</b> e <b>2</b> conforme a margem desejada.
+            <span aria-hidden="true">⚠</span> Valor recomendado: <b>2</b>. Se
+            preferir, utilize um valor entre <b>1</b> e <b>2</b> para adequar
+            a margem.
           </p>
         </div>
       </div>
@@ -211,9 +312,25 @@ export default function Passo1({
           </div>
         </div>
         <div className="calc-readout-main">
-          <span className="calc-readout-main-k">Custo da hora final</span>
-          <span className="calc-readout-num">
-            <AnimatedBRL value={hora.custoFinal} />
+          <span className="calc-readout-main-k">
+            Custo da hora final{" "}
+            <span className="calc-edit-hint">(edite se quiser — o fator da régua acompanha)</span>
+          </span>
+          <span className="calc-readout-num calc-readout-num--editavel">
+            <span className="calc-readout-prefix">R$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              aria-label="Custo da hora final"
+              style={{ width: `${Math.max(valorHoraExibido.length, 4)}ch` }}
+              value={valorHoraExibido}
+              disabled={hora.custoBase <= 0}
+              onChange={(e) => setValorHoraEdit(maskMoneyTyping(e.target.value))}
+              onBlur={aplicarValorHoraManual}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+            />
             <small>/h</small>
           </span>
         </div>
@@ -231,6 +348,91 @@ export default function Passo1({
             "⚠ Não foi possível salvar. Suas edições continuam nesta tela — altere um campo para tentar de novo."}
         </p>
       )}
+
+      {/* histórico de valores hora salvos */}
+      <div className="calc-card mt-6">
+        <p className="calc-card-kicker">Histórico de valor hora</p>
+        <h2 className="calc-card-title">Salvar valor hora</h2>
+        <p className="calc-card-sub">
+          Dê um nome e salve o valor calculado acima. O valor{" "}
+          <b>padrão</b> é o que aparece nos orçamentos; valores <b>ativos</b>{" "}
+          podem ser selecionados na hora de montar o orçamento.
+        </p>
+
+        <form
+          className="calc-vh-form mt-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            salvarNoHistorico();
+          }}
+        >
+          <label className="grid gap-1.5 flex-1">
+            <span className="quiz-label">Nome</span>
+            <input
+              type="text"
+              className="quiz-input"
+              placeholder="ex.: Tabela 2026"
+              value={nomeValorHora}
+              onChange={(e) => setNomeValorHora(e.target.value)}
+            />
+          </label>
+          <button
+            type="submit"
+            className="btn"
+            disabled={salvandoValorHora || hora.custoFinal <= 0}
+          >
+            {salvandoValorHora
+              ? "Salvando…"
+              : `Salvar ${brl(hora.custoFinal)}/h`}
+          </button>
+        </form>
+
+        {erroValorHora && (
+          <p className="calc-warn mt-3" role="alert">
+            <span aria-hidden="true">⚠</span> {erroValorHora}
+          </p>
+        )}
+        {okValorHora && (
+          <p className="calc-saved mt-3" role="status">
+            ✓ Valor hora salvo no histórico.
+          </p>
+        )}
+
+        {historico.length > 0 && (
+          <ul className="conta-lista mt-5">
+            {historico.map((h) => (
+              <li key={h.id} className="conta-item">
+                <div className="conta-item-info">
+                  <span className="conta-item-nome">{h.nome}</span>
+                  <span className="conta-item-sub">
+                    {brl(h.valorHora)}/h · {formatData(h.data)}
+                  </span>
+                </div>
+                <select
+                  className={`calc-hist-status calc-vh-status--${h.status}`}
+                  value={h.status}
+                  onChange={(e) =>
+                    mudarStatusHistorico(
+                      h.id,
+                      e.target.value as StatusValorHora,
+                    )
+                  }
+                  disabled={mudandoStatusId === h.id}
+                  aria-label={`Status do valor hora ${h.nome}`}
+                >
+                  {(
+                    Object.keys(STATUS_VALOR_HORA_LABEL) as StatusValorHora[]
+                  ).map((st) => (
+                    <option key={st} value={st}>
+                      {STATUS_VALOR_HORA_LABEL[st]}
+                    </option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="flex justify-between items-center mt-7 gap-3">
         <button className="calc-back" onClick={limparCampos}>

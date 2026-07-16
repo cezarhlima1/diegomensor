@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Membro, Papel } from "@/lib/db/types";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import { definirEmpresaAtiva } from "@/lib/auth/empresaAtiva";
-import { adicionarUsuario, criarEmpresa, removerUsuario } from "./actions";
+import { adicionarUsuario, removerUsuario } from "./actions";
 
 /** Resumo de uma empresa do usuário para o seletor de empresa ativa. */
 type EmpresaResumo = { id: string; nome: string };
@@ -52,12 +52,6 @@ export default function Conta({
   const [okEquipe, setOkEquipe] = useState<string | null>(null);
   const [adicionando, setAdicionando] = useState(false);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
-
-  // --- form "criar empresa" ------------------------------------------------
-  const [nomeEmpresa, setNomeEmpresa] = useState("");
-  const [erroEmpresas, setErroEmpresas] = useState<string | null>(null);
-  const [okEmpresas, setOkEmpresas] = useState<string | null>(null);
-  const [criando, setCriando] = useState(false);
 
   const equipeCheia = membros.length >= maxUsuarios;
   const empresasCheias = empresas.length >= maxEmpresas;
@@ -116,29 +110,6 @@ export default function Conta({
     }
   }
 
-  async function criar(e: React.FormEvent) {
-    e.preventDefault();
-    if (criando) return;
-    setErroEmpresas(null);
-    setOkEmpresas(null);
-    setCriando(true);
-    try {
-      const resultado = await criarEmpresa(nomeEmpresa);
-      if (!resultado.ok) {
-        setErroEmpresas(resultado.error);
-        return;
-      }
-      setNomeEmpresa("");
-      setOkEmpresas("Empresa criada.");
-      router.refresh();
-    } catch (err) {
-      console.error("Conta: falha inesperada ao criar empresa:", err);
-      setErroEmpresas(ERRO_GENERICO);
-    } finally {
-      setCriando(false);
-    }
-  }
-
   return (
     <div className="grid gap-6">
       {/* ---------------- equipe da empresa ativa ---------------- */}
@@ -188,8 +159,15 @@ export default function Conta({
 
         <div className="calc-divider" />
 
-        <h3 className="calc-card-kicker">Adicionar usuário</h3>
-        <form onSubmit={adicionar} className="grid gap-4 mt-4" noValidate>
+        {equipeCheia ? (
+          <p className="calc-card-sub" role="status">
+            Limite de usuários da licença atingido ({maxUsuarios}). Para
+            adicionar mais usuários, contrate uma licença adicional.
+          </p>
+        ) : (
+          <>
+          <h3 className="calc-card-kicker">Adicionar usuário</h3>
+          <form onSubmit={adicionar} className="grid gap-4 mt-4" noValidate>
           <div className="calc-grid-2">
             <label className="grid gap-1.5">
               <span className="quiz-label">Nome</span>
@@ -255,7 +233,9 @@ export default function Conta({
           <button type="submit" className="btn btn--wide" disabled={adicionando}>
             {adicionando ? "Adicionando…" : "Adicionar usuário"}
           </button>
-        </form>
+          </form>
+          </>
+        )}
       </section>
 
       {/* ---------------- minhas empresas ---------------- */}
@@ -285,7 +265,7 @@ export default function Conta({
                 <span className="conta-item-nome">{e.nome}</span>
               </div>
               {e.id === empresaAtiva.id ? (
-                <span className="conta-ativa">Ativa</span>
+                <span className="conta-ativa">Visualizando</span>
               ) : (
                 <form action={definirEmpresaAtiva.bind(null, e.id, "/conta")}>
                   <button type="submit" className="conta-acao">
@@ -297,38 +277,6 @@ export default function Conta({
           ))}
         </ul>
 
-        <div className="calc-divider" />
-
-        <h3 className="calc-card-kicker">Criar empresa</h3>
-        <form onSubmit={criar} className="grid gap-4 mt-4" noValidate>
-          <label className="grid gap-1.5">
-            <span className="quiz-label">Nome da empresa</span>
-            <input
-              type="text"
-              autoComplete="organization"
-              className="quiz-input"
-              placeholder="ex.: Oficina Matriz"
-              value={nomeEmpresa}
-              onChange={(e) => setNomeEmpresa(e.target.value)}
-              required
-            />
-          </label>
-
-          {erroEmpresas && (
-            <p className="auth-erro" role="alert">
-              {erroEmpresas}
-            </p>
-          )}
-          {okEmpresas && (
-            <p className="auth-ok" role="status">
-              {okEmpresas}
-            </p>
-          )}
-
-          <button type="submit" className="btn btn--wide" disabled={criando}>
-            {criando ? "Criando…" : "Criar empresa"}
-          </button>
-        </form>
       </section>
     </div>
   );

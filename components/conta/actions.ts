@@ -7,7 +7,6 @@ import type { Papel } from "@/lib/db/types";
 import type { ResultadoAuth } from "@/components/auth/actions";
 import {
   ERRO_GENERICO,
-  MSG_LIMITE_EMPRESAS,
   MSG_LIMITE_USUARIOS,
   SENHA_MIN,
   emailValido,
@@ -229,52 +228,6 @@ export async function removerUsuario(userIdAlvo: string): Promise<ResultadoAuth>
         erroExclusao.message
       );
     }
-  }
-
-  revalidatePath("/conta");
-  return { ok: true };
-}
-
-/**
- * Cria uma empresa adicional para o admin chamador (DW-3.3).
- * O limite profiles.max_empresas é lido do banco A CADA chamada — aumentar
- * o valor manualmente no banco libera a criação sem mudança de código.
- * A escrita reusa a RPC transacional criar_admin_com_empresa (migration
- * 0002): empresa + vínculo admin são atômicos e o trigger check_limites
- * é o backstop do limite em caso de corrida.
- */
-export async function criarEmpresa(nomeEmpresa: string): Promise<ResultadoAuth> {
-  const sessao = await exigirAdminDaEmpresaAtiva();
-  if (!sessao) return { ok: false, error: ERRO_SEM_PERMISSAO };
-
-  const nome = nomeEmpresa.trim();
-  if (!nome) return { ok: false, error: "Informe o nome da empresa." };
-
-  const admin = createSupabaseAdminClient();
-
-  const { data: profile, error: erroProfile } = await admin
-    .from("profiles")
-    .select("max_empresas")
-    .eq("id", sessao.userId)
-    .single();
-  const { count: empresasComoAdmin, error: erroContagem } = await admin
-    .from("empresa_usuarios")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", sessao.userId)
-    .eq("papel", "admin");
-  if (erroProfile || erroContagem || !profile || empresasComoAdmin === null) {
-    return { ok: false, error: ERRO_GENERICO };
-  }
-  if (empresasComoAdmin >= profile.max_empresas) {
-    return { ok: false, error: MSG_LIMITE_EMPRESAS };
-  }
-
-  const { error: erroCriacao } = await admin.rpc("criar_admin_com_empresa", {
-    p_user_id: sessao.userId,
-    p_nome_empresa: nome,
-  });
-  if (erroCriacao) {
-    return { ok: false, error: mapearErroBanco(erroCriacao.message, ERRO_GENERICO) };
   }
 
   revalidatePath("/conta");

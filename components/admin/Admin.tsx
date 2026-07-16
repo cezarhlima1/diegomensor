@@ -9,6 +9,7 @@ import {
   atualizarEmpresa,
   atualizarUsuarioEmpresa,
   criarEmpresaComAdmin,
+  criarEmpresaParaUsuario,
   excluirEmpresa,
   excluirUsuarioEmpresa,
   type EmpresaAdmin,
@@ -66,6 +67,13 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
   const [okCriacao, setOkCriacao] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
 
+  // --- form "criar empresa para usuário existente" -------------------------
+  const [emailExistente, setEmailExistente] = useState("");
+  const [nomeEmpresaExistente, setNomeEmpresaExistente] = useState("");
+  const [erroExistente, setErroExistente] = useState<string | null>(null);
+  const [okExistente, setOkExistente] = useState<string | null>(null);
+  const [criandoExistente, setCriandoExistente] = useState(false);
+
   async function criar(e: React.FormEvent) {
     e.preventDefault();
     if (criando) return;
@@ -98,6 +106,35 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
       setErroCriacao(ERRO_GENERICO);
     } finally {
       setCriando(false);
+    }
+  }
+
+  async function criarParaExistente(e: React.FormEvent) {
+    e.preventDefault();
+    if (criandoExistente) return;
+    setErroExistente(null);
+    setOkExistente(null);
+    setCriandoExistente(true);
+    try {
+      const resultado = await criarEmpresaParaUsuario({
+        emailUsuario: emailExistente,
+        nomeEmpresa: nomeEmpresaExistente,
+      });
+      if (!resultado.ok) {
+        setErroExistente(resultado.error);
+        return;
+      }
+      setOkExistente(
+        `Empresa "${nomeEmpresaExistente}" criada para ${emailExistente}.`
+      );
+      setEmailExistente("");
+      setNomeEmpresaExistente("");
+      router.refresh();
+    } catch (err) {
+      console.error("Admin: falha inesperada ao criar empresa para usuário:", err);
+      setErroExistente(ERRO_GENERICO);
+    } finally {
+      setCriandoExistente(false);
     }
   }
 
@@ -195,6 +232,68 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
 
           <button type="submit" className="btn btn--wide" disabled={criando}>
             {criando ? "Criando…" : "Criar empresa"}
+          </button>
+        </form>
+      </section>
+
+      <section
+        className="calc-card cta-reveal"
+        aria-labelledby="admin-criar-existente"
+      >
+        <p className="calc-card-kicker">Cliente existente</p>
+        <h2 id="admin-criar-existente" className="calc-card-title">
+          Criar empresa para usuário existente
+        </h2>
+        <p className="calc-card-sub">
+          Cria uma nova empresa e vincula um usuário já cadastrado como admin
+          dela. Se o usuário estiver no limite de empresas, o limite é
+          ampliado automaticamente.
+        </p>
+
+        <form onSubmit={criarParaExistente} className="grid gap-4 mt-6" noValidate>
+          <div className="calc-grid-2">
+            <label className="grid gap-1.5">
+              <span className="quiz-label">E-mail do usuário</span>
+              <input
+                type="email"
+                autoComplete="off"
+                className="quiz-input"
+                placeholder="joao@suaoficina.com.br"
+                value={emailExistente}
+                onChange={(e) => setEmailExistente(e.target.value)}
+                required
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Nome da nova empresa</span>
+              <input
+                type="text"
+                className="quiz-input"
+                placeholder="ex.: Oficina Filial"
+                value={nomeEmpresaExistente}
+                onChange={(e) => setNomeEmpresaExistente(e.target.value)}
+                required
+              />
+            </label>
+          </div>
+
+          {erroExistente && (
+            <p className="auth-erro" role="alert">
+              {erroExistente}
+            </p>
+          )}
+          {okExistente && (
+            <p className="auth-ok" role="status">
+              {okExistente}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn--wide"
+            disabled={criandoExistente}
+          >
+            {criandoExistente ? "Criando…" : "Criar empresa"}
           </button>
         </form>
       </section>

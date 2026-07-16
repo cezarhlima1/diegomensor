@@ -20,6 +20,8 @@ import {
   type Passo1Dados,
   type Passo2ConfigDados,
   type StatusOrcamento,
+  type StatusValorHora,
+  type ValorHoraSalvo,
 } from "./calcLogic";
 
 const ERRO_SEM_PERMISSAO =
@@ -37,7 +39,17 @@ const MAX_CHARS_PLACA = 10;
 /** Teto de peças por orçamento — evita payload arbitrário no jsonb. */
 const MAX_PECAS = 100;
 
-const STATUS_VALIDOS: StatusOrcamento[] = ["Aguardando aprovação", "Aprovado"];
+const STATUS_VALIDOS: StatusOrcamento[] = [
+  "Aguardando aprovação",
+  "Aprovado",
+  "Não aprovado",
+];
+
+const STATUS_VALOR_HORA_VALIDOS: StatusValorHora[] = [
+  "ativo",
+  "inativo",
+  "padrao",
+];
 
 /**
  * Persiste os insumos do Passo 1 (calc_passo1) e o resultado consolidado
@@ -270,9 +282,9 @@ export async function criarOrcamento(
 }
 
 /**
- * Muda o status de um orçamento existente entre as duas únicas opções
- * (Aguardando aprovação / Aprovado). Qualquer membro da empresa pode mudar —
- * não é restrito a admin.
+ * Muda o status de um orçamento existente entre as opções do CHECK
+ * (Aguardando aprovação / Aprovado / Não aprovado). Qualquer membro da
+ * empresa pode mudar — não é restrito a admin.
  */
 export async function atualizarStatusOrcamento(
   empresaId: string,
@@ -326,6 +338,141 @@ export async function excluirOrcamento(
 
   if (error) {
     console.error("excluirOrcamento: falha ao remover orcamentos:", error.message);
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true };
+}
+
+function paraValorHoraSalvo(row: {
+  id: string;
+  nome: string;
+  valor_hora: number;
+  status: string;
+  created_at: string;
+}): ValorHoraSalvo {
+  return {
+    id: row.id,
+    nome: row.nome,
+    valorHora: Number(row.valor_hora),
+    status: row.status as StatusValorHora,
+    data: row.created_at,
+  };
+}
+
+export type ResultadoSalvarValorHora =
+  | { ok: true; registro: ValorHoraSalvo }
+  | { ok: false; error: string };
+
+/**
+ * Salva o valor hora atual do Passo 1 no histórico da empresa
+ * (valor_hora_historico). Restrito a admin, como salvarPasso1 — o valor
+ * hora é dado gerencial. O primeiro registro da empresa nasce como
+ * "padrao" (o orçamento precisa de um default); os demais nascem "ativo".
+ */
+export async function salvarValorHora(
+  empresaId: string,
+  dados: { nome: string; valorHora: number }
+): Promise<ResultadoSalvarValorHora> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo || vinculo.papel !== "admin") {
+    return { ok: false, error: ERRO_SEM_PERMISSAO };
+  }
+
+  const nome = String(dados.nome ?? "").trim().slice(0, MAX_CHARS_NOME);
+  if (!nome) {
+    return { ok: false, error: "Dê um nome para este valor hora." };
+  }
+  const valorHora = Number(dados.valorHora);
+  if (!Number.isFinite(valorHora) || valorHora <= 0) {
+    return { ok: false, error: "Calcule um valor hora antes de salvar." };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { count: totalPadrao, error: erroPadrao } = await admin
+    .from("valor_hora_historico")
+    .select("*", { count: "exact", head: true })
+    .eq("empresa_id", empresaId)
+    .eq("status", "padrao");
+  if (erroPadrao || totalPadrao === null) {
+    console.error(
+      "salvarValorHora: falha ao verificar o padrão:",
+      erroPadrao?.message
+    );
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  const { data, error } = await admin
+    .from("valor_hora_historico")
+    .insert({
+      empresa_id: empresaId,
+      nome,
+      valor_hora: valorHora,
+      status: totalPadrao === 0 ? "padrao" : "ativo",
+    })
+    .select("id, nome, valor_hora, status, created_at")
+    .single();
+  if (error || !data) {
+    console.error(
+      "salvarValorHora: falha ao gravar valor_hora_historico:",
+      error?.message
+    );
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true, registro: paraValorHoraSalvo(data) };
+}
+
+/**
+ * Muda o status de um valor hora salvo. Restrito a admin. Ao promover um
+ * registro a "padrao", o padrão anterior é rebaixado para "ativo" antes —
+ * o índice único parcial (migration 0008) garante no banco que nunca há
+ * dois padrões, mesmo com chamadas concorrentes.
+ */
+export async function atualizarStatusValorHora(
+  empresaId: string,
+  registroId: string,
+  status: StatusValorHora
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo || vinculo.papel !== "admin") {
+    return { ok: false, error: ERRO_SEM_PERMISSAO };
+  }
+  if (!STATUS_VALOR_HORA_VALIDOS.includes(status)) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  if (status === "padrao") {
+    const { error: erroRebaixar } = await admin
+      .from("valor_hora_historico")
+      .update({ status: "ativo" })
+      .eq("empresa_id", empresaId)
+      .eq("status", "padrao")
+      .neq("id", registroId);
+    if (erroRebaixar) {
+      console.error(
+        "atualizarStatusValorHora: falha ao rebaixar o padrão anterior:",
+        erroRebaixar.message
+      );
+      return { ok: false, error: ERRO_GENERICO };
+    }
+  }
+
+  const { error } = await admin
+    .from("valor_hora_historico")
+    .update({ status })
+    .eq("id", registroId)
+    .eq("empresa_id", empresaId);
+  if (error) {
+    console.error(
+      "atualizarStatusValorHora: falha ao gravar valor_hora_historico:",
+      error.message
+    );
     return { ok: false, error: ERRO_GENERICO };
   }
 

@@ -1,0 +1,13 @@
+- [x] No passo 1, permitir editar o valor hora e conforme editado, ajustar o fator correspondente na régua que mostra o fator de multiplicação
+- [x] No passo 1, na régua com o fator de cálculo, altere o texto em amarelo para: Valor recomendado: 2. Se preferir, utilize um valor entre 1 e 2 para adequar a margem.
+- [x] No passo 1, ao calculado o valor hora, criar um botão salvar para salvar um histórico desse cálculo no banco, também vai precisar criar um campo nome, o valor hora, um campo com a data de criação desse valor hora e um campo status com as opções ativo, inativo e padrão. O padrão vai ser o valor que sempre vai mostrar ao abrir a tela ou seja, só pode ter um padrão, no orçamento vai sempre mostrar o padrão, mas permitir selecionar outro diferente do padrão desde que este esteja ativo
+- [x] No histórico do orçamento, adicionar um novo status não aprovado
+- [x] Permitir gerar um relatório com o histórico dos orçamentos em xlsx, por período.
+- [x] Colocar um filtro na tela de histórico para mostrar somente os históricos da semana e do mês, por default mostrar o do mês atual sempre
+- [x] No histórico de orçamentos, adicionar um campo de busca textual que vai buscar ao mesmo tempo pela placa, pelo nome do cliente e pelo veículo
+- [x] No histórico de orçamentos adicionar um filtro por status
+- [x] Adicionar botão para copiar orçamento na tela do histórico de orçamentos
+- [x] O botão minha conta as vezes quando clica não faz nada e demora pra reagir.
+- [x] Na tela onde posso mudar a empresa que estou usando,  ao invés do botão que faz a alteração ficar como ativa, ficar como visualizando
+- [x] Tirar botão de criar empresa dos usuários comuns e também retirar o botão  criar usuário quando ele tiver atingido o limite de usuários cadastrados
+- [x] No painel do admin, permitir que o admin crie outra empresa dentro de um usuário já existente

@@ -1393,3 +1393,54 @@ a:focus-visible, button:focus-visible {
   .dest-ticket-price { animation: none; }
   .dest-bar-fill { transition: none; width: var(--dest-bar-w, 75%) !important; }
 }
+
+/* ============================================================
+   MELHORIAS DA CALCULADORA (histórico de valor hora, filtros
+   do histórico de orçamentos, status "Não aprovado")
+   ============================================================ */
+@layer components {
+  /* status "Não aprovado" no histórico de orçamentos */
+  .calc-hist-status--reprovado { color: var(--color-brand-red); background: rgba(240,88,76,.1); border-color: rgba(240,88,76,.32); }
+  .calc-hist-status--reprovado:hover:not(:disabled) { background: rgba(240,88,76,.18); border-color: rgba(240,88,76,.55); }
+  .calc-hist-status--reprovado:focus-visible { outline: 2px solid var(--color-brand-red); outline-offset: 2px; }
+
+  /* botão "Copiar" do item do histórico — par visual do .calc-hist-wa, em azul */
+  .calc-hist-copy { color: var(--color-blue); background: rgba(4,149,240,.08); border-color: rgba(4,149,240,.32); }
+  .calc-hist-copy:hover { background: rgba(4,149,240,.16); border-color: rgba(4,149,240,.55); }
+
+  /* barra de filtros do histórico */
+  .calc-hist-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .calc-filtro-grupo { flex: none; display: flex; gap: 4px; padding: 4px; background: rgba(11,13,17,.6); border: 1px solid var(--color-line); border-radius: 100px; }
+  .calc-filtro-pill {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-muted); background: none; border: none; padding: 9px 18px; border-radius: 100px; cursor: pointer;
+    transition: color .2s ease, background .2s ease;
+  }
+  .calc-filtro-pill.is-active { color: #02131f; background: linear-gradient(180deg, var(--color-blue-soft), var(--color-blue)); box-shadow: 0 6px 18px -6px rgba(4,149,240,.6); }
+  .calc-filtro-sel { flex: 0 1 auto; width: auto; padding: 11px 14px; font-size: 14px; }
+  .calc-filtro-busca { flex: 1 1 220px; padding: 11px 14px; font-size: 14px; }
+
+  /* Passo 1: valor hora final editável no readout */
+  .calc-readout-num--editavel { display: inline-flex; align-items: baseline; gap: 8px; }
+  .calc-readout-prefix { font-family: var(--font-mono); font-size: .42em; font-weight: 700; color: var(--color-muted); }
+  .calc-readout-num--editavel input {
+    background: none; border: none; border-bottom: 2px dashed rgba(4,149,240,.4); outline: none;
+    font: inherit; color: inherit; text-align: right; padding: 0 0 2px;
+    font-variant-numeric: tabular-nums; text-shadow: inherit;
+  }
+  .calc-readout-num--editavel input:focus { border-bottom-style: solid; border-bottom-color: var(--color-blue); }
+  .calc-readout-num--editavel input:disabled { border-bottom-color: transparent; }
+
+  /* Passo 1: form e lista do histórico de valor hora */
+  .calc-vh-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .calc-vh-form .btn { flex: none; }
+  .calc-vh-status--padrao { color: var(--color-brand-green); background: rgba(47,210,122,.1); border-color: rgba(47,210,122,.32); }
+  .calc-vh-status--padrao:hover:not(:disabled) { background: rgba(47,210,122,.18); border-color: rgba(47,210,122,.55); }
+  .calc-vh-status--ativo { color: var(--color-blue); background: rgba(4,149,240,.1); border-color: rgba(4,149,240,.32); }
+  .calc-vh-status--ativo:hover:not(:disabled) { background: rgba(4,149,240,.18); border-color: rgba(4,149,240,.55); }
+  .calc-vh-status--inativo { color: var(--color-muted); background: rgba(143,178,204,.08); border-color: var(--color-line); }
+}
+
+@layer components {
+  .calc-totais-item--reprovado .calc-totais-v { color: var(--color-brand-red); }
+}

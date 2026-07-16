@@ -202,6 +202,75 @@ export async function criarEmpresaComAdmin(dados: {
 }
 
 /**
+ * Cria uma empresa nova para um usuário JÁ existente (localizado pelo
+ * e-mail), vinculando-o como admin dela. Reusa a RPC transacional
+ * criar_admin_com_empresa (migration 0002). Se o usuário já estiver no
+ * limite de profiles.max_empresas, o limite é aumentado automaticamente —
+ * o super admin está concedendo a licença adicional de forma explícita.
+ */
+export async function criarEmpresaParaUsuario(dados: {
+  emailUsuario: string;
+  nomeEmpresa: string;
+}): Promise<ResultadoAuth> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return { ok: false, error: ERRO_SEM_PERMISSAO };
+
+  const email = dados.emailUsuario.trim().toLowerCase();
+  const nomeEmpresa = dados.nomeEmpresa.trim();
+  if (!email || !nomeEmpresa) {
+    return { ok: false, error: "Preencha o e-mail do usuário e o nome da empresa." };
+  }
+  if (!emailValido(email)) {
+    return { ok: false, error: "Informe um e-mail válido." };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: perfil, error: erroPerfil } = await admin
+    .from("profiles")
+    .select("id, max_empresas")
+    .eq("email", email)
+    .maybeSingle();
+  if (erroPerfil) return { ok: false, error: ERRO_GENERICO };
+  if (!perfil) {
+    return { ok: false, error: "Nenhum usuário encontrado com este e-mail." };
+  }
+
+  const { count: empresasComoAdmin, error: erroContagem } = await admin
+    .from("empresa_usuarios")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", perfil.id)
+    .eq("papel", "admin");
+  if (erroContagem || empresasComoAdmin === null) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
+  if (empresasComoAdmin >= perfil.max_empresas) {
+    const { error: erroLimite } = await admin
+      .from("profiles")
+      .update({ max_empresas: empresasComoAdmin + 1 })
+      .eq("id", perfil.id);
+    if (erroLimite) {
+      console.error(
+        `criarEmpresaParaUsuario: falha ao ampliar max_empresas de ${perfil.id}:`,
+        erroLimite.message
+      );
+      return { ok: false, error: ERRO_GENERICO };
+    }
+  }
+
+  const { error: erroRpc } = await admin.rpc("criar_admin_com_empresa", {
+    p_user_id: perfil.id,
+    p_nome_empresa: nomeEmpresa,
+  });
+  if (erroRpc) {
+    return { ok: false, error: mapearErroBanco(erroRpc.message, ERRO_GENERICO) };
+  }
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/**
  * Adiciona um usuário (admin ou funcionário) a uma empresa JÁ existente,
  * com a licença definida explicitamente pelo super admin — mesma validação
  * de limite de adicionarUsuario (components/conta/actions.ts), repetida

@@ -32,6 +32,7 @@ import {
   type Passo2ConfigDados,
   type Peca,
   type StatusOrcamento,
+  type ValorHoraSalvo,
 } from "./calcLogic";
 import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
 import {
@@ -62,6 +63,15 @@ const STEP_LABELS: Record<Step, string> = {
   3: "Orçamento",
 };
 
+/** Segunda-feira 00:00 da semana corrente — base do filtro "Semana". */
+function inicioDaSemana(agora: Date): Date {
+  const d = new Date(agora);
+  const dia = (d.getDay() + 6) % 7; // 0 = segunda
+  d.setDate(d.getDate() - dia);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export default function Calculadora({
   papel,
   empresaId,
@@ -69,6 +79,7 @@ export default function Calculadora({
   passo1Inicial,
   passo2ConfigInicial,
   orcamentosIniciais,
+  valorHoraHistoricoInicial,
   nomeEmpresa,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
@@ -83,6 +94,8 @@ export default function Calculadora({
   passo2ConfigInicial?: Passo2ConfigDados;
   /** Histórico de orçamentos da empresa (banco, tabela orcamentos), mais recente primeiro. */
   orcamentosIniciais: Orcamento[];
+  /** Valores hora salvos (banco, tabela valor_hora_historico), mais recente primeiro. */
+  valorHoraHistoricoInicial: ValorHoraSalvo[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
 }) {
@@ -116,6 +129,22 @@ export default function Calculadora({
   // Histórico — vem do banco (tabela orcamentos), compartilhado entre os
   // membros da empresa; o estado local só reflete as mudanças desta sessão.
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosIniciais);
+  // Filtros do histórico: período (default mês corrente), status e busca
+  // textual (placa + cliente + veículo ao mesmo tempo).
+  const [filtroPeriodo, setFiltroPeriodo] = useState<"semana" | "mes">("mes");
+  const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
+  const [busca, setBusca] = useState("");
+  const [copiadoId, setCopiadoId] = useState("");
+  // Relatório XLSX por período (datas independentes do filtro da lista).
+  const [expInicio, setExpInicio] = useState("");
+  const [expFim, setExpFim] = useState("");
+  const [exportando, setExportando] = useState(false);
+  // Histórico de valores hora: alimentado pelo Passo 1 (admin) e usado no
+  // Passo 3 — o orçamento mostra o padrão e deixa escolher outro ativo.
+  const [histValorHora, setHistValorHora] = useState<ValorHoraSalvo[]>(
+    valorHoraHistoricoInicial,
+  );
+  const [valorHoraSelId, setValorHoraSelId] = useState("");
   const [salvandoOrcamento, setSalvandoOrcamento] = useState(false);
   const [erroOrcamento, setErroOrcamento] = useState("");
   const [atualizandoStatusId, setAtualizandoStatusId] = useState("");
@@ -180,6 +209,20 @@ export default function Calculadora({
   }, [hydrated, pecas, nomeCliente, nomeCarro, placa, empresaId]);
 
   /* ---------- derivados ---------- */
+  // Valor da hora usado no orçamento: o registro selecionado do histórico
+  // (default: o padrão); sem histórico, cai no valor ao vivo do Passo 1 /
+  // empresas.valor_hora — comportamento anterior.
+  const padraoVH = histValorHora.find((h) => h.status === "padrao");
+  const selecionaveisVH = useMemo(
+    () => histValorHora.filter((h) => h.status !== "inativo"),
+    [histValorHora],
+  );
+  const vhSelecionado =
+    selecionaveisVH.find((h) => h.id === valorHoraSelId) ?? padraoVH;
+  const valorHoraOrcamento = vhSelecionado
+    ? vhSelecionado.valorHora
+    : valorHora;
+
   const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
 
   const expandedPeca = pecas.find((p) => p.id === expandedId) ?? pecas[0];
@@ -197,29 +240,57 @@ export default function Calculadora({
     [pecas],
   );
   const maoDeObraTotal = useMemo(
-    () => somaMaoDeObra(pecasValidas, valorHora),
-    [pecasValidas, valorHora],
+    () => somaMaoDeObra(pecasValidas, valorHoraOrcamento),
+    [pecasValidas, valorHoraOrcamento],
   );
   const totalOrcamento = maoDeObraTotal + pecasTotal;
 
   const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
 
-  // Totais do histórico por status — soma o valor total de cada orçamento
-  // conforme está aguardando aprovação ou já foi aprovado.
+  // Lista do histórico após período (semana/mês corrente), status e busca.
+  const orcamentosFiltrados = useMemo(() => {
+    const agora = new Date();
+    const inicioSemana = inicioDaSemana(agora);
+    const termo = busca.trim().toLowerCase();
+    return orcamentos.filter((o) => {
+      const d = new Date(o.data);
+      const periodoOk =
+        filtroPeriodo === "mes"
+          ? d.getMonth() === agora.getMonth() &&
+            d.getFullYear() === agora.getFullYear()
+          : d >= inicioSemana;
+      const statusOk = !filtroStatus || o.status === filtroStatus;
+      const buscaOk =
+        !termo ||
+        [o.placa, o.nomeCliente, o.nomeCarro].some((v) =>
+          (v ?? "").toLowerCase().includes(termo),
+        );
+      return periodoOk && statusOk && buscaOk;
+    });
+  }, [orcamentos, filtroPeriodo, filtroStatus, busca]);
+
+  // Totais do histórico por status — sobre a lista filtrada (o que se vê).
   const totalPendente = useMemo(
     () =>
-      orcamentos
+      orcamentosFiltrados
         .filter((o) => o.status === "Aguardando aprovação")
         .reduce((acc, o) => acc + o.total, 0),
-    [orcamentos],
+    [orcamentosFiltrados],
   );
   const totalAprovado = useMemo(
     () =>
-      orcamentos
+      orcamentosFiltrados
         .filter((o) => o.status === "Aprovado")
         .reduce((acc, o) => acc + o.total, 0),
-    [orcamentos],
+    [orcamentosFiltrados],
+  );
+  const totalReprovado = useMemo(
+    () =>
+      orcamentosFiltrados
+        .filter((o) => o.status === "Não aprovado")
+        .reduce((acc, o) => acc + o.total, 0),
+    [orcamentosFiltrados],
   );
 
   /* ---------- navegação ---------- */
@@ -286,7 +357,7 @@ export default function Calculadora({
       nome: p.nome.trim() || "Peça",
       quantidade: quantidadePeca(p),
       valor: precoPecaItem(p, tiers),
-      maoDeObra: maoDeObraPeca(p, valorHora),
+      maoDeObra: maoDeObraPeca(p, valorHoraOrcamento),
     }));
   }
 
@@ -324,7 +395,7 @@ export default function Calculadora({
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
       placa: placa.trim(),
-      valorHora,
+      valorHora: valorHoraOrcamento,
       horas: pecasValidas.reduce((acc, p) => acc + parseNum(p.horas), 0),
       maoDeObra: maoDeObraTotal,
       pecas: pecasResumo(),
@@ -366,6 +437,65 @@ export default function Calculadora({
       "_blank",
       "noopener,noreferrer",
     );
+  }
+
+  async function copiarOrcamentoHistorico(o: Orcamento) {
+    try {
+      await navigator.clipboard.writeText(
+        buildOrcamentoMsg({
+          nomeCliente: o.nomeCliente,
+          nomeCarro: o.nomeCarro,
+          placa: o.placa,
+          pecas: o.pecas ?? [],
+          maoDeObra: o.maoDeObra ?? o.valorHora ?? 0,
+          total: o.total,
+          sufixo: sufixoOrcamento,
+        }),
+      );
+      setCopiadoId(o.id);
+      window.setTimeout(
+        () => setCopiadoId((atual) => (atual === o.id ? "" : atual)),
+        2200,
+      );
+    } catch {
+      // clipboard indisponível: ignora
+    }
+  }
+
+  async function exportarXlsx() {
+    if (exportando) return;
+    setExportando(true);
+    try {
+      const XLSX = await import("xlsx");
+      const ini = expInicio ? new Date(`${expInicio}T00:00:00`) : null;
+      const fim = expFim ? new Date(`${expFim}T23:59:59.999`) : null;
+      const linhas = orcamentos
+        .filter((o) => {
+          const d = new Date(o.data);
+          return (!ini || d >= ini) && (!fim || d <= fim);
+        })
+        .map((o) => ({
+          Data: formatData(o.data),
+          Cliente: o.nomeCliente,
+          Veículo: o.nomeCarro,
+          Placa: o.placa,
+          "Valor hora (R$)": o.valorHora,
+          Horas: o.horas,
+          "Mão de obra (R$)": o.maoDeObra,
+          "Peças (R$)": o.valorPeca,
+          "Total (R$)": o.total,
+          Status: o.status,
+        }));
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Orçamentos");
+      XLSX.writeFile(
+        wb,
+        `orcamentos-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+    } finally {
+      setExportando(false);
+    }
   }
 
   async function removerOrcamento(id: string) {
@@ -715,21 +845,47 @@ export default function Calculadora({
                         <span className="quiz-label">
                           Valor da hora{" "}
                           <span className="calc-lock-tag">
-                            🔒 {ehAdmin ? "definido no Passo 01" : `definido por ${nomeEmpresa}`}
+                            🔒{" "}
+                            {selecionaveisVH.length > 0
+                              ? "do histórico de valor hora"
+                              : ehAdmin
+                                ? "definido no Passo 01"
+                                : `definido por ${nomeEmpresa}`}
                           </span>
                         </span>
-                        <span className="calc-money calc-money--locked">
-                          <span className="calc-money-prefix">R$</span>
-                          <input
-                            type="text"
-                            readOnly
-                            tabIndex={-1}
-                            value={valorHora.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          />
-                        </span>
+                        {selecionaveisVH.length > 0 ? (
+                          <select
+                            className="quiz-input"
+                            value={vhSelecionado?.id ?? ""}
+                            onChange={(e) => setValorHoraSelId(e.target.value)}
+                            aria-label="Valor da hora do orçamento"
+                          >
+                            {!vhSelecionado && (
+                              <option value="">
+                                Valor atual — {brl(valorHora)}
+                              </option>
+                            )}
+                            {selecionaveisVH.map((h) => (
+                              <option key={h.id} value={h.id}>
+                                {h.nome} — {brl(h.valorHora)}
+                                {h.status === "padrao" ? " (padrão)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="calc-money calc-money--locked">
+                            <span className="calc-money-prefix">R$</span>
+                            <input
+                              type="text"
+                              readOnly
+                              tabIndex={-1}
+                              value={valorHora.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            />
+                          </span>
+                        )}
                       </label>
                     </div>
                   </div>
@@ -832,7 +988,7 @@ export default function Calculadora({
                             </span>
                             <span>
                               <em>Mão de obra</em>
-                              {brl(maoDeObraPeca(p, valorHora))}
+                              {brl(maoDeObraPeca(p, valorHoraOrcamento))}
                             </span>
                           </span>
                         </div>
@@ -920,6 +1076,8 @@ export default function Calculadora({
               onValorHora={setValorHora}
               onAvancar={() => goToStep(2)}
               onLimparResto={limparResto}
+              historico={histValorHora}
+              onHistoricoChange={setHistValorHora}
             />
           </div>
         )}
@@ -949,21 +1107,72 @@ export default function Calculadora({
                     <span className="calc-totais-k">Total aprovado</span>
                     <span className="calc-totais-v">{brl(totalAprovado)}</span>
                   </div>
+                  <div className="calc-totais-item calc-totais-item--reprovado">
+                    <span className="calc-totais-k">Total não aprovado</span>
+                    <span className="calc-totais-v">{brl(totalReprovado)}</span>
+                  </div>
+                </div>
+
+                <div className="calc-hist-filtros">
+                  <div className="calc-filtro-grupo" role="group" aria-label="Filtrar por período">
+                    <button
+                      type="button"
+                      className={`calc-filtro-pill ${filtroPeriodo === "semana" ? "is-active" : ""}`}
+                      onClick={() => setFiltroPeriodo("semana")}
+                    >
+                      Semana
+                    </button>
+                    <button
+                      type="button"
+                      className={`calc-filtro-pill ${filtroPeriodo === "mes" ? "is-active" : ""}`}
+                      onClick={() => setFiltroPeriodo("mes")}
+                    >
+                      Mês
+                    </button>
+                  </div>
+                  <select
+                    className="quiz-input calc-filtro-sel"
+                    value={filtroStatus}
+                    onChange={(e) =>
+                      setFiltroStatus(e.target.value as "" | StatusOrcamento)
+                    }
+                    aria-label="Filtrar por status"
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="Aguardando aprovação">
+                      Aguardando aprovação
+                    </option>
+                    <option value="Aprovado">Aprovado</option>
+                    <option value="Não aprovado">Não aprovado</option>
+                  </select>
+                  <input
+                    type="search"
+                    className="quiz-input calc-filtro-busca"
+                    placeholder="Buscar por placa, cliente ou veículo…"
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    aria-label="Buscar por placa, cliente ou veículo"
+                  />
                 </div>
 
                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                   <p className="quiz-label">
-                    {orcamentos.length}{" "}
-                    {orcamentos.length === 1
-                      ? "orçamento salvo"
-                      : "orçamentos salvos"}
+                    {orcamentosFiltrados.length}{" "}
+                    {orcamentosFiltrados.length === 1
+                      ? "orçamento no período"
+                      : "orçamentos no período"}
                   </p>
                   <button className="btn" onClick={novoOrcamento}>
                     Novo orçamento
                   </button>
                 </div>
                 <div className="grid gap-3">
-                  {orcamentos.map((o) => (
+                  {orcamentosFiltrados.length === 0 && (
+                    <p className="calc-card-sub text-center py-8">
+                      Nenhum orçamento encontrado com os filtros atuais.
+                    </p>
+                  )}
+                  {orcamentosFiltrados.map((o) => (
                     <div key={o.id} className="calc-hist">
                       <div className="calc-hist-main">
                         <span className="calc-hist-name">
@@ -994,7 +1203,9 @@ export default function Calculadora({
                         className={`calc-hist-status ${
                           o.status === "Aprovado"
                             ? "calc-hist-status--aprovado"
-                            : "calc-hist-status--pendente"
+                            : o.status === "Não aprovado"
+                              ? "calc-hist-status--reprovado"
+                              : "calc-hist-status--pendente"
                         }`}
                         value={o.status}
                         onChange={(e) =>
@@ -1010,7 +1221,15 @@ export default function Calculadora({
                           Aguardando aprovação
                         </option>
                         <option value="Aprovado">Aprovado</option>
+                        <option value="Não aprovado">Não aprovado</option>
                       </select>
+                      <button
+                        className="calc-hist-wa calc-hist-copy"
+                        onClick={() => copiarOrcamentoHistorico(o)}
+                        aria-label={`Copiar orçamento ${o.nomeCarro}`}
+                      >
+                        {copiadoId === o.id ? "✓ Copiado" : "Copiar"}
+                      </button>
                       <button
                         className="calc-hist-wa"
                         onClick={() => reenviarWhatsApp(o)}
@@ -1027,6 +1246,42 @@ export default function Calculadora({
                       </button>
                     </div>
                   ))}
+                </div>
+
+                <div className="calc-card mt-8">
+                  <p className="calc-card-kicker">Relatório</p>
+                  <h2 className="calc-card-title">Exportar histórico em XLSX</h2>
+                  <p className="calc-card-sub">
+                    Gera uma planilha com os orçamentos do período escolhido.
+                    Deixe as datas em branco para exportar tudo.
+                  </p>
+                  <div className="calc-grid-2 mt-5">
+                    <label className="grid gap-1.5">
+                      <span className="quiz-label">De</span>
+                      <input
+                        type="date"
+                        className="quiz-input"
+                        value={expInicio}
+                        onChange={(e) => setExpInicio(e.target.value)}
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="quiz-label">Até</span>
+                      <input
+                        type="date"
+                        className="quiz-input"
+                        value={expFim}
+                        onChange={(e) => setExpFim(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    className="btn btn--wide mt-5"
+                    onClick={exportarXlsx}
+                    disabled={exportando}
+                  >
+                    {exportando ? "Gerando…" : "Exportar XLSX"}
+                  </button>
                 </div>
               </>
             )}
