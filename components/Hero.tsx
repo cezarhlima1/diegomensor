@@ -15,19 +15,19 @@ export default function Hero() {
           </span>
 
           <h1 className="reveal d1 font-display font-black text-[clamp(34px,5.4vw,62px)] my-6 max-w-[16ch]">
-            Pare de cobrar errado e comece a ver{" "}
-            <span className="text-blue">mais dinheiro sobrando</span> na oficina.
+            Quanto dinheiro você já perdeu só porque{" "}
+            <span className="text-blue">cobrou errado?</span>
           </h1>
 
           <p className="reveal d2 text-muted text-[clamp(16px,1.7vw,20px)] max-w-[46ch] mb-[34px]">
-            Você conserta carro como ninguém, mas nunca te ensinaram quanto custa{" "}
-            <b className="text-offwhite">manter a oficina aberta</b> nem quanto você deveria
-            cobrar. É exatamente isso que muda aqui.
+            Todos os dias, donos de oficina deixam dinheiro na mesa sem perceber. Neste
+            treinamento, você aprende a formar preços com segurança, proteger sua margem e{" "}
+            <b className="text-offwhite">transformar cada serviço em lucro de verdade.</b>
           </p>
 
           <div className="reveal d3 flex flex-col items-start gap-[14px]">
             <Cta variant="lg">
-              Quero acessar por R$197
+              Quero aprender a cobrar certo
             </Cta>
             <span className="reassure">
               Parcelável • <b>Acesso imediato</b> • Garantia 7 dias

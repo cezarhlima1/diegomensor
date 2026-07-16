@@ -52,7 +52,7 @@ export default function DelayedCta() {
   return (
     <div className="cta-reveal flex flex-col items-center gap-[14px] mt-12">
       <Cta variant="lg">
-        Quero acessar por R$197
+        Quero aprender a cobrar certo
       </Cta>
       <span className="reassure">
         Parcelável • <b>Acesso imediato</b> • Garantia 7 dias

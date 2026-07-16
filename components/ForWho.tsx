@@ -63,7 +63,7 @@ export default function ForWho() {
 
         <div className="text-center mt-10 reveal d2">
           <Cta variant="lg">
-            Quero acessar por R$197
+            Quero aprender a cobrar certo
           </Cta>
         </div>
       </div>

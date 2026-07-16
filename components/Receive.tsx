@@ -53,7 +53,7 @@ export default function Receive() {
 
           <div className="reveal d4 mt-[30px]">
             <Cta variant="lg">
-              Quero acessar por R$197
+              Quero aprender a cobrar certo
             </Cta>
           </div>
         </div>

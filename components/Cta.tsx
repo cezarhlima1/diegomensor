@@ -1,7 +1,7 @@
 /** Botão CTA reutilizável. Todos apontam para o mesmo checkout do produto. */
 
 const CHECKOUT_URL =
-  "https://payfast.greenn.com.br/redirect/267726?utm_source=ig&utm_medium=social&utm_content=link_in_bio";
+  "https://payfast.greenn.com.br/x4tv742/offer/EH1p7y?ch_id=136193&b_id_1=n9vm2px";
 
 type Variant = "lg" | "wide" | "base";
 

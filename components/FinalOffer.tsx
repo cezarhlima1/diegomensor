@@ -11,12 +11,21 @@ export default function FinalOffer() {
         </h2>
 
         <div className="final-card reveal d2 max-w-[680px] mx-auto">
-          <div className="font-display font-black text-[clamp(22px,3vw,30px)] text-white">
-            de <s className="[text-decoration-color:var(--color-brand-red)] text-muted font-medium">R$497</s>{" "}
-            por <b className="text-offwhite">R$197</b> à vista
-            <span className="block text-[clamp(15px,2vw,20px)] mt-1">
-              ou <span className="text-blue">12x de R$20,25</span>
-            </span>
+          <div className="text-white">
+            <div className="font-display text-[clamp(18px,2.5vw,24px)]">
+              de <s className="[text-decoration-color:var(--color-brand-red)] text-muted font-medium">R$497</s>{" "}
+              <span className="text-muted font-medium">por</span>
+            </div>
+            <div className="font-display font-black text-[clamp(26px,5vw,40px)] text-offwhite leading-none mt-2">
+              R$197
+            </div>
+            <div className="font-mono text-[13px] text-muted tracking-[.1em] uppercase mt-1">
+              à vista
+            </div>
+            <div className="font-mono text-[13px] text-muted uppercase mt-3">ou</div>
+            <div className="price-main !text-[clamp(36px,7vw,68px)] mx-auto leading-none mt-1">
+              12x de R$20,25
+            </div>
             <small className="block font-mono font-medium text-[13px] text-muted tracking-[.06em] uppercase mt-2">
               Acesso imediato + vitalício
             </small>
