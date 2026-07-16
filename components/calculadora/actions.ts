@@ -38,6 +38,11 @@ const MAX_CHARS_NOME = 120;
 const MAX_CHARS_PLACA = 10;
 /** Teto de peças por orçamento — evita payload arbitrário no jsonb. */
 const MAX_PECAS = 100;
+/** Teto defensivo para impedir overflow/abuso de colunas numeric. */
+const MAX_VALOR = 100_000_000;
+const MAX_HORAS = 100_000;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const STATUS_VALIDOS: StatusOrcamento[] = [
   "Aguardando aprovação",
@@ -180,16 +185,26 @@ export async function salvarPasso2Config(
 function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
   return pecas.slice(0, MAX_PECAS).map((p) => ({
     nome: String(p?.nome ?? "").slice(0, MAX_CHARS_NOME),
-    valor: Number.isFinite(Number(p?.valor)) ? Number(p.valor) : 0,
+    valor: limitarNumero(p?.valor, MAX_VALOR),
     quantidade:
-      p?.quantidade != null && Number.isFinite(Number(p.quantidade))
-        ? Number(p.quantidade)
+      p?.quantidade != null
+        ? limitarNumero(p.quantidade, MAX_HORAS)
         : undefined,
     maoDeObra:
-      p?.maoDeObra != null && Number.isFinite(Number(p.maoDeObra))
-        ? Number(p.maoDeObra)
+      p?.maoDeObra != null
+        ? limitarNumero(p.maoDeObra, MAX_VALOR)
         : undefined,
   }));
+}
+
+function limitarNumero(valor: unknown, maximo: number): number {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero <= 0) return 0;
+  return Math.min(numero, maximo);
+}
+
+function idValido(id: string): boolean {
+  return UUID_RE.test(id);
 }
 
 function paraOrcamento(row: {
@@ -254,6 +269,14 @@ export async function criarOrcamento(
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
 
+  const pecas = sanitizarPecas(dados.pecas ?? []);
+  const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
+  const maoDeObra = pecas.reduce(
+    (total, peca) => total + (peca.maoDeObra ?? 0),
+    0
+  );
+  const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("orcamentos")
@@ -263,12 +286,12 @@ export async function criarOrcamento(
       nome_carro:
         dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
       placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
-      valor_hora: Number.isFinite(dados.valorHora) ? dados.valorHora : 0,
-      horas: Number.isFinite(dados.horas) ? dados.horas : 0,
-      mao_de_obra: Number.isFinite(dados.maoDeObra) ? dados.maoDeObra : 0,
-      pecas: sanitizarPecas(dados.pecas ?? []),
-      valor_peca: Number.isFinite(dados.valorPeca) ? dados.valorPeca : 0,
-      total: Number.isFinite(dados.total) ? dados.total : 0,
+      valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
+      horas: limitarNumero(dados.horas, MAX_HORAS),
+      mao_de_obra: maoDeObra,
+      pecas,
+      valor_peca: valorPeca,
+      total,
     })
     .select(SELECT_ORCAMENTO)
     .single();
@@ -296,21 +319,23 @@ export async function atualizarStatusOrcamento(
   if (!vinculo) {
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
-  if (!STATUS_VALIDOS.includes(status)) {
+  if (!idValido(orcamentoId) || !STATUS_VALIDOS.includes(status)) {
     return { ok: false, error: ERRO_GENERICO };
   }
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("orcamentos")
     .update({ status })
     .eq("id", orcamentoId)
-    .eq("empresa_id", empresaId);
+    .eq("empresa_id", empresaId)
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
+  if (error || !data) {
     console.error(
       "atualizarStatusOrcamento: falha ao gravar orcamentos:",
-      error.message
+      error?.message ?? "registro não encontrado"
     );
     return { ok: false, error: ERRO_GENERICO };
   }
@@ -328,16 +353,24 @@ export async function excluirOrcamento(
   if (!vinculo) {
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
+  if (!idValido(orcamentoId)) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("orcamentos")
     .delete()
     .eq("id", orcamentoId)
-    .eq("empresa_id", empresaId);
+    .eq("empresa_id", empresaId)
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
-    console.error("excluirOrcamento: falha ao remover orcamentos:", error.message);
+  if (error || !data) {
+    console.error(
+      "excluirOrcamento: falha ao remover orcamentos:",
+      error?.message ?? "registro não encontrado"
+    );
     return { ok: false, error: ERRO_GENERICO };
   }
 
@@ -384,8 +417,8 @@ export async function salvarValorHora(
   if (!nome) {
     return { ok: false, error: "Dê um nome para este valor hora." };
   }
-  const valorHora = Number(dados.valorHora);
-  if (!Number.isFinite(valorHora) || valorHora <= 0) {
+  const valorHora = limitarNumero(dados.valorHora, MAX_VALOR);
+  if (valorHora <= 0) {
     return { ok: false, error: "Calcule um valor hora antes de salvar." };
   }
 
@@ -441,37 +474,54 @@ export async function atualizarStatusValorHora(
   if (!vinculo || vinculo.papel !== "admin") {
     return { ok: false, error: ERRO_SEM_PERMISSAO };
   }
-  if (!STATUS_VALOR_HORA_VALIDOS.includes(status)) {
+  if (!idValido(registroId) || !STATUS_VALOR_HORA_VALIDOS.includes(status)) {
     return { ok: false, error: ERRO_GENERICO };
   }
 
   const admin = createSupabaseAdminClient();
 
   if (status === "padrao") {
-    const { error: erroRebaixar } = await admin
-      .from("valor_hora_historico")
-      .update({ status: "ativo" })
-      .eq("empresa_id", empresaId)
-      .eq("status", "padrao")
-      .neq("id", registroId);
-    if (erroRebaixar) {
+    const { error } = await admin.rpc("definir_valor_hora_padrao", {
+      p_empresa_id: empresaId,
+      p_registro_id: registroId,
+    });
+    if (error) {
       console.error(
-        "atualizarStatusValorHora: falha ao rebaixar o padrão anterior:",
-        erroRebaixar.message
+        "atualizarStatusValorHora: falha ao definir o novo padrão:",
+        error.message
       );
       return { ok: false, error: ERRO_GENERICO };
     }
+    return { ok: true };
   }
 
-  const { error } = await admin
+  const { data: atual, error: erroAtual } = await admin
+    .from("valor_hora_historico")
+    .select("status")
+    .eq("id", registroId)
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  if (erroAtual || !atual) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
+  if (atual.status === "padrao") {
+    return {
+      ok: false,
+      error: "Defina outro valor hora como padrão antes de alterar este.",
+    };
+  }
+
+  const { data, error } = await admin
     .from("valor_hora_historico")
     .update({ status })
     .eq("id", registroId)
-    .eq("empresa_id", empresaId);
-  if (error) {
+    .eq("empresa_id", empresaId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
     console.error(
       "atualizarStatusValorHora: falha ao gravar valor_hora_historico:",
-      error.message
+      error?.message ?? "registro não encontrado"
     );
     return { ok: false, error: ERRO_GENERICO };
   }
