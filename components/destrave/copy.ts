@@ -2,7 +2,7 @@ import type { DestraveCopy } from "./types";
 
 /** Página A — transcrita de "Página de captura_LP01_01". */
 export const lp1Copy: DestraveCopy = {
-  eventLine: "Imersão - 01 de agosto · 8h às 18h",
+  eventLine: "Imersão - 08 de agosto · 8h às 18h",
   heroTitle: "DESTRAVE o próximo nível da sua oficina",
   heroBackgroundImage: true,
   headline: [
@@ -50,7 +50,7 @@ export const lp1Copy: DestraveCopy = {
     heading: "Comprando agora você leva",
     items: [
       "01 ingresso para a Imersão DESTRAVE o próximo nível da sua oficina",
-      "Ao vivo, dia 01 de agosto a partir das 8h",
+      "Ao vivo, dia 08 de agosto a partir das 8h",
       "Valor da segunda cadeira para o seu sócio com 50% de desconto",
       "Slides da imersão",
       "8 horas de conteúdo prático",
@@ -68,7 +68,7 @@ export const lp1Copy: DestraveCopy = {
 
 /** Página B — transcrita de "Página de captura_LP01_02". */
 export const lp2Copy: DestraveCopy = {
-  eventLine: "DESTRAVE o próximo nível da sua oficina | 01 de agosto • 8h às 18h",
+  eventLine: "DESTRAVE o próximo nível da sua oficina | 08 de agosto • 8h às 18h",
   headline: [
     { text: "Em um único dia, vamos construir o caminho que sua oficina precisa para " },
     { text: "organizar a gestão e alcançar melhores resultados", blue: true },

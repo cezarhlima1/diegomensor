@@ -8,7 +8,7 @@ import { lp2Copy } from "@/components/destrave/copy";
 export const metadata: Metadata = {
   title: "Imersão DESTRAVE — Diego Mensor",
   description:
-    "Em um único dia, construa o caminho que sua oficina precisa para organizar a gestão e alcançar melhores resultados. 01 de agosto, das 8h às 18h.",
+    "Em um único dia, construa o caminho que sua oficina precisa para organizar a gestão e alcançar melhores resultados. 08 de agosto, das 8h às 18h.",
 };
 
 export default function DestraveLp2Page() {

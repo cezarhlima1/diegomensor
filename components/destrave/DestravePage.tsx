@@ -6,6 +6,7 @@ import DestraveTicket from "./DestraveTicket";
 import DestraveFaq from "./DestraveFaq";
 import DestraveChainMotif from "./DestraveChainMotif";
 import DestraveGiantWord from "./DestraveGiantWord";
+import DestraveInteractions from "./DestraveInteractions";
 import type { DestraveCopy } from "./types";
 
 const testimonials = [
@@ -13,7 +14,7 @@ const testimonials = [
   { src: "/depoimentocaptura2.png", alt: "Depoimento de participante da imersão", caption: "relato após aplicar o método" },
 ];
 
-const tickerText = "IMERSÃO ONLINE | AO VIVO | 01 DE AGOSTO |";
+const tickerText = "IMERSÃO ONLINE | AO VIVO | 08 DE AGOSTO |";
 const tickerLine = `${tickerText} ${tickerText} ${tickerText} `;
 
 function renderHighlightedText(text: string, highlightedWords?: string[]) {
@@ -37,6 +38,7 @@ function renderHighlightedText(text: string, highlightedWords?: string[]) {
 export default function DestravePage({ copy }: { copy: DestraveCopy }) {
   return (
     <div className={`destrave-theme ${copy.heroTitle ? "destrave-theme--lp1" : ""}`}>
+      {copy.heroTitle && <DestraveInteractions href={DESTRAVE_CHECKOUT_URL} ctaLabel={copy.ctaLabel} />}
       {/* 1º BLOCO — herói */}
       <section
         data-hero
@@ -156,6 +158,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
             {copy.block2.checks.map((c, i) => (
               <li
                 key={i}
+                data-dest-tilt
                 className={`reveal d${i + 1} flex items-start gap-3 rounded-[14px] px-5 py-[16px] text-[15.5px] font-medium text-offwhite border border-line bg-[linear-gradient(160deg,var(--color-card),#10171f)]`}
               >
                 <span className="check-ic">
@@ -188,7 +191,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 xl:gap-8 max-w-[820px] xl:max-w-[980px] mx-auto mt-10 xl:mt-12 items-start">
             {testimonials.map((t, i) => (
-              <figure key={i} className={`testi reveal d${i + 1} !p-0 overflow-hidden`}>
+              <figure key={i} data-dest-tilt className={`testi reveal d${i + 1} !p-0 overflow-hidden`}>
                 <div className="dest-photo overflow-hidden">
                   <img src={t.src} alt={t.alt} className="block w-full h-auto" />
                 </div>
@@ -213,7 +216,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       {/* ÚLTIMO BLOCO — autor */}
       <section className="py-[72px] md:py-24 lg:py-28 xl:py-32">
         <div className="wrap">
-          <div className="author-card reveal grid grid-cols-1 xl:grid-cols-[.85fr_1.15fr]">
+          <div data-dest-tilt className="author-card reveal grid grid-cols-1 xl:grid-cols-[.85fr_1.15fr]">
             <div className="author-photo dest-photo relative min-h-[280px] lg:min-h-[360px] xl:min-h-[420px] border-b xl:border-b-0 xl:border-r border-blue/20 overflow-hidden">
               <img src="/diego.jpeg" alt="Diego Mensor" className="absolute inset-0 w-full h-full object-cover object-top" />
             </div>
@@ -252,7 +255,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
       {/* BLOCO FINAL — oferta */}
       {copy.heroTitle ? (
         <section className="destrave-offer-hero text-center">
-          <div className="destrave-offer-hero__inner reveal">
+          <div data-dest-tilt className="destrave-offer-hero__inner reveal">
             <div className="destrave-offer-eyebrow">
               <span aria-hidden="true">⚡</span> COMPRANDO AGORA VOCÊ LEVA
             </div>
@@ -265,7 +268,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
             <span className="destrave-live-badge"><span aria-hidden="true" /> AO VIVO</span>
 
             <div className="destrave-event-info">
-              <span><Calendar className="w-[18px] h-[18px]" /> 01 de agosto de 2026</span>
+              <span><Calendar className="w-[18px] h-[18px]" /> 08 de agosto de 2026</span>
               <span><Clock className="w-[18px] h-[18px]" /> A partir das 8h</span>
             </div>
 

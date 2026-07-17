@@ -258,7 +258,7 @@ export default function ObrigadoDestrave() {
 
           {currentQuestion === 8 && <>
             <FieldTitle number={8}>Qual solução faria você terminar essa aula pensando: “Só isso já valeu a pena participar”?</FieldTitle>
-            <Hint>Quando você sair da aula do dia 01/08, se tiver a informação que resolve AQUELE problema, já vai ter valido a pena. Qual é esse problema?</Hint>
+            <Hint>Quando você sair da aula do dia 08/08, se tiver a informação que resolve AQUELE problema, já vai ter valido a pena. Qual é esse problema?</Hint>
             <textarea className={textAreaClass} value={form.solucaoEsperada} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("solucaoEsperada", e.target.value)} />
           </>}
 
