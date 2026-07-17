@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import ObrigadoDestrave from "@/components/ObrigadoDestrave";
+import ClientEffects from "@/components/ClientEffects";
 
 export const metadata: Metadata = {
   title: "Cadastro quase concluído — Imersão DESTRAVE",
@@ -15,6 +16,7 @@ export default function ObrigadoDestravePage() {
         <ObrigadoDestrave />
       </main>
       <Footer />
+      <ClientEffects />
     </>
   );
 }

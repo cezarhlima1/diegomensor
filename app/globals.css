@@ -123,15 +123,7 @@ a:focus-visible, button:focus-visible {
   }
   .destrave-obrigado__header { position: relative; }
   .destrave-progress-shell {
-    position: relative; isolation: isolate; overflow: hidden;
-    padding: 14px 16px 16px; border: 1px solid rgba(79,182,246,.24); border-radius: 16px;
-    background: linear-gradient(135deg, rgba(18,42,58,.4), rgba(8,16,23,.2));
-    backdrop-filter: blur(18px) saturate(135%); -webkit-backdrop-filter: blur(18px) saturate(135%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 18px 48px -30px rgba(4,149,240,.8), 0 0 35px -25px rgba(79,182,246,.9);
-  }
-  .destrave-progress-shell::before {
-    content: ""; position: absolute; z-index: -1; inset: -80% 35% auto -10%; height: 120px;
-    background: radial-gradient(ellipse, rgba(79,182,246,.2), transparent 70%); pointer-events: none;
+    position: relative; padding: 0; border: 0; background: transparent;
   }
   .destrave-progress-fill {
     position: relative; overflow: hidden;
@@ -150,15 +142,36 @@ a:focus-visible, button:focus-visible {
   }
   @keyframes destrave-progress-shine { 55%, 100% { transform: translateX(120%); } }
   .destrave-obrigado__title { text-wrap: balance; text-shadow: 0 12px 42px rgba(0,0,0,.35); }
+  .destrave-title-line {
+    opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(12px);
+    animation: destrave-title-reveal .75s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  .destrave-title-line--1 { animation-delay: .18s; }
+  .destrave-title-line--2 { animation-delay: .38s; }
+  .destrave-title-line--3 { animation-delay: .58s; }
+  .destrave-title-line--2 {
+    background-image: linear-gradient(100deg, var(--color-blue), var(--color-blue-soft), var(--color-blue));
+    background-size: 220% 100%; background-clip: text; -webkit-background-clip: text; color: transparent;
+    animation-name: destrave-title-reveal, destrave-title-shimmer;
+    animation-duration: .75s, 4s; animation-delay: .38s, 1.2s;
+    animation-timing-function: cubic-bezier(.2,.8,.2,1), ease-in-out;
+    animation-fill-mode: forwards, none; animation-iteration-count: 1, infinite;
+  }
   .destrave-obrigado__intro { position: relative; text-wrap: pretty; }
   .destrave-survey {
     border-top: 1px solid rgba(143,178,204,.12); padding-top: 46px;
   }
   .destrave-survey-card {
-    width: min(100%, 720px); min-height: 310px; align-content: start;
+    width: min(100%, 720px); min-height: 310px; align-content: start; isolation: isolate;
     padding: clamp(24px, 5vw, 40px);
     animation: destrave-question-in .32s cubic-bezier(.2,.8,.2,1);
   }
+  .destrave-survey-card::after {
+    content: ""; position: absolute; z-index: -1; width: 260px; height: 260px; right: -150px; bottom: -170px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(4,149,240,.2), transparent 68%);
+    transition: transform .45s ease, opacity .45s ease; opacity: .55; pointer-events: none;
+  }
+  .destrave-survey-card:hover::after { transform: translate(-25px,-20px) scale(1.12); opacity: 1; }
   .destrave-survey-card .quiz-input {
     margin-top: 6px; background: rgba(6,16,24,.72); border-color: rgba(143,178,204,.22);
   }
@@ -174,10 +187,23 @@ a:focus-visible, button:focus-visible {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  @keyframes destrave-title-reveal {
+    to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+  }
+  @keyframes destrave-title-shimmer {
+    0%, 100% { background-position: 100% 50%; }
+    50% { background-position: 0% 50%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .destrave-title-line { opacity: 1; clip-path: none; transform: none; animation: none; }
+    .destrave-progress-fill::after { animation: none; }
+    .destrave-survey-card { animation: none; }
+    .destrave-survey-card::after { transition: none; }
+  }
   @media (max-width: 640px) {
     .destrave-obrigado { padding-block: 28px 48px; }
     .destrave-obrigado .wrap { width: min(100% - 28px, 920px); }
-    .destrave-progress-shell { padding: 12px 13px 14px; border-radius: 14px; }
+    .destrave-progress-shell { padding: 0; }
     .destrave-obrigado__header .tag { font-size: 10px; letter-spacing: .1em; padding: 7px 11px; }
     .destrave-obrigado__title { margin-top: 20px; }
     .destrave-obrigado__title > span:first-child,

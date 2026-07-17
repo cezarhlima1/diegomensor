@@ -171,11 +171,11 @@ export default function ObrigadoDestrave() {
 
           <span className="tag tag--red">2 passos para concluir sua inscrição</span>
           <h1 className="destrave-obrigado__title font-display font-black mt-7 mx-auto max-w-[800px] leading-[1.04] tracking-[-.035em]">
-            <span className="block text-[clamp(27px,4.4vw,44px)]">🚨 Seu cadastro para a</span>
-            <span className="block text-blue text-[clamp(34px,5.8vw,58px)] my-2">
+            <span className="destrave-title-line destrave-title-line--1 block text-[clamp(27px,4.4vw,44px)]">🚨 Seu cadastro para a</span>
+            <span className="destrave-title-line destrave-title-line--2 block text-blue text-[clamp(34px,5.8vw,58px)] my-2">
               Imersão DESTRAVE sua oficina
             </span>
-            <span className="block text-[clamp(27px,4.4vw,44px)]">está quase concluído!</span>
+            <span className="destrave-title-line destrave-title-line--3 block text-[clamp(27px,4.4vw,44px)]">está quase concluído!</span>
           </h1>
           <p className="lead mt-7 max-w-[610px] mx-auto text-[clamp(17px,2vw,20px)]">
             Faltam só mais 2 passos: responder à pesquisa e entrar no grupo oficial para receber todas as informações e ter acesso ao evento.
@@ -185,11 +185,11 @@ export default function ObrigadoDestrave() {
         <div className="destrave-obrigado__intro mt-11 md:mt-14 max-w-[720px] mx-auto text-center">
           <div className="w-16 h-px bg-blue/60 mx-auto mb-8 shadow-[0_0_14px_rgba(4,149,240,.8)]" />
           <div className="grid gap-4 text-[15px] md:text-[17px] text-muted leading-relaxed">
-            <p>Antes de entrar no grupo exclusivo da imersão, queremos conhecer um pouco melhor a realidade da sua oficina.</p>
-            <p>Essa pesquisa leva menos de 2 minutos e vai nos ajudar a adaptar o conteúdo da imersão para os desafios reais dos donos de oficina que estarão presentes, como você.</p>
-            <p className="text-offwhite font-display font-bold text-lg">Nosso objetivo não é entregar teoria.</p>
-            <p>É falar exatamente sobre os gargalos que estão impedindo sua oficina de crescer hoje.</p>
-            <p className="text-blue font-display font-bold text-lg">Quanto mais você responder com sinceridade, mais direcionado será o treinamento.</p>
+            <p className="reveal">Antes de entrar no grupo exclusivo da imersão, queremos conhecer um pouco melhor a realidade da sua oficina.</p>
+            <p className="reveal d1">Essa pesquisa leva menos de 2 minutos e vai nos ajudar a adaptar o conteúdo da imersão para os desafios reais dos donos de oficina que estarão presentes, como você.</p>
+            <p className="reveal d2 text-offwhite font-display font-bold text-lg">Nosso objetivo não é entregar teoria.</p>
+            <p className="reveal d3">É falar exatamente sobre os gargalos que estão impedindo sua oficina de crescer hoje.</p>
+            <p className="reveal d4 text-blue font-display font-bold text-lg">Quanto mais você responder com sinceridade, mais direcionado será o treinamento.</p>
           </div>
         </div>
 
