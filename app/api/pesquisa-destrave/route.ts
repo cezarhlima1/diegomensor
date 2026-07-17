@@ -10,7 +10,7 @@ function textoPlanilha(valor: unknown, maximo = MAX_CAMPO): string {
 }
 
 export async function POST(req: Request) {
-  const webhook = process.env.SHEETS_WEBHOOK_URL;
+  const webhook = process.env.DESTRAVE_SHEETS_WEBHOOK_URL;
   if (!webhook || !webhook.startsWith("https://")) {
     return NextResponse.json({ ok: false, error: "missing-webhook" }, { status: 500 });
   }

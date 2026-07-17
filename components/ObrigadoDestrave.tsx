@@ -265,37 +265,44 @@ export default function ObrigadoDestrave() {
         </form>}
 
         {surveyCompleted && (
-          <div id="grupo-destrave" className="price-card mt-10 cta-reveal">
+          <div id="grupo-destrave" className="price-card mt-10 cta-reveal text-center !px-5 md:!px-10 !py-10 md:!py-12">
             <div className="pointer-glow" aria-hidden="true" />
             <div className="relative z-[1]">
-              <div className="flex items-center gap-3 mb-5">
-                <span className="grid place-items-center w-11 h-11 rounded-xl text-brand-green bg-brand-green/10 border border-brand-green/40">
-                  <Check className="w-6 h-6" />
+              <span
+                className="grid place-items-center w-16 h-16 rounded-[20px] text-brand-green bg-brand-green/10 border border-brand-green/40 mx-auto shadow-[0_0_32px_-8px_rgba(47,210,122,.7)]"
+              >
+                <Check className="w-8 h-8" />
+              </span>
+
+              <div className="mt-6">
+                <span className="inline-block font-mono font-bold text-xs uppercase tracking-[.16em] text-brand-green">
+                  Pesquisa concluída
                 </span>
-                <div>
-                  <span className="font-mono text-[11px] uppercase tracking-[.12em] text-brand-green">Pesquisa concluída</span>
-                  <h2 className="font-display font-bold text-xl text-white">Agora entre no grupo oficial</h2>
-                </div>
+                <h2 className="font-display font-black text-[clamp(28px,5vw,46px)] leading-tight text-white mt-2">
+                  Agora entre no <span className="text-blue">grupo oficial.</span>
+                </h2>
               </div>
 
-              <p className="font-display font-bold text-[clamp(18px,2.6vw,23px)] text-white leading-snug">
-                Assim que finalizar a pesquisa, você será direcionado para o Grupo Oficial da Imersão DESTRAVE.
-              </p>
-              <p className="text-muted mt-5 mb-3">É por lá que vamos enviar:</p>
-              <div className="grid gap-3 mb-7">
+              <div className="w-16 h-px bg-blue/60 mx-auto my-7 shadow-[0_0_14px_rgba(4,149,240,.8)]" />
+
+              <p className="text-muted mb-4">É por lá que vamos enviar:</p>
+              <div className="grid sm:grid-cols-2 gap-3 mb-8 text-left max-w-[650px] mx-auto">
                 {["Informações importantes sobre o evento", "Materiais de apoio", "Horários e orientações", "Avisos exclusivos", "Conteúdos de preparação para você chegar no sábado aproveitando o máximo da experiência."].map((item) => (
-                  <div key={item} className="flex items-start gap-3 text-offwhite">
+                  <div
+                    key={item}
+                    className="flex items-start gap-3 text-offwhite bg-white/[.035] border border-line rounded-xl p-3.5 last:sm:col-span-2"
+                  >
                     <span className="price-feat-ck mt-0.5"><Check className="w-[13px] h-[13px]" /></span>
-                    <span>{item}</span>
+                    <span className="text-sm md:text-[15px] leading-relaxed">{item}</span>
                   </div>
                 ))}
               </div>
 
-              <a href={DESTRAVE_WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer" className="btn btn--wide">
+              <a href={DESTRAVE_WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer" className="btn btn--wide max-w-[560px] mx-auto">
                 <WhatsApp className="w-[22px] h-[22px]" />
                 Entrar no grupo exclusivo
               </a>
-              <p className="reassure mt-4 text-center">
+              <p className="reassure mt-5 text-center max-w-[610px] mx-auto leading-relaxed">
                 <b>Importante:</b> sua participação no grupo é essencial para receber todas as informações da imersão. É por lá que faremos toda a comunicação até o dia do evento.
               </p>
             </div>
