@@ -51,7 +51,7 @@ function FieldTitle({ number, children }: { number: number; children: React.Reac
 }
 
 function Hint({ children }: { children: React.ReactNode }) {
-  return <p className="text-muted text-sm leading-relaxed mt-2 ml-11">{children}</p>;
+  return <p className="text-muted text-sm leading-relaxed mt-1 md:ml-11">{children}</p>;
 }
 
 export default function ObrigadoDestrave() {
@@ -138,11 +138,11 @@ export default function ObrigadoDestrave() {
   const textAreaClass = "quiz-input min-h-[132px] resize-y leading-relaxed";
 
   return (
-    <section className="relative overflow-hidden py-20 md:py-28">
+    <section className="destrave-obrigado relative overflow-hidden py-12 md:py-20 lg:py-24">
       <div className="hero-bg" aria-hidden="true" />
-      <div className="wrap max-w-[820px]">
-        <div className="cta-reveal text-center">
-          <div className="max-w-[620px] mx-auto mb-8">
+      <div className="wrap max-w-[920px]">
+        <div className="cta-reveal text-center destrave-obrigado__header">
+          <div className="destrave-progress-shell max-w-[680px] mx-auto mb-9">
             <div className="flex items-center justify-between font-mono text-xs uppercase tracking-[.12em] mb-2">
               <span className="text-muted">Cadastro</span>
               <strong className={registrationProgress === 100 ? "text-brand-green" : "text-blue"}>
@@ -158,19 +158,19 @@ export default function ObrigadoDestrave() {
           </div>
 
           <span className="tag tag--red">Último passo para concluir sua inscrição</span>
-          <h1 className="font-display font-black mt-7 mx-auto max-w-[760px] leading-[1.02] tracking-[-.035em]">
-            <span className="block text-[clamp(28px,5vw,48px)]">🚨 Seu cadastro para a</span>
-            <span className="block text-blue text-[clamp(36px,6.5vw,66px)] my-2">
+          <h1 className="destrave-obrigado__title font-display font-black mt-7 mx-auto max-w-[800px] leading-[1.04] tracking-[-.035em]">
+            <span className="block text-[clamp(27px,4.4vw,44px)]">🚨 Seu cadastro para a</span>
+            <span className="block text-blue text-[clamp(34px,5.8vw,58px)] my-2">
               Imersão DESTRAVE sua oficina
             </span>
-            <span className="block text-[clamp(28px,5vw,48px)]">está quase concluído!</span>
+            <span className="block text-[clamp(27px,4.4vw,44px)]">está quase concluído!</span>
           </h1>
           <p className="lead mt-7 max-w-[610px] mx-auto text-[clamp(17px,2vw,20px)]">
             Falta só mais um passo para garantir que você receba todas as informações e tenha acesso ao evento.
           </p>
         </div>
 
-        <div className="mt-11 md:mt-14 max-w-[690px] mx-auto text-center">
+        <div className="destrave-obrigado__intro mt-11 md:mt-14 max-w-[720px] mx-auto text-center">
           <div className="w-16 h-px bg-blue/60 mx-auto mb-8 shadow-[0_0_14px_rgba(4,149,240,.8)]" />
           <div className="grid gap-4 text-[15px] md:text-[17px] text-muted leading-relaxed">
             <p>Antes de entrar no grupo exclusivo da imersão, queremos conhecer um pouco melhor a realidade da sua oficina.</p>
@@ -181,8 +181,8 @@ export default function ObrigadoDestrave() {
           </div>
         </div>
 
-        {!surveyCompleted && <form id="pesquisa-destrave" onSubmit={onSubmit} className="mt-8">
-          <div className="text-center mb-1">
+        {!surveyCompleted && <form id="pesquisa-destrave" onSubmit={onSubmit} className="destrave-survey mt-12 md:mt-16">
+          <div className="text-center mb-1 max-w-[620px] mx-auto">
             <span className="tag">Pesquisa rápida</span>
             <p className="font-display font-bold text-offwhite mt-4">Vão ser apenas 9 perguntas, é jogo rápido! 🫡</p>
             <div className="max-w-[420px] mx-auto mt-5">
@@ -196,7 +196,7 @@ export default function ObrigadoDestrave() {
             </div>
           </div>
 
-          <div className="price-card grid gap-4 mt-6">
+          <div key={currentQuestion} className="price-card destrave-survey-card grid gap-4 mt-7 mx-auto">
           {currentQuestion === 1 && <>
             <FieldTitle number={1}>Seu WhatsApp</FieldTitle>
             <input autoFocus type="tel" inputMode="tel" autoComplete="tel" className="quiz-input" placeholder="(00) 00000-0000" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
@@ -277,7 +277,7 @@ export default function ObrigadoDestrave() {
         </form>}
 
         {surveyCompleted && (
-          <div id="grupo-destrave" className="price-card mt-10 cta-reveal text-center !px-5 md:!px-10 !py-10 md:!py-12">
+          <div id="grupo-destrave" className="price-card destrave-group-card mt-12 cta-reveal text-center !px-5 md:!px-10 !py-10 md:!py-12 mx-auto">
             <div className="pointer-glow" aria-hidden="true" />
             <div className="relative z-[1]">
               <span
