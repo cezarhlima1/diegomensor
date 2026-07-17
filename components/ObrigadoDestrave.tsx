@@ -57,29 +57,25 @@ function Hint({ children }: { children: React.ReactNode }) {
 export default function ObrigadoDestrave() {
   const [form, setForm] = useState<FormData>(initialForm);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   function update(field: keyof FormData, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
-    if (error) setError("");
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError("");
 
     try {
-      const response = await fetch("/api/pesquisa-destrave", {
+      await fetch("/api/pesquisa-destrave", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!response.ok) throw new Error("Não foi possível salvar a pesquisa.");
-      window.location.href = DESTRAVE_WHATSAPP_GROUP_URL;
     } catch {
-      setError("Não conseguimos enviar agora. Confira os campos e tente novamente.");
-      setSubmitting(false);
+      // A planilha não pode impedir o participante de entrar no grupo.
+    } finally {
+      window.location.href = DESTRAVE_WHATSAPP_GROUP_URL;
     }
   }
 
@@ -205,7 +201,6 @@ export default function ObrigadoDestrave() {
               ))}
             </div>
 
-            {error && <p role="alert" className="mb-4 text-brand-red text-sm font-semibold text-center">{error}</p>}
             <button type="submit" className="btn btn--wide" disabled={submitting}>
               <WhatsApp className="w-[22px] h-[22px]" />
               {submitting ? "Enviando pesquisa…" : "Entrar no grupo exclusivo"}
