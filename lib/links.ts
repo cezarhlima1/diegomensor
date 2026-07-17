@@ -8,7 +8,7 @@
 export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/HMONNxxhyMlGsDTiyU8an2";
 
 /** Grupo oficial da Imersão DESTRAVE. Troque aqui caso o evento use outro grupo. */
-export const DESTRAVE_WHATSAPP_GROUP_URL = WHATSAPP_GROUP_URL;
+export const DESTRAVE_WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/ErlrjPLXj04BF69xlHNQt3";
 
 /**
  * Link do formulário de aplicação da Mentoria OAG (usado na página /bio).

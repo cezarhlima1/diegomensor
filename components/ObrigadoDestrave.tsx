@@ -59,7 +59,14 @@ export default function ObrigadoDestrave() {
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [surveyCompleted, setSurveyCompleted] = useState(false);
+  const [groupAccessed, setGroupAccessed] = useState(false);
   const [validationError, setValidationError] = useState("");
+
+  const registrationProgress = groupAccessed
+    ? 100
+    : surveyCompleted
+      ? 99
+      : 92 + Math.round(((currentQuestion - 1) / 8) * 6);
 
   function update(field: keyof FormData, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -138,10 +145,15 @@ export default function ObrigadoDestrave() {
           <div className="max-w-[620px] mx-auto mb-8">
             <div className="flex items-center justify-between font-mono text-xs uppercase tracking-[.12em] mb-2">
               <span className="text-muted">Cadastro</span>
-              <strong className="text-blue">92% concluído</strong>
+              <strong className={registrationProgress === 100 ? "text-brand-green" : "text-blue"}>
+                {registrationProgress}% concluído
+              </strong>
             </div>
-            <div className="h-3 rounded-full bg-white/8 border border-line overflow-hidden" role="progressbar" aria-label="Progresso do cadastro" aria-valuemin={0} aria-valuemax={100} aria-valuenow={92}>
-              <div className="h-full w-[92%] rounded-full bg-[linear-gradient(90deg,var(--color-blue-deep),var(--color-blue-soft))] shadow-[0_0_20px_rgba(4,149,240,.7)]" />
+            <div className="h-3 rounded-full bg-white/8 border border-line overflow-hidden" role="progressbar" aria-label="Progresso do cadastro" aria-valuemin={0} aria-valuemax={100} aria-valuenow={registrationProgress}>
+              <div
+                className={`h-full rounded-full transition-[width,background] duration-500 ${registrationProgress === 100 ? "bg-brand-green shadow-[0_0_20px_rgba(47,210,122,.7)]" : "bg-[linear-gradient(90deg,var(--color-blue-deep),var(--color-blue-soft))] shadow-[0_0_20px_rgba(4,149,240,.7)]"}`}
+                style={{ width: `${registrationProgress}%` }}
+              />
             </div>
           </div>
 
@@ -298,7 +310,7 @@ export default function ObrigadoDestrave() {
                 ))}
               </div>
 
-              <a href={DESTRAVE_WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer" className="btn btn--wide max-w-[560px] mx-auto">
+              <a href={DESTRAVE_WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer" className="btn btn--wide max-w-[560px] mx-auto" onClick={() => setGroupAccessed(true)}>
                 <WhatsApp className="w-[22px] h-[22px]" />
                 Entrar no grupo exclusivo
               </a>
