@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, WhatsApp } from "./icons";
 import { DESTRAVE_WHATSAPP_GROUP_URL } from "@/lib/links";
 
@@ -61,12 +61,18 @@ export default function ObrigadoDestrave() {
   const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [groupAccessed, setGroupAccessed] = useState(false);
   const [validationError, setValidationError] = useState("");
+  const [visualProgress, setVisualProgress] = useState(0);
 
   const registrationProgress = groupAccessed
     ? 100
     : surveyCompleted
       ? 99
-      : 92 + Math.round(((currentQuestion - 1) / 8) * 6);
+      : 93 + Math.round(((currentQuestion - 1) / 8) * 5);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisualProgress(registrationProgress), 120);
+    return () => window.clearTimeout(timer);
+  }, [registrationProgress]);
 
   function update(field: keyof FormData, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -157,8 +163,8 @@ export default function ObrigadoDestrave() {
             </div>
             <div className="h-3 rounded-full bg-white/8 border border-line overflow-hidden" role="progressbar" aria-label="Progresso do cadastro" aria-valuemin={0} aria-valuemax={100} aria-valuenow={registrationProgress}>
               <div
-                className={`h-full rounded-full transition-[width,background] duration-500 ${registrationProgress === 100 ? "bg-brand-green shadow-[0_0_20px_rgba(47,210,122,.7)]" : "bg-[linear-gradient(90deg,var(--color-blue-deep),var(--color-blue-soft))] shadow-[0_0_20px_rgba(4,149,240,.7)]"}`}
-                style={{ width: `${registrationProgress}%` }}
+                className={`destrave-progress-fill h-full rounded-full ${registrationProgress === 100 ? "is-complete" : ""}`}
+                style={{ width: `${visualProgress}%` }}
               />
             </div>
           </div>
