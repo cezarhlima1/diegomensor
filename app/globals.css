@@ -101,6 +101,8 @@ a:focus-visible, button:focus-visible {
     border-radius: 100px; background: rgba(4,149,240,.07);
   }
   .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--color-blue); box-shadow: 0 0 10px var(--color-blue); }
+  .tag--red { color: var(--color-brand-red); border-color: rgba(240,88,76,.45); background: rgba(240,88,76,.1); }
+  .tag--red::before { background: var(--color-brand-red); box-shadow: 0 0 10px var(--color-brand-red); }
 
   .section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.4vw, 50px); }
   .lead { color: var(--color-muted); font-size: clamp(16px, 1.5vw, 19px); }

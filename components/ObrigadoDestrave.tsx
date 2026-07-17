@@ -58,6 +58,7 @@ export default function ObrigadoDestrave() {
   const [form, setForm] = useState<FormData>(initialForm);
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [validationError, setValidationError] = useState("");
 
   function update(field: keyof FormData, value: string) {
@@ -119,7 +120,11 @@ export default function ObrigadoDestrave() {
     } catch {
       // A planilha não pode impedir o participante de entrar no grupo.
     } finally {
-      window.location.href = DESTRAVE_WHATSAPP_GROUP_URL;
+      setSubmitting(false);
+      setSurveyCompleted(true);
+      requestAnimationFrame(() => {
+        document.querySelector("#grupo-destrave")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     }
   }
 
@@ -140,30 +145,34 @@ export default function ObrigadoDestrave() {
             </div>
           </div>
 
-          <span className="tag">Último passo</span>
-          <h1 className="section-title mt-6 max-w-[18ch] mx-auto">
-            🚨 Seu cadastro para a Imersão <span className="text-blue">DESTRAVE sua oficina</span> está quase concluído!
+          <span className="tag tag--red">Último passo para concluir sua inscrição</span>
+          <h1 className="font-display font-black mt-7 mx-auto max-w-[760px] leading-[1.02] tracking-[-.035em]">
+            <span className="block text-[clamp(28px,5vw,48px)]">🚨 Seu cadastro para a</span>
+            <span className="block text-blue text-[clamp(36px,6.5vw,66px)] my-2">
+              Imersão DESTRAVE sua oficina
+            </span>
+            <span className="block text-[clamp(28px,5vw,48px)]">está quase concluído!</span>
           </h1>
-          <p className="lead mt-6 max-w-[650px] mx-auto">
+          <p className="lead mt-7 max-w-[610px] mx-auto text-[clamp(17px,2vw,20px)]">
             Falta só mais um passo para garantir que você receba todas as informações e tenha acesso ao evento.
           </p>
         </div>
 
-        <div className="price-card mt-10 md:mt-12">
-          <div className="pointer-glow" aria-hidden="true" />
-          <div className="relative z-[1] grid gap-4 text-[15px] md:text-base text-muted leading-relaxed">
+        <div className="mt-11 md:mt-14 max-w-[690px] mx-auto text-center">
+          <div className="w-16 h-px bg-blue/60 mx-auto mb-8 shadow-[0_0_14px_rgba(4,149,240,.8)]" />
+          <div className="grid gap-4 text-[15px] md:text-[17px] text-muted leading-relaxed">
             <p>Antes de entrar no grupo exclusivo da imersão, queremos conhecer um pouco melhor a realidade da sua oficina.</p>
             <p>Essa pesquisa leva menos de 2 minutos e vai nos ajudar a adaptar o conteúdo da imersão para os desafios reais dos donos de oficina que estarão presentes, como você.</p>
-            <p className="text-offwhite font-semibold">Nosso objetivo não é entregar teoria.</p>
+            <p className="text-offwhite font-display font-bold text-lg">Nosso objetivo não é entregar teoria.</p>
             <p>É falar exatamente sobre os gargalos que estão impedindo sua oficina de crescer hoje.</p>
-            <p className="text-blue font-bold">Quanto mais você responder com sinceridade, mais direcionado será o treinamento.</p>
+            <p className="text-blue font-display font-bold text-lg">Quanto mais você responder com sinceridade, mais direcionado será o treinamento.</p>
           </div>
         </div>
 
-        <form id="pesquisa-destrave" onSubmit={onSubmit} className="mt-8">
+        {!surveyCompleted && <form id="pesquisa-destrave" onSubmit={onSubmit} className="mt-8">
           <div className="text-center mb-1">
             <span className="tag">Pesquisa rápida</span>
-            <p className="font-display font-bold text-offwhite mt-4">Vão ser apenas 6 perguntas, é jogo rápido! 🫡</p>
+            <p className="font-display font-bold text-offwhite mt-4">Vão ser apenas 9 perguntas, é jogo rápido! 🫡</p>
             <div className="max-w-[420px] mx-auto mt-5">
               <div className="flex justify-between font-mono text-[11px] uppercase tracking-[.1em] text-muted mb-2">
                 <span>Pergunta {currentQuestion} de 9</span>
@@ -239,20 +248,6 @@ export default function ObrigadoDestrave() {
                 </label>
               ))}
             </div>
-            <div className="border-t border-line mt-3 pt-5">
-              <p className="font-display font-bold text-[clamp(17px,2.4vw,21px)] text-white leading-snug">
-              Assim que finalizar a pesquisa, você será direcionado para o Grupo Oficial da Imersão DESTRAVE.
-              </p>
-              <p className="text-muted mt-4 mb-3">É por lá que vamos enviar:</p>
-              <div className="grid gap-3 mb-6">
-              {["Informações importantes sobre o evento", "Materiais de apoio", "Horários e orientações", "Avisos exclusivos", "Conteúdos de preparação para você chegar no sábado aproveitando o máximo da experiência."].map((item) => (
-                <div key={item} className="flex items-start gap-3 text-offwhite">
-                  <span className="price-feat-ck mt-0.5"><Check className="w-[13px] h-[13px]" /></span>
-                  <span>{item}</span>
-                </div>
-              ))}
-              </div>
-            </div>
           </>}
 
             {validationError && <p role="alert" className="text-brand-red text-sm font-semibold text-center">{validationError}</p>}
@@ -262,18 +257,50 @@ export default function ObrigadoDestrave() {
                 <button type="button" className="btn flex-1" onClick={nextQuestion}>Próxima pergunta</button>
               </div>
             ) : (
-              <>
             <button type="submit" className="btn btn--wide" disabled={submitting}>
-              <WhatsApp className="w-[22px] h-[22px]" />
-              {submitting ? "Concluindo pesquisa…" : "Concluir e entrar no grupo exclusivo"}
+              {submitting ? "Enviando respostas…" : "Enviar respostas"}
             </button>
-            <p className="reassure mt-4 text-center">
-              <b>Importante:</b> sua participação no grupo é essencial para receber todas as informações da imersão. É por lá que faremos toda a comunicação até o dia do evento.
-            </p>
-              </>
             )}
           </div>
-        </form>
+        </form>}
+
+        {surveyCompleted && (
+          <div id="grupo-destrave" className="price-card mt-10 cta-reveal">
+            <div className="pointer-glow" aria-hidden="true" />
+            <div className="relative z-[1]">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="grid place-items-center w-11 h-11 rounded-xl text-brand-green bg-brand-green/10 border border-brand-green/40">
+                  <Check className="w-6 h-6" />
+                </span>
+                <div>
+                  <span className="font-mono text-[11px] uppercase tracking-[.12em] text-brand-green">Pesquisa concluída</span>
+                  <h2 className="font-display font-bold text-xl text-white">Agora entre no grupo oficial</h2>
+                </div>
+              </div>
+
+              <p className="font-display font-bold text-[clamp(18px,2.6vw,23px)] text-white leading-snug">
+                Assim que finalizar a pesquisa, você será direcionado para o Grupo Oficial da Imersão DESTRAVE.
+              </p>
+              <p className="text-muted mt-5 mb-3">É por lá que vamos enviar:</p>
+              <div className="grid gap-3 mb-7">
+                {["Informações importantes sobre o evento", "Materiais de apoio", "Horários e orientações", "Avisos exclusivos", "Conteúdos de preparação para você chegar no sábado aproveitando o máximo da experiência."].map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-offwhite">
+                    <span className="price-feat-ck mt-0.5"><Check className="w-[13px] h-[13px]" /></span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <a href={DESTRAVE_WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer" className="btn btn--wide">
+                <WhatsApp className="w-[22px] h-[22px]" />
+                Entrar no grupo exclusivo
+              </a>
+              <p className="reassure mt-4 text-center">
+                <b>Importante:</b> sua participação no grupo é essencial para receber todas as informações da imersão. É por lá que faremos toda a comunicação até o dia do evento.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
