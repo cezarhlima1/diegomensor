@@ -1559,6 +1559,22 @@ a:focus-visible, button:focus-visible {
       padding-bottom: 56px;
     }
 
+    .destrave-theme--lp1 .destrave-hero--with-cover .hero-bg {
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5,8,10,.18) 0%, rgba(5,8,10,.34) 30%, rgba(5,8,10,.78) 66%, #0d1419 100%),
+        linear-gradient(90deg, rgba(5,8,10,.62) 0%, rgba(5,8,10,.12) 78%, rgba(5,8,10,.22) 100%),
+        radial-gradient(circle at 75% 20%, rgba(4,149,240,.14), transparent 34%),
+        url("/CAPA%20DOBRA1.png") 72% top / auto 100% no-repeat;
+    }
+
+    .destrave-theme--lp1 .destrave-hero--with-cover::after {
+      content: ""; position: absolute; z-index: 0; inset: 0; pointer-events: none;
+      background: linear-gradient(180deg, transparent 0 42%, rgba(13,20,25,.16) 58%, rgba(13,20,25,.72) 86%, #0d1419 100%);
+    }
+
+    .destrave-theme--lp1 .destrave-hero--with-cover > .wrap { position: relative; z-index: 1; }
+
     .destrave-theme--lp1 > section:not([data-hero]):not(.destrave-ticker) {
       padding-top: 56px;
       padding-bottom: 56px;
