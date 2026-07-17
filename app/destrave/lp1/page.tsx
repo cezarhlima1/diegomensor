@@ -5,6 +5,8 @@ import ClientEffects from "@/components/ClientEffects";
 import DestravePage from "@/components/destrave/DestravePage";
 import { lp1Copy } from "@/components/destrave/copy";
 
+const CHECKOUT_URL = "https://payfast.greenn.com.br/redirect/300783";
+
 export const metadata: Metadata = {
   title: "Imersão DESTRAVE — Diego Mensor",
   description:
@@ -16,7 +18,7 @@ export default function DestraveLp1Page() {
     <>
       <FacebookPixel />
       <main>
-        <DestravePage copy={lp1Copy} />
+        <DestravePage copy={lp1Copy} checkoutUrl={CHECKOUT_URL} />
       </main>
       <Footer />
       <ClientEffects />

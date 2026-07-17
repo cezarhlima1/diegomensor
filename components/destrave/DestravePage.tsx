@@ -35,10 +35,16 @@ function renderHighlightedText(text: string, highlightedWords?: string[]) {
   );
 }
 
-export default function DestravePage({ copy }: { copy: DestraveCopy }) {
+export default function DestravePage({
+  copy,
+  checkoutUrl = DESTRAVE_CHECKOUT_URL,
+}: {
+  copy: DestraveCopy;
+  checkoutUrl?: string;
+}) {
   return (
     <div className={`destrave-theme ${copy.heroTitle ? "destrave-theme--lp1" : ""}`}>
-      {copy.heroTitle && <DestraveInteractions href={DESTRAVE_CHECKOUT_URL} ctaLabel={copy.ctaLabel} />}
+      {copy.heroTitle && <DestraveInteractions href={checkoutUrl} ctaLabel={copy.ctaLabel} />}
       {/* 1º BLOCO — herói */}
       <section
         data-hero
@@ -120,7 +126,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
             </div>
 
             <div className="reveal d3 flex flex-col items-start">
-              <Cta variant="lg" href={DESTRAVE_CHECKOUT_URL}>
+              <Cta variant="lg" href={checkoutUrl}>
                 {copy.ctaLabel}
               </Cta>
               <DestravePriceBar label={copy.priceBarLabel} align="left" />
@@ -206,7 +212,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
           </div>
 
           <div className="mt-10 reveal d2">
-            <Cta variant="lg" href={DESTRAVE_CHECKOUT_URL}>
+            <Cta variant="lg" href={checkoutUrl}>
               {copy.block3.ctaLabel}
             </Cta>
           </div>
@@ -244,7 +250,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
               ) : (
                 <p className="text-[#d7e6f2] text-[clamp(15px,1.7vw,18px)] mb-6">{copy.authorBlock.paragraph}</p>
               )}
-              <Cta variant="lg" href={DESTRAVE_CHECKOUT_URL}>
+              <Cta variant="lg" href={checkoutUrl}>
                 {copy.authorBlock.ctaLabel}
               </Cta>
             </div>
@@ -272,7 +278,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
               <span><Clock className="w-[18px] h-[18px]" /> A partir das 8h</span>
             </div>
 
-            <a className="destrave-offer-cta" href={DESTRAVE_CHECKOUT_URL}>
+            <a className="destrave-offer-cta" href={checkoutUrl}>
               QUERO DESTRAVAR A GESTÃO DA MINHA OFICINA <ArrowRight className="w-5 h-5" />
             </a>
 
@@ -339,7 +345,7 @@ export default function DestravePage({ copy }: { copy: DestraveCopy }) {
                 ))}
               </div>
 
-              <Cta variant="wide" href={DESTRAVE_CHECKOUT_URL}>
+              <Cta variant="wide" href={checkoutUrl}>
                 {copy.finalBlock.ctaLabel}
               </Cta>
               <DestravePriceBar label={copy.finalBlock.priceBarLabel} />
