@@ -153,12 +153,30 @@ a:focus-visible, button:focus-visible {
     to { opacity: 1; transform: translateY(0); }
   }
   @media (max-width: 640px) {
+    .destrave-obrigado { padding-block: 28px 48px; }
+    .destrave-obrigado .wrap { width: min(100% - 28px, 920px); }
     .destrave-progress-shell { padding: 12px 13px 14px; border-radius: 14px; }
+    .destrave-obrigado__header .tag { font-size: 10px; letter-spacing: .1em; padding: 7px 11px; }
+    .destrave-obrigado__title { margin-top: 20px; }
+    .destrave-obrigado__title > span:first-child,
+    .destrave-obrigado__title > span:last-child { font-size: clamp(24px, 8vw, 32px); }
+    .destrave-obrigado__title > .text-blue { font-size: clamp(30px, 10vw, 40px); margin-block: 5px; }
     .destrave-obrigado__title .text-blue { line-height: 1.08; }
-    .destrave-survey { padding-top: 36px; }
-    .destrave-survey-card { min-height: 0; border-radius: 18px; }
+    .destrave-obrigado__header .lead { margin-top: 18px; font-size: 15px; line-height: 1.55; }
+    .destrave-obrigado__intro { margin-top: 32px; }
+    .destrave-obrigado__intro > div:first-child { margin-bottom: 22px; }
+    .destrave-obrigado__intro > .grid { gap: 11px; font-size: 14px; line-height: 1.55; }
+    .destrave-obrigado__intro .text-lg { font-size: 16px; }
+    .destrave-survey { margin-top: 38px; padding-top: 30px; }
+    .destrave-survey .tag { padding: 6px 10px; font-size: 10px; }
+    .destrave-survey-card { min-height: 0; border-radius: 18px; padding: 18px; gap: 12px; margin-top: 20px; }
+    .destrave-survey-card h2 { font-size: 16px; }
+    .destrave-survey-card textarea.quiz-input { min-height: 96px; max-height: 32svh; scroll-margin-block: 30svh; }
+    .destrave-survey-card input.quiz-input { min-height: 48px; scroll-margin-block: 30svh; }
+    .destrave-survey-card label { padding: 11px; }
     .destrave-survey-card .btn { padding-inline: 16px; font-size: 13px; }
     .destrave-survey-card .btn--ghost { flex: 0 0 auto; }
+    .destrave-group-card { margin-top: 32px; }
   }
 
   .section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.4vw, 50px); }

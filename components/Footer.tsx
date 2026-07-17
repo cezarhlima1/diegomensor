@@ -9,7 +9,7 @@ export default function Footer() {
             <Logo className="w-[18px] h-[18px]" />
           </span>
           <span>
-            Precificação para Oficinas
+            Mensor Treinamentos
             <small className="block font-mono font-medium text-[10px] tracking-[.14em] text-muted uppercase">
               by Diego Mensor
             </small>
@@ -21,7 +21,7 @@ export default function Footer() {
           <br />
           CNPJ: 66.021.375/0001-46
           <br />
-          diegomensor@hotmail.com
+          mensortreinamentos@gmail.com
         </div>
 
         <div className="w-full border-t border-line mt-[34px] pt-[22px] font-mono text-xs text-muted-dim flex flex-wrap justify-between gap-3.5">

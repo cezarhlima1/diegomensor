@@ -73,6 +73,12 @@ export default function ObrigadoDestrave() {
     setValidationError("");
   }
 
+  function keepFieldVisible(element: HTMLInputElement | HTMLTextAreaElement) {
+    window.setTimeout(() => {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 350);
+  }
+
   function currentAnswerIsValid() {
     const fieldByQuestion: Record<number, keyof FormData> = {
       1: "phone",
@@ -157,7 +163,7 @@ export default function ObrigadoDestrave() {
             </div>
           </div>
 
-          <span className="tag tag--red">Último passo para concluir sua inscrição</span>
+          <span className="tag tag--red">2 passos para concluir sua inscrição</span>
           <h1 className="destrave-obrigado__title font-display font-black mt-7 mx-auto max-w-[800px] leading-[1.04] tracking-[-.035em]">
             <span className="block text-[clamp(27px,4.4vw,44px)]">🚨 Seu cadastro para a</span>
             <span className="block text-blue text-[clamp(34px,5.8vw,58px)] my-2">
@@ -166,7 +172,7 @@ export default function ObrigadoDestrave() {
             <span className="block text-[clamp(27px,4.4vw,44px)]">está quase concluído!</span>
           </h1>
           <p className="lead mt-7 max-w-[610px] mx-auto text-[clamp(17px,2vw,20px)]">
-            Falta só mais um passo para garantir que você receba todas as informações e tenha acesso ao evento.
+            Faltam só mais 2 passos: responder à pesquisa e entrar no grupo oficial para receber todas as informações e ter acesso ao evento.
           </p>
         </div>
 
@@ -199,18 +205,18 @@ export default function ObrigadoDestrave() {
           <div key={currentQuestion} className="price-card destrave-survey-card grid gap-4 mt-7 mx-auto">
           {currentQuestion === 1 && <>
             <FieldTitle number={1}>Seu WhatsApp</FieldTitle>
-            <input autoFocus type="tel" inputMode="tel" autoComplete="tel" className="quiz-input" placeholder="(00) 00000-0000" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+            <input type="tel" inputMode="tel" autoComplete="tel" className="quiz-input" placeholder="(00) 00000-0000" value={form.phone} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("phone", e.target.value)} />
           </>}
 
           {currentQuestion === 2 && <>
             <FieldTitle number={2}>Seu nome</FieldTitle>
-            <input autoFocus type="text" autoComplete="name" className="quiz-input" placeholder="Digite seu nome completo" value={form.name} onChange={(e) => update("name", e.target.value)} />
+            <input type="text" autoComplete="name" className="quiz-input" placeholder="Digite seu nome completo" value={form.name} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("name", e.target.value)} />
           </>}
 
           {currentQuestion === 3 && <>
             <FieldTitle number={3}>O que mais tira seu sono quando você pensa na oficina? Aquele PROBLEMA que mais incomoda.</FieldTitle>
             <Hint>Aquele problema que tu sabe que precisa resolver, não tá resolvendo por algum motivo e que tu sabe que, se resolver, vai mudar muita coisa dentro da tua oficina.</Hint>
-            <textarea autoFocus className={textAreaClass} value={form.problemaPrincipal} onChange={(e) => update("problemaPrincipal", e.target.value)} />
+            <textarea className={textAreaClass} value={form.problemaPrincipal} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("problemaPrincipal", e.target.value)} />
           </>}
 
           {currentQuestion === 4 && <>
@@ -229,25 +235,25 @@ export default function ObrigadoDestrave() {
           {currentQuestion === 5 && <>
             <FieldTitle number={5}>Você já tentou resolver esse (ou esses) problema que tem dentro da oficina? Como?</FieldTitle>
             <Hint>Não existe resposta certa. Conte o que você já fez para resolver esse problema ou o que ainda te impede de agir.</Hint>
-            <textarea autoFocus className={textAreaClass} value={form.tentativaSolucao} onChange={(e) => update("tentativaSolucao", e.target.value)} />
+            <textarea className={textAreaClass} value={form.tentativaSolucao} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("tentativaSolucao", e.target.value)} />
           </>}
 
           {currentQuestion === 6 && <>
             <FieldTitle number={6}>Quando um cliente entra na oficina, qual é a maior dificuldade para fechar o serviço?</FieldTitle>
             <Hint>Pode ser atendimento, processo, tempo de reparo, diagnóstico, preço etc. Não tem resposta certa ou errada; é o que tu analisa que acontece aí dentro da oficina.</Hint>
-            <textarea autoFocus className={textAreaClass} value={form.dificuldadeFechamento} onChange={(e) => update("dificuldadeFechamento", e.target.value)} />
+            <textarea className={textAreaClass} value={form.dificuldadeFechamento} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("dificuldadeFechamento", e.target.value)} />
           </>}
 
           {currentQuestion === 7 && <>
             <FieldTitle number={7}>Se o Diego pudesse solucionar os 3 principais problemas que tu estás tendo, quais seriam eles?</FieldTitle>
             <Hint>Pensa que tu vai ter 30 minutos com o Diego e ele vai te direcionar e trazer solução pra 3 problemas. O que tu perguntaria pra ele?</Hint>
-            <textarea autoFocus className={textAreaClass} value={form.tresProblemas} onChange={(e) => update("tresProblemas", e.target.value)} />
+            <textarea className={textAreaClass} value={form.tresProblemas} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("tresProblemas", e.target.value)} />
           </>}
 
           {currentQuestion === 8 && <>
             <FieldTitle number={8}>Qual solução faria você terminar essa aula pensando: “Só isso já valeu a pena participar”?</FieldTitle>
             <Hint>Quando você sair da aula do dia 01/08, se tiver a informação que resolve AQUELE problema, já vai ter valido a pena. Qual é esse problema?</Hint>
-            <textarea autoFocus className={textAreaClass} value={form.solucaoEsperada} onChange={(e) => update("solucaoEsperada", e.target.value)} />
+            <textarea className={textAreaClass} value={form.solucaoEsperada} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("solucaoEsperada", e.target.value)} />
           </>}
 
           {currentQuestion === 9 && <>
