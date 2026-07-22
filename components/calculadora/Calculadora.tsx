@@ -112,6 +112,7 @@ export default function Calculadora({
   // membro lê/edita e reutiliza os valores que a empresa definiu.
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [expandedId, setExpandedId] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tiers, setTiers] = useState<MarkupTier[]>(() =>
     tiersFromMarkups(passo2ConfigInicial?.markupTiers ?? []),
   );
@@ -350,6 +351,37 @@ export default function Calculadora({
       if (id === expandedId) setExpandedId(list[list.length - 1].id);
       return list;
     });
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function togglePecaSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllPecas() {
+    setSelectedIds((prev) =>
+      prev.size === pecas.length ? new Set() : new Set(pecas.map((p) => p.id)),
+    );
+  }
+
+  function removeSelectedPecas() {
+    setPecas((prev) => {
+      const next = prev.filter((p) => !selectedIds.has(p.id));
+      const list = next.length > 0 ? next : [novaPeca()];
+      if (selectedIds.has(expandedId)) setExpandedId(list[list.length - 1].id);
+      return list;
+    });
+    setSelectedIds(new Set());
   }
 
   function pecasResumo() {
@@ -588,6 +620,27 @@ export default function Calculadora({
                   </p>
 
                   {/* lista de peças (acordeão) */}
+                  <div className="calc-pecas-toolbar">
+                    <label className="calc-select-all">
+                      <input
+                        type="checkbox"
+                        checked={
+                          pecas.length > 0 && selectedIds.size === pecas.length
+                        }
+                        onChange={toggleSelectAllPecas}
+                      />
+                      Selecionar todas
+                    </label>
+                    {selectedIds.size > 0 && (
+                      <button
+                        type="button"
+                        className="calc-peca-del"
+                        onClick={removeSelectedPecas}
+                      >
+                        Excluir selecionadas ({selectedIds.size})
+                      </button>
+                    )}
+                  </div>
                   <div className="calc-pecas mt-6">
                     {pecas.map((p, i) => {
                       const custoNum = parseNum(p.custo);
@@ -599,22 +652,32 @@ export default function Calculadora({
                           key={p.id}
                           className={`calc-peca ${isOpen ? "is-open" : ""}`}
                         >
-                          <button
-                            type="button"
-                            className="calc-peca-head"
-                            onClick={() => setExpandedId(isOpen ? "" : p.id)}
-                          >
-                            <span className="calc-peca-idx">{i + 1}</span>
-                            <span className="calc-peca-name">
-                              {p.nome.trim() || "Nova peça"}
+                          <div className="calc-peca-headrow">
+                            <span className="calc-peca-chk">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(p.id)}
+                                onChange={() => togglePecaSelected(p.id)}
+                                aria-label={`Selecionar ${p.nome.trim() || "peça"}`}
+                              />
                             </span>
-                            <span className="calc-peca-val">
-                              {custoNum > 0 ? brl(valor) : "—"}
-                            </span>
-                            <span className="calc-peca-chev" aria-hidden="true">
-                              ⌄
-                            </span>
-                          </button>
+                            <button
+                              type="button"
+                              className="calc-peca-head"
+                              onClick={() => setExpandedId(isOpen ? "" : p.id)}
+                            >
+                              <span className="calc-peca-idx">{i + 1}</span>
+                              <span className="calc-peca-name">
+                                {p.nome.trim() || "Nova peça"}
+                              </span>
+                              <span className="calc-peca-val">
+                                {custoNum > 0 ? brl(valor) : "—"}
+                              </span>
+                              <span className="calc-peca-chev" aria-hidden="true">
+                                ⌄
+                              </span>
+                            </button>
+                          </div>
 
                           {isOpen && (
                             <div className="calc-peca-body">
