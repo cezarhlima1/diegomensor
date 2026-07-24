@@ -3,7 +3,7 @@ import type { DestraveCopy } from "./types";
 /** Página A — transcrita de "Página de captura_LP01_01". */
 export const lp1Copy: DestraveCopy = {
   eventLine: "Imersão - 08 de agosto · 8h às 18h",
-  heroTitle: "DESTRAVE o próximo nível da sua oficina",
+  heroTitle: "DESTRAVE a gestão da tua oficina",
   heroBackgroundImage: true,
   headline: [
     { text: "Em um dia vamos construir um plano de ação para " },
