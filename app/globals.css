@@ -1316,7 +1316,7 @@ a:focus-visible, button:focus-visible {
     background:
       linear-gradient(90deg, rgba(4,5,6,.22) 0%, rgba(4,5,6,.08) 48%, rgba(4,5,6,.38) 100%),
       linear-gradient(0deg, rgba(4,5,6,.5) 0%, transparent 45%),
-      url("/CAPA%20VENDA%20DOBRA1.png") center / cover no-repeat;
+      url("/CAPA%20VENDA%20DOBRA1.png?v=20260724-101858") center / cover no-repeat;
   }
 
   /* faixa de reforço da proposta, logo após a primeira dobra da LP1 */
@@ -1571,7 +1571,7 @@ a:focus-visible, button:focus-visible {
         linear-gradient(180deg, rgba(5,8,10,.18) 0%, rgba(5,8,10,.34) 30%, rgba(5,8,10,.78) 66%, #0d1419 100%),
         linear-gradient(90deg, rgba(5,8,10,.62) 0%, rgba(5,8,10,.12) 78%, rgba(5,8,10,.22) 100%),
         radial-gradient(circle at 75% 20%, rgba(4,149,240,.14), transparent 34%),
-        url("/CAPA%20VENDA%20DOBRA1.png") 72% top / auto 100% no-repeat;
+        url("/CAPA%20VENDA%20DOBRA1.png?v=20260724-101858") 72% top / auto 100% no-repeat;
     }
 
     .destrave-theme--lp1 .destrave-hero--with-cover::after {
