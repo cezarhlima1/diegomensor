@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import FacebookPixel from "@/components/FacebookPixel";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
+import ClarityScript from "@/components/ClarityScript";
 import DestravePage from "@/components/destrave/DestravePage";
 import { lp1Copy } from "@/components/destrave/copy";
 
@@ -17,6 +18,7 @@ export default function DestraveLp1Page() {
   return (
     <>
       <FacebookPixel />
+      <ClarityScript projectId="xthz0xw8o1" />
       <main>
         <DestravePage copy={lp1Copy} checkoutUrl={CHECKOUT_URL} />
       </main>
