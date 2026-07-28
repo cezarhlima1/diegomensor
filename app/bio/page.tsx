@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FacebookPixel from "@/components/FacebookPixel";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
 import { ArrowRight } from "@/components/icons";
@@ -43,6 +44,7 @@ const LINKS: BioLink[] = [
 export default function BioPage() {
   return (
     <>
+      <FacebookPixel />
       <ClientEffects />
 
       <main className="relative min-h-[100svh] py-16 sm:py-24" data-hero>

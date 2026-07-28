@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FacebookPixel from "@/components/FacebookPixel";
 import Footer from "@/components/Footer";
 import ObrigadoDestrave from "@/components/ObrigadoDestrave";
 import ClientEffects from "@/components/ClientEffects";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function ObrigadoDestravePage() {
   return (
     <>
+      <FacebookPixel conversion="CompleteRegistration" />
       <main>
         <ObrigadoDestrave />
       </main>

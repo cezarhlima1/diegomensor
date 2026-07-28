@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FacebookPixel from "@/components/FacebookPixel";
 import Footer from "@/components/Footer";
 import { Check, WhatsApp } from "@/components/icons";
 import { WHATSAPP_GROUP_URL } from "@/lib/links";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function ObrigadoPage() {
   return (
     <>
+      <FacebookPixel conversion="Purchase" />
       <main className="relative min-h-[100svh] flex items-center py-24">
         <div className="hero-bg" aria-hidden="true" />
 

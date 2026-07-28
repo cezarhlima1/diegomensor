@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FacebookPixel from "@/components/FacebookPixel";
 import Quiz from "@/components/quiz/Quiz";
 import Footer from "@/components/Footer";
 import ClarityScript from "@/components/ClarityScript";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function QuizPage() {
   return (
     <>
+      <FacebookPixel />
       <ClarityScript projectId="xjeuhpvk1z" />
       <main>
         <Quiz />
