@@ -67,7 +67,7 @@ export const lp1Copy: DestraveCopy = {
 
 /** Página B — transcrita de "Página de captura_LP01_02". */
 export const lp2Copy: DestraveCopy = {
-  eventLine: "DESTRAVE o próximo nível da sua oficina | 08 de agosto • 8h30 às 17h",
+  eventLine: "DESTRAVE o próximo nível da sua oficina | 08 de agosto • 8h às 18h",
   headline: [
     { text: "Em um único dia, vamos construir o caminho que sua oficina precisa para " },
     { text: "organizar a gestão e alcançar melhores resultados", blue: true },
@@ -120,7 +120,7 @@ export const lp2Copy: DestraveCopy = {
   },
 };
 
-/** FAQ — idêntico nas duas páginas. */
+/** FAQ base compartilhado entre as duas páginas. */
 export const destraveFaqs: { q: string; a: string }[] = [
   {
     q: "O evento será ao vivo?",
@@ -128,7 +128,7 @@ export const destraveFaqs: { q: string; a: string }[] = [
   },
   {
     q: "Quanto tempo dura o encontro?",
-    a: "O evento acontecerá das 8h30 às 17h, com intervalo para almoço entre 12h e 13h30.",
+    a: "O evento terá aproximadamente 7 horas e 30 minutos de conteúdo, das 8h às 17h, com intervalo para almoço entre 12h e 13h30.",
   },
   {
     q: "Estou começando agora. Esse evento é para mim?",

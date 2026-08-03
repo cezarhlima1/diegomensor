@@ -351,7 +351,13 @@ export default function DestravePage({
         </section>
       )}
 
-      <DestraveFaq />
+      <DestraveFaq
+        scheduleAnswer={
+          isLp1
+            ? "O evento acontecerá das 8h30 às 17h, com intervalo para almoço entre 12h e 13h30."
+            : undefined
+        }
+      />
     </div>
   );
 }

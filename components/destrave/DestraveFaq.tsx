@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { destraveFaqs } from "./copy";
 
-export default function DestraveFaq() {
+export default function DestraveFaq({ scheduleAnswer }: { scheduleAnswer?: string }) {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
@@ -19,6 +19,7 @@ export default function DestraveFaq() {
         <div className="grid gap-3 mt-10">
           {destraveFaqs.map((item, i) => {
             const isOpen = open === i;
+            const answer = i === 1 && scheduleAnswer ? scheduleAnswer : item.a;
             return (
               <div key={i} className={`faq-item reveal d${Math.min(Math.floor(i / 2) + 1, 3)} ${isOpen ? "open" : ""}`}>
                 <button
@@ -36,7 +37,7 @@ export default function DestraveFaq() {
                   className="faq-answer"
                 >
                   <div className="overflow-hidden">
-                    <p className="px-[22px] pb-[22px] text-muted text-[15.5px]">{item.a}</p>
+                    <p className="px-[22px] pb-[22px] text-muted text-[15.5px]">{answer}</p>
                   </div>
                 </div>
               </div>
