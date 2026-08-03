@@ -27,6 +27,7 @@ import {
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
 const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
+const EMAIL_PILOTO_EDICAO = "diegomensor@hotmail.com";
 
 /** Teto de caracteres por campo persistido — a máscara pt-BR nunca passa disso. */
 const MAX_CHARS_CAMPO = 20;
@@ -244,6 +245,18 @@ export type ResultadoCriarOrcamento =
   | { ok: true; orcamento: Orcamento }
   | { ok: false; error: string };
 
+type DadosOrcamento = {
+  nomeCliente: string;
+  nomeCarro: string;
+  placa: string;
+  valorHora: number;
+  horas: number;
+  maoDeObra: number;
+  pecas: PecaResumo[];
+  valorPeca: number;
+  total: number;
+};
+
 /**
  * Cria um orçamento no histórico da empresa, sempre com status inicial
  * "Aguardando aprovação" — o client nunca escolhe o status na criação.
@@ -251,17 +264,7 @@ export type ResultadoCriarOrcamento =
  */
 export async function criarOrcamento(
   empresaId: string,
-  dados: {
-    nomeCliente: string;
-    nomeCarro: string;
-    placa: string;
-    valorHora: number;
-    horas: number;
-    maoDeObra: number;
-    pecas: PecaResumo[];
-    valorPeca: number;
-    total: number;
-  }
+  dados: DadosOrcamento
 ): Promise<ResultadoCriarOrcamento> {
   const sessao = await getSessaoComEmpresa();
   const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
@@ -298,6 +301,70 @@ export async function criarOrcamento(
 
   if (error || !data) {
     console.error("criarOrcamento: falha ao gravar orcamentos:", error?.message);
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true, orcamento: paraOrcamento(data) };
+}
+
+/**
+ * Atualiza um orçamento existente. Durante o piloto, a permissão é validada
+ * no servidor pelo e-mail autenticado; ocultar o botão no client não é a
+ * barreira de segurança.
+ */
+export async function editarOrcamento(
+  empresaId: string,
+  orcamentoId: string,
+  dados: DadosOrcamento
+): Promise<ResultadoCriarOrcamento> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) {
+    return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+  if (
+    sessao?.email !== EMAIL_PILOTO_EDICAO ||
+    !idValido(orcamentoId)
+  ) {
+    return {
+      ok: false,
+      error: "A edição de orçamentos ainda não está liberada para este cadastro.",
+    };
+  }
+
+  const pecas = sanitizarPecas(dados.pecas ?? []);
+  const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
+  const maoDeObra = pecas.reduce(
+    (total, peca) => total + (peca.maoDeObra ?? 0),
+    0
+  );
+  const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("orcamentos")
+    .update({
+      nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
+      nome_carro:
+        dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
+      placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
+      valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
+      horas: limitarNumero(dados.horas, MAX_HORAS),
+      mao_de_obra: maoDeObra,
+      pecas,
+      valor_peca: valorPeca,
+      total,
+    })
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId)
+    .select(SELECT_ORCAMENTO)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error(
+      "editarOrcamento: falha ao atualizar orcamentos:",
+      error?.message ?? "registro não encontrado"
+    );
     return { ok: false, error: ERRO_GENERICO };
   }
 

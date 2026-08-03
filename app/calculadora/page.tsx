@@ -171,6 +171,9 @@ export default async function CalculadoraPage() {
           valorHoraHistoricoInicial={valorHoraHistoricoInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
           permiteFiltroDatas={sessao.email === "diegomensor@hotmail.com"}
+          permiteEditarOrcamentos={
+            sessao.email === "diegomensor@hotmail.com"
+          }
         />
       </main>
       <Footer />

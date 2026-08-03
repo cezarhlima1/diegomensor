@@ -38,6 +38,7 @@ import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
 import {
   atualizarStatusOrcamento,
   criarOrcamento,
+  editarOrcamento,
   excluirOrcamento,
   salvarPasso2Config,
 } from "./actions";
@@ -83,6 +84,7 @@ export default function Calculadora({
   valorHoraHistoricoInicial,
   nomeEmpresa,
   permiteFiltroDatas,
+  permiteEditarOrcamentos,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -102,6 +104,8 @@ export default function Calculadora({
   nomeEmpresa: string;
   /** Liberação inicial do filtro por intervalo para o cadastro piloto. */
   permiteFiltroDatas: boolean;
+  /** Liberação piloto para alterar orçamentos já persistidos. */
+  permiteEditarOrcamentos: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -142,6 +146,8 @@ export default function Calculadora({
   const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
+  const [orcamentoEditandoId, setOrcamentoEditandoId] = useState("");
+  const [valorHoraEdicao, setValorHoraEdicao] = useState<number | null>(null);
   // Relatório XLSX por período (datas independentes do filtro da lista).
   const [expInicio, setExpInicio] = useState("");
   const [expFim, setExpFim] = useState("");
@@ -226,9 +232,12 @@ export default function Calculadora({
   );
   const vhSelecionado =
     selecionaveisVH.find((h) => h.id === valorHoraSelId) ?? padraoVH;
-  const valorHoraOrcamento = vhSelecionado
-    ? vhSelecionado.valorHora
-    : valorHora;
+  const valorHoraOrcamento =
+    orcamentoEditandoId && valorHoraEdicao != null
+      ? valorHoraEdicao
+      : vhSelecionado
+        ? vhSelecionado.valorHora
+        : valorHora;
 
   const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
 
@@ -458,7 +467,7 @@ export default function Calculadora({
   async function salvarOrcamento() {
     setSalvandoOrcamento(true);
     setErroOrcamento("");
-    const resultado = await criarOrcamento(empresaId, {
+    const dados = {
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
       placa: placa.trim(),
@@ -468,24 +477,84 @@ export default function Calculadora({
       pecas: pecasResumo(),
       valorPeca: pecasTotal,
       total: totalOrcamento,
-    });
+    };
+    const resultado = orcamentoEditandoId
+      ? await editarOrcamento(empresaId, orcamentoEditandoId, dados)
+      : await criarOrcamento(empresaId, dados);
     setSalvandoOrcamento(false);
     if (!resultado.ok) {
       setErroOrcamento(resultado.error);
       return;
     }
-    setOrcamentos((prev) => [resultado.orcamento, ...prev]);
+    setOrcamentos((prev) =>
+      orcamentoEditandoId
+        ? prev.map((o) =>
+            o.id === orcamentoEditandoId ? resultado.orcamento : o,
+          )
+        : [resultado.orcamento, ...prev],
+    );
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2600);
   }
 
   function novoOrcamento() {
+    setOrcamentoEditandoId("");
+    setValorHoraEdicao(null);
+    setErroOrcamento("");
     setNomeCliente("");
     setNomeCarro("");
     setPlaca("");
     setPecas((prev) => prev.map((p) => ({ ...p, horas: "" })));
     setView("calc");
     setStep(3);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function abrirEdicaoOrcamento(o: Orcamento) {
+    if (!permiteEditarOrcamentos) return;
+
+    const pecasRecuperadas: Peca[] = (o.pecas ?? []).map((peca) => {
+      const quantidade = Math.max(1, Number(peca.quantidade) || 1);
+      const custoUnitario = Number(peca.valor) / quantidade;
+      const horas =
+        o.valorHora > 0 ? Number(peca.maoDeObra ?? 0) / o.valorHora : 0;
+      return {
+        ...novaPeca(),
+        nome: peca.nome,
+        custo: custoUnitario.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        markup: 0,
+        quantidade: String(quantidade),
+        horas: horas
+          ? horas.toLocaleString("pt-BR", {
+              maximumFractionDigits: 2,
+            })
+          : "",
+      };
+    });
+    const lista = pecasRecuperadas.length > 0 ? pecasRecuperadas : [novaPeca()];
+
+    setOrcamentoEditandoId(o.id);
+    setValorHoraEdicao(o.valorHora);
+    setNomeCliente(o.nomeCliente);
+    setNomeCarro(o.nomeCarro);
+    setPlaca(o.placa);
+    setPecas(lista);
+    setExpandedId(lista[0].id);
+    setSelectedIds(new Set());
+    setErroOrcamento("");
+    setView("calc");
+    setStep(2);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicaoOrcamento() {
+    setOrcamentoEditandoId("");
+    setValorHoraEdicao(null);
+    setErroOrcamento("");
+    setView("hist");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -639,6 +708,18 @@ export default function Calculadora({
                 </button>
               ))}
             </div>
+
+            {orcamentoEditandoId && (
+              <div className="calc-editando-aviso" role="status">
+                <span>
+                  Você está editando um orçamento já salvo. As alterações
+                  substituirão o registro atual.
+                </span>
+                <button type="button" onClick={cancelarEdicaoOrcamento}>
+                  Cancelar edição
+                </button>
+              </div>
+            )}
 
             {/* ============ PASSO 2 ============ */}
             {step === 2 && (
@@ -951,7 +1032,20 @@ export default function Calculadora({
                                 : `definido por ${nomeEmpresa}`}
                           </span>
                         </span>
-                        {selecionaveisVH.length > 0 ? (
+                        {orcamentoEditandoId ? (
+                          <span className="calc-money calc-money--locked">
+                            <span className="calc-money-prefix">R$</span>
+                            <input
+                              type="text"
+                              readOnly
+                              tabIndex={-1}
+                              value={valorHoraOrcamento.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            />
+                          </span>
+                        ) : selecionaveisVH.length > 0 ? (
                           <select
                             className="quiz-input"
                             value={vhSelecionado?.id ?? ""}
@@ -1119,7 +1213,9 @@ export default function Calculadora({
                   <p className="calc-saved cta-reveal mt-4">
                     {copied
                       ? "✓ Orçamento copiado."
-                      : "✓ Orçamento salvo no histórico."}
+                      : orcamentoEditandoId
+                        ? "✓ Alterações salvas no orçamento."
+                        : "✓ Orçamento salvo no histórico."}
                   </p>
                 )}
                 {erroOrcamento && (
@@ -1143,7 +1239,11 @@ export default function Calculadora({
                     onClick={salvarOrcamento}
                     disabled={salvandoOrcamento}
                   >
-                    {salvandoOrcamento ? "Salvando…" : "Salvar orçamento"}
+                    {salvandoOrcamento
+                      ? "Salvando…"
+                      : orcamentoEditandoId
+                        ? "Salvar alterações"
+                        : "Salvar orçamento"}
                   </button>
                 </div>
 
@@ -1392,6 +1492,15 @@ export default function Calculadora({
                       >
                         WhatsApp
                       </button>
+                      {permiteEditarOrcamentos && (
+                        <button
+                          className="calc-hist-wa calc-hist-edit"
+                          onClick={() => abrirEdicaoOrcamento(o)}
+                          aria-label={`Editar orçamento ${o.nomeCarro}`}
+                        >
+                          Editar
+                        </button>
+                      )}
                       <button
                         className="calc-hist-del"
                         onClick={() => removerOrcamento(o.id)}

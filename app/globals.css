@@ -1693,10 +1693,24 @@ a:focus-visible, button:focus-visible {
   }
   .calc-filtro-limpar:hover { color: #fff; border-color: rgba(4,149,240,.45); background: rgba(4,149,240,.1); }
   .calc-filtro-data-erro { width: 100%; color: var(--color-brand-red); font-size: 13px; }
+  .calc-editando-aviso {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    margin: -10px 0 20px; padding: 13px 16px; border-radius: 12px;
+    border: 1px solid rgba(245,166,35,.42); background: rgba(245,166,35,.08);
+    color: var(--color-offwhite); font-size: 13.5px;
+  }
+  .calc-editando-aviso button {
+    flex: none; border: 0; background: none; color: var(--color-amber);
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    text-decoration: underline; cursor: pointer;
+  }
+  .calc-hist-edit { color: var(--color-amber); border-color: rgba(245,166,35,.3); }
+  .calc-hist-edit:hover { background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.5); }
   @media (max-width: 560px) {
     .calc-filtro-grupo { width: 100%; overflow-x: auto; border-radius: 14px; }
     .calc-filtro-pill { flex: 1 0 auto; }
     .calc-filtro-limpar { width: 100%; }
+    .calc-editando-aviso { align-items: flex-start; flex-direction: column; }
   }
 
   /* Passo 1: valor hora final editável no readout */
