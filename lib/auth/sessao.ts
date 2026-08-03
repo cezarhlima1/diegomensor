@@ -17,6 +17,7 @@ export type EmpresaDaSessao = {
 /** Sessão resolvida para a área logada: usuário + empresa ativa + empresas. */
 export type SessaoComEmpresa = {
   userId: string;
+  email: string;
   empresaAtiva: EmpresaDaSessao;
   empresas: EmpresaDaSessao[];
 };
@@ -74,5 +75,10 @@ export async function getSessaoComEmpresa(): Promise<SessaoComEmpresa | null> {
   const idAtiva = cookieStore.get(COOKIE_EMPRESA_ATIVA)?.value;
   const empresaAtiva = empresas.find((e) => e.id === idAtiva) ?? empresas[0];
 
-  return { userId: user.id, empresaAtiva, empresas };
+  return {
+    userId: user.id,
+    email: user.email?.trim().toLowerCase() ?? "",
+    empresaAtiva,
+    empresas,
+  };
 }

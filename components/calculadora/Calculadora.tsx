@@ -56,6 +56,7 @@ const Passo1 = nextDynamic(() => import("./Passo1"));
 
 type View = "calc" | "hist";
 type Step = 1 | 2 | 3;
+type FiltroPeriodo = "todos" | "semana" | "mes" | "personalizado";
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Custo da hora",
@@ -81,6 +82,7 @@ export default function Calculadora({
   orcamentosIniciais,
   valorHoraHistoricoInicial,
   nomeEmpresa,
+  permiteFiltroDatas,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -98,6 +100,8 @@ export default function Calculadora({
   valorHoraHistoricoInicial: ValorHoraSalvo[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
+  /** Liberação inicial do filtro por intervalo para o cadastro piloto. */
+  permiteFiltroDatas: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -130,9 +134,11 @@ export default function Calculadora({
   // Histórico — vem do banco (tabela orcamentos), compartilhado entre os
   // membros da empresa; o estado local só reflete as mudanças desta sessão.
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosIniciais);
-  // Filtros do histórico: período (default mês corrente), status e busca
-  // textual (placa + cliente + veículo ao mesmo tempo).
-  const [filtroPeriodo, setFiltroPeriodo] = useState<"semana" | "mes">("mes");
+  // Filtros do histórico: todos por padrão; semana, mês e intervalo
+  // personalizado (este último liberado inicialmente só para o piloto).
+  const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>("todos");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
@@ -249,18 +255,39 @@ export default function Calculadora({
   const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
 
-  // Lista do histórico após período (semana/mês corrente), status e busca.
+  const intervaloInvalido =
+    filtroPeriodo === "personalizado" &&
+    Boolean(dataInicio && dataFim && dataInicio > dataFim);
+
+  // Lista do histórico após período, status e busca.
   const orcamentosFiltrados = useMemo(() => {
     const agora = new Date();
     const inicioSemana = inicioDaSemana(agora);
+    const inicioPersonalizado = dataInicio
+      ? new Date(`${dataInicio}T00:00:00`)
+      : null;
+    const fimPersonalizadoExclusivo = dataFim
+      ? new Date(`${dataFim}T00:00:00`)
+      : null;
+    fimPersonalizadoExclusivo?.setDate(
+      fimPersonalizadoExclusivo.getDate() + 1,
+    );
     const termo = busca.trim().toLowerCase();
     return orcamentos.filter((o) => {
       const d = new Date(o.data);
-      const periodoOk =
-        filtroPeriodo === "mes"
-          ? d.getMonth() === agora.getMonth() &&
-            d.getFullYear() === agora.getFullYear()
-          : d >= inicioSemana;
+      let periodoOk = true;
+      if (filtroPeriodo === "mes") {
+        periodoOk =
+          d.getMonth() === agora.getMonth() &&
+          d.getFullYear() === agora.getFullYear();
+      } else if (filtroPeriodo === "semana") {
+        periodoOk = d >= inicioSemana;
+      } else if (filtroPeriodo === "personalizado") {
+        periodoOk =
+          !intervaloInvalido &&
+          (!inicioPersonalizado || d >= inicioPersonalizado) &&
+          (!fimPersonalizadoExclusivo || d < fimPersonalizadoExclusivo);
+      }
       const statusOk = !filtroStatus || o.status === filtroStatus;
       const buscaOk =
         !termo ||
@@ -269,7 +296,15 @@ export default function Calculadora({
         );
       return periodoOk && statusOk && buscaOk;
     });
-  }, [orcamentos, filtroPeriodo, filtroStatus, busca]);
+  }, [
+    orcamentos,
+    filtroPeriodo,
+    dataInicio,
+    dataFim,
+    intervaloInvalido,
+    filtroStatus,
+    busca,
+  ]);
 
   // Totais do histórico por status — sobre a lista filtrada (o que se vê).
   const totalPendente = useMemo(
@@ -1180,6 +1215,13 @@ export default function Calculadora({
                   <div className="calc-filtro-grupo" role="group" aria-label="Filtrar por período">
                     <button
                       type="button"
+                      className={`calc-filtro-pill ${filtroPeriodo === "todos" ? "is-active" : ""}`}
+                      onClick={() => setFiltroPeriodo("todos")}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      type="button"
                       className={`calc-filtro-pill ${filtroPeriodo === "semana" ? "is-active" : ""}`}
                       onClick={() => setFiltroPeriodo("semana")}
                     >
@@ -1192,6 +1234,15 @@ export default function Calculadora({
                     >
                       Mês
                     </button>
+                    {permiteFiltroDatas && (
+                      <button
+                        type="button"
+                        className={`calc-filtro-pill ${filtroPeriodo === "personalizado" ? "is-active" : ""}`}
+                        onClick={() => setFiltroPeriodo("personalizado")}
+                      >
+                        Por data
+                      </button>
+                    )}
                   </div>
                   <select
                     className="quiz-input calc-filtro-sel"
@@ -1218,12 +1269,53 @@ export default function Calculadora({
                   />
                 </div>
 
+                {permiteFiltroDatas && filtroPeriodo === "personalizado" && (
+                  <div className="calc-filtro-datas">
+                    <label className="calc-filtro-data-campo">
+                      <span>Data inicial</span>
+                      <input
+                        type="date"
+                        className="quiz-input"
+                        value={dataInicio}
+                        max={dataFim || undefined}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                      />
+                    </label>
+                    <label className="calc-filtro-data-campo">
+                      <span>Data final</span>
+                      <input
+                        type="date"
+                        className="quiz-input"
+                        value={dataFim}
+                        min={dataInicio || undefined}
+                        onChange={(e) => setDataFim(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="calc-filtro-limpar"
+                      onClick={() => {
+                        setDataInicio("");
+                        setDataFim("");
+                        setFiltroPeriodo("todos");
+                      }}
+                    >
+                      Limpar período
+                    </button>
+                    {intervaloInvalido && (
+                      <p className="calc-filtro-data-erro" role="alert">
+                        A data final deve ser igual ou posterior à data inicial.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                   <p className="quiz-label">
                     {orcamentosFiltrados.length}{" "}
                     {orcamentosFiltrados.length === 1
-                      ? "orçamento no período"
-                      : "orçamentos no período"}
+                      ? "orçamento encontrado"
+                      : "orçamentos encontrados"}
                   </p>
                   <button className="btn" onClick={novoOrcamento}>
                     Novo orçamento
