@@ -58,6 +58,21 @@ const Passo1 = nextDynamic(() => import("./Passo1"));
 type View = "calc" | "hist";
 type Step = 1 | 2 | 3;
 type FiltroPeriodo = "todos" | "semana" | "mes" | "personalizado";
+type PecaAjusteRapido = {
+  id: string;
+  nome: string;
+  quantidade: string;
+  valor: string;
+  maoDeObra: string;
+};
+type OrcamentoAjusteRapido = {
+  id: string;
+  nomeCliente: string;
+  nomeCarro: string;
+  placa: string;
+  valorHora: number;
+  pecas: PecaAjusteRapido[];
+};
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Custo da hora",
@@ -146,8 +161,10 @@ export default function Calculadora({
   const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
-  const [orcamentoEditandoId, setOrcamentoEditandoId] = useState("");
-  const [valorHoraEdicao, setValorHoraEdicao] = useState<number | null>(null);
+  const [ajusteRapido, setAjusteRapido] =
+    useState<OrcamentoAjusteRapido | null>(null);
+  const [salvandoAjuste, setSalvandoAjuste] = useState(false);
+  const [erroAjuste, setErroAjuste] = useState("");
   // Relatório XLSX por período (datas independentes do filtro da lista).
   const [expInicio, setExpInicio] = useState("");
   const [expFim, setExpFim] = useState("");
@@ -232,12 +249,9 @@ export default function Calculadora({
   );
   const vhSelecionado =
     selecionaveisVH.find((h) => h.id === valorHoraSelId) ?? padraoVH;
-  const valorHoraOrcamento =
-    orcamentoEditandoId && valorHoraEdicao != null
-      ? valorHoraEdicao
-      : vhSelecionado
-        ? vhSelecionado.valorHora
-        : valorHora;
+  const valorHoraOrcamento = vhSelecionado
+    ? vhSelecionado.valorHora
+    : valorHora;
 
   const pecasTotal = useMemo(() => somaPecas(pecas, tiers), [pecas, tiers]);
 
@@ -337,6 +351,22 @@ export default function Calculadora({
         .reduce((acc, o) => acc + o.total, 0),
     [orcamentosFiltrados],
   );
+  const totaisAjusteRapido = useMemo(() => {
+    if (!ajusteRapido) return { pecas: 0, maoDeObra: 0, total: 0 };
+    const totalPecas = ajusteRapido.pecas.reduce(
+      (total, p) => total + parseNum(p.valor),
+      0,
+    );
+    const totalMaoDeObra = ajusteRapido.pecas.reduce(
+      (total, p) => total + parseNum(p.maoDeObra),
+      0,
+    );
+    return {
+      pecas: totalPecas,
+      maoDeObra: totalMaoDeObra,
+      total: totalPecas + totalMaoDeObra,
+    };
+  }, [ajusteRapido]);
 
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
@@ -467,7 +497,6 @@ export default function Calculadora({
   async function salvarOrcamento() {
     setSalvandoOrcamento(true);
     setErroOrcamento("");
-    const editandoId = orcamentoEditandoId;
     const dados = {
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
@@ -479,41 +508,18 @@ export default function Calculadora({
       valorPeca: pecasTotal,
       total: totalOrcamento,
     };
-    const resultado = editandoId
-      ? await editarOrcamento(empresaId, editandoId, dados)
-      : await criarOrcamento(empresaId, dados);
+    const resultado = await criarOrcamento(empresaId, dados);
     setSalvandoOrcamento(false);
     if (!resultado.ok) {
       setErroOrcamento(resultado.error);
       return;
     }
-    setOrcamentos((prev) =>
-      editandoId
-        ? prev.map((o) =>
-            o.id === editandoId ? resultado.orcamento : o,
-          )
-        : [resultado.orcamento, ...prev],
-    );
-    if (editandoId) {
-      const pecaVazia = novaPeca();
-      setOrcamentoEditandoId("");
-      setValorHoraEdicao(null);
-      setNomeCliente("");
-      setNomeCarro("");
-      setPlaca("");
-      setPecas([pecaVazia]);
-      setExpandedId(pecaVazia.id);
-      setSelectedIds(new Set());
-      setValorHoraSelId("");
-      setStep(2);
-    }
+    setOrcamentos((prev) => [resultado.orcamento, ...prev]);
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2600);
   }
 
   function novoOrcamento() {
-    setOrcamentoEditandoId("");
-    setValorHoraEdicao(null);
     setErroOrcamento("");
     setNomeCliente("");
     setNomeCarro("");
@@ -527,49 +533,143 @@ export default function Calculadora({
   function abrirEdicaoOrcamento(o: Orcamento) {
     if (!permiteEditarOrcamentos) return;
 
-    const pecasRecuperadas: Peca[] = (o.pecas ?? []).map((peca) => {
-      const quantidade = Math.max(1, Number(peca.quantidade) || 1);
-      const custoUnitario = Number(peca.valor) / quantidade;
-      const horas =
-        o.valorHora > 0 ? Number(peca.maoDeObra ?? 0) / o.valorHora : 0;
+    const pecasRecuperadas: PecaAjusteRapido[] = (o.pecas ?? []).map((peca) => {
       return {
-        ...novaPeca(),
+        id: crypto.randomUUID(),
         nome: peca.nome,
-        custo: custoUnitario.toLocaleString("pt-BR", {
+        quantidade: String(Math.max(1, Number(peca.quantidade) || 1)),
+        valor: Number(peca.valor).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }),
-        markup: 0,
-        quantidade: String(quantidade),
-        horas: horas
-          ? horas.toLocaleString("pt-BR", {
-              maximumFractionDigits: 2,
-            })
-          : "",
+        maoDeObra: Number(peca.maoDeObra ?? 0).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
       };
     });
-    const lista = pecasRecuperadas.length > 0 ? pecasRecuperadas : [novaPeca()];
-
-    setOrcamentoEditandoId(o.id);
-    setValorHoraEdicao(o.valorHora);
-    setNomeCliente(o.nomeCliente);
-    setNomeCarro(o.nomeCarro);
-    setPlaca(o.placa);
-    setPecas(lista);
-    setExpandedId(lista[0].id);
-    setSelectedIds(new Set());
-    setErroOrcamento("");
-    setView("calc");
-    setStep(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setAjusteRapido({
+      id: o.id,
+      nomeCliente: o.nomeCliente,
+      nomeCarro: o.nomeCarro,
+      placa: o.placa,
+      valorHora: o.valorHora,
+      pecas: pecasRecuperadas,
+    });
+    setErroAjuste("");
   }
 
-  function cancelarEdicaoOrcamento() {
-    setOrcamentoEditandoId("");
-    setValorHoraEdicao(null);
-    setErroOrcamento("");
-    setView("hist");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  function atualizarAjusteRapido(
+    campo: "nomeCliente" | "nomeCarro" | "placa",
+    valor: string,
+  ) {
+    setAjusteRapido((atual) =>
+      atual ? { ...atual, [campo]: valor } : atual,
+    );
+  }
+
+  function atualizarPecaAjuste(
+    id: string,
+    campo: "nome" | "quantidade" | "valor" | "maoDeObra",
+    valor: string,
+  ) {
+    setAjusteRapido((atual) =>
+      atual
+        ? {
+            ...atual,
+            pecas: atual.pecas.map((p) =>
+              p.id === id ? { ...p, [campo]: valor } : p,
+            ),
+          }
+        : atual,
+    );
+  }
+
+  function adicionarPecaAjuste() {
+    setAjusteRapido((atual) =>
+      atual
+        ? {
+            ...atual,
+            pecas: [
+              ...atual.pecas,
+              {
+                id: crypto.randomUUID(),
+                nome: "",
+                quantidade: "1",
+                valor: "",
+                maoDeObra: "",
+              },
+            ],
+          }
+        : atual,
+    );
+  }
+
+  function excluirPecaAjuste(id: string) {
+    setAjusteRapido((atual) =>
+      atual
+        ? { ...atual, pecas: atual.pecas.filter((p) => p.id !== id) }
+        : atual,
+    );
+  }
+
+  async function salvarAjusteRapido() {
+    if (!ajusteRapido || salvandoAjuste) return;
+    setSalvandoAjuste(true);
+    setErroAjuste("");
+    const pecasAjustadas = ajusteRapido.pecas.map((p) => ({
+      nome: p.nome.trim() || "Peça",
+      quantidade: Math.max(1, parseNum(p.quantidade)),
+      valor: parseNum(p.valor),
+      maoDeObra: parseNum(p.maoDeObra),
+    }));
+    const valorPeca = pecasAjustadas.reduce((total, p) => total + p.valor, 0);
+    const maoDeObra = pecasAjustadas.reduce(
+      (total, p) => total + (p.maoDeObra ?? 0),
+      0,
+    );
+    const resultado = await editarOrcamento(
+      empresaId,
+      ajusteRapido.id,
+      {
+        nomeCliente: ajusteRapido.nomeCliente,
+        nomeCarro: ajusteRapido.nomeCarro,
+        placa: ajusteRapido.placa,
+        valorHora: ajusteRapido.valorHora,
+        horas:
+          ajusteRapido.valorHora > 0
+            ? maoDeObra / ajusteRapido.valorHora
+            : 0,
+        maoDeObra,
+        pecas: pecasAjustadas,
+        valorPeca,
+        total: valorPeca + maoDeObra,
+      },
+    );
+    setSalvandoAjuste(false);
+    if (!resultado.ok) {
+      setErroAjuste(resultado.error);
+      return;
+    }
+    setOrcamentos((prev) =>
+      prev.map((o) => (o.id === resultado.orcamento.id ? resultado.orcamento : o)),
+    );
+    setAjusteRapido(null);
+  }
+
+  async function excluirOrcamentoDoAjuste() {
+    if (!ajusteRapido || salvandoAjuste) return;
+    if (!window.confirm("Excluir este orçamento? Esta ação não pode ser desfeita.")) return;
+    const id = ajusteRapido.id;
+    setSalvandoAjuste(true);
+    const resultado = await excluirOrcamento(empresaId, id);
+    setSalvandoAjuste(false);
+    if (!resultado.ok) {
+      setErroAjuste(resultado.error);
+      return;
+    }
+    setOrcamentos((prev) => prev.filter((o) => o.id !== id));
+    setAjusteRapido(null);
   }
 
   function reenviarWhatsApp(o: Orcamento) {
@@ -722,18 +822,6 @@ export default function Calculadora({
                 </button>
               ))}
             </div>
-
-            {orcamentoEditandoId && (
-              <div className="calc-editando-aviso" role="status">
-                <span>
-                  Você está editando um orçamento já salvo. As alterações
-                  substituirão o registro atual.
-                </span>
-                <button type="button" onClick={cancelarEdicaoOrcamento}>
-                  Cancelar edição
-                </button>
-              </div>
-            )}
 
             {/* ============ PASSO 2 ============ */}
             {step === 2 && (
@@ -1046,20 +1134,7 @@ export default function Calculadora({
                                 : `definido por ${nomeEmpresa}`}
                           </span>
                         </span>
-                        {orcamentoEditandoId ? (
-                          <span className="calc-money calc-money--locked">
-                            <span className="calc-money-prefix">R$</span>
-                            <input
-                              type="text"
-                              readOnly
-                              tabIndex={-1}
-                              value={valorHoraOrcamento.toLocaleString("pt-BR", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            />
-                          </span>
-                        ) : selecionaveisVH.length > 0 ? (
+                        {selecionaveisVH.length > 0 ? (
                           <select
                             className="quiz-input"
                             value={vhSelecionado?.id ?? ""}
@@ -1227,9 +1302,7 @@ export default function Calculadora({
                   <p className="calc-saved cta-reveal mt-4">
                     {copied
                       ? "✓ Orçamento copiado."
-                      : orcamentoEditandoId
-                        ? "✓ Alterações salvas no orçamento."
-                        : "✓ Orçamento salvo no histórico."}
+                      : "✓ Orçamento salvo no histórico."}
                   </p>
                 )}
                 {erroOrcamento && (
@@ -1253,11 +1326,7 @@ export default function Calculadora({
                     onClick={salvarOrcamento}
                     disabled={salvandoOrcamento}
                   >
-                    {salvandoOrcamento
-                      ? "Salvando…"
-                      : orcamentoEditandoId
-                        ? "Salvar alterações"
-                        : "Salvar orçamento"}
+                    {salvandoOrcamento ? "Salvando…" : "Salvar orçamento"}
                   </button>
                 </div>
 
@@ -1563,6 +1632,235 @@ export default function Calculadora({
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {ajusteRapido && (
+          <div
+            className="calc-ajuste-overlay"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !salvandoAjuste) {
+                setAjusteRapido(null);
+              }
+            }}
+          >
+            <div
+              className="calc-ajuste-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="calc-ajuste-titulo"
+            >
+              <div className="calc-ajuste-cabecalho">
+                <div>
+                  <p className="calc-card-kicker">Ajuste rápido</p>
+                  <h2 id="calc-ajuste-titulo" className="calc-card-title">
+                    Editar orçamento
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="calc-ajuste-fechar"
+                  onClick={() => setAjusteRapido(null)}
+                  disabled={salvandoAjuste}
+                  aria-label="Fechar ajuste rápido"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="calc-grid-2 mt-5">
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">Cliente</span>
+                  <input
+                    className="quiz-input"
+                    value={ajusteRapido.nomeCliente}
+                    onChange={(e) =>
+                      atualizarAjusteRapido("nomeCliente", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">Veículo</span>
+                  <input
+                    className="quiz-input"
+                    value={ajusteRapido.nomeCarro}
+                    onChange={(e) =>
+                      atualizarAjusteRapido("nomeCarro", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">Placa</span>
+                  <input
+                    className="quiz-input"
+                    value={ajusteRapido.placa}
+                    maxLength={8}
+                    onChange={(e) =>
+                      atualizarAjusteRapido(
+                        "placa",
+                        e.target.value.toUpperCase(),
+                      )
+                    }
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">Valor da hora</span>
+                  <span className="calc-money calc-money--locked">
+                    <span className="calc-money-prefix">R$</span>
+                    <input
+                      readOnly
+                      value={ajusteRapido.valorHora.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    />
+                  </span>
+                </label>
+              </div>
+
+              <div className="calc-divider" />
+              <div className="calc-ajuste-itens-titulo">
+                <span className="quiz-label">Itens do orçamento</span>
+                <button type="button" onClick={adicionarPecaAjuste}>
+                  + Adicionar item
+                </button>
+              </div>
+
+              <div className="calc-ajuste-itens">
+                {ajusteRapido.pecas.length === 0 && (
+                  <p className="calc-card-sub text-center py-5">
+                    Nenhum item. Adicione uma peça para continuar.
+                  </p>
+                )}
+                {ajusteRapido.pecas.map((peca) => (
+                  <div className="calc-ajuste-item" key={peca.id}>
+                    <label>
+                      <span>Descrição</span>
+                      <input
+                        className="quiz-input"
+                        value={peca.nome}
+                        onChange={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "nome",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Qtd.</span>
+                      <input
+                        className="quiz-input"
+                        inputMode="numeric"
+                        value={peca.quantidade}
+                        onChange={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "quantidade",
+                            maskIntTyping(e.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Peças (R$)</span>
+                      <input
+                        className="quiz-input"
+                        inputMode="decimal"
+                        value={peca.valor}
+                        onChange={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "valor",
+                            maskMoneyTyping(e.target.value),
+                          )
+                        }
+                        onBlur={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "valor",
+                            formatMoneyBlur(e.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Mão de obra (R$)</span>
+                      <input
+                        className="quiz-input"
+                        inputMode="decimal"
+                        value={peca.maoDeObra}
+                        onChange={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "maoDeObra",
+                            maskMoneyTyping(e.target.value),
+                          )
+                        }
+                        onBlur={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "maoDeObra",
+                            formatMoneyBlur(e.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="calc-ajuste-item-excluir"
+                      onClick={() => excluirPecaAjuste(peca.id)}
+                      aria-label={`Excluir item ${peca.nome || "sem nome"}`}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="calc-ajuste-totais">
+                <span>Peças <b>{brl(totaisAjusteRapido.pecas)}</b></span>
+                <span>Mão de obra <b>{brl(totaisAjusteRapido.maoDeObra)}</b></span>
+                <span>Total <strong>{brl(totaisAjusteRapido.total)}</strong></span>
+              </div>
+
+              {erroAjuste && (
+                <p className="calc-warn mt-4" role="alert">
+                  <span aria-hidden="true">⚠</span> {erroAjuste}
+                </p>
+              )}
+
+              <div className="calc-ajuste-acoes">
+                <button
+                  type="button"
+                  className="calc-ajuste-excluir"
+                  onClick={excluirOrcamentoDoAjuste}
+                  disabled={salvandoAjuste}
+                >
+                  Excluir orçamento
+                </button>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => setAjusteRapido(null)}
+                    disabled={salvandoAjuste}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={salvarAjusteRapido}
+                    disabled={salvandoAjuste}
+                  >
+                    {salvandoAjuste ? "Salvando…" : "Salvar alterações"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
