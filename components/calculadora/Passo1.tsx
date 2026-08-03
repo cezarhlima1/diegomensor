@@ -79,9 +79,9 @@ export default function Passo1({
   );
   const [salvamento, setSalvamento] = useState<Salvamento>("ocioso");
 
-  // Edição manual do valor hora: guarda o texto digitado até o blur/Enter,
-  // quando o fator correspondente (valor ÷ custo base) é aplicado na régua,
-  // limitado ao intervalo 1-2 — o valor exibido volta a ser derivado.
+  // Edição manual do valor hora: guarda o texto digitado até o blur/Enter.
+  // O fator exato (valor ÷ custo base) é aplicado sem arredondamento, para o
+  // valor monetário informado não ser alterado ao sincronizar com a régua.
   const [valorHoraEdit, setValorHoraEdit] = useState<string | null>(null);
 
   // Form "salvar valor hora no histórico".
@@ -150,7 +150,7 @@ export default function Passo1({
       MULT_MAX,
       Math.max(MULT_MIN, alvo / hora.custoBase),
     );
-    setMultiplicador(Math.round(fator * 100) / 100);
+    setMultiplicador(fator);
   }
 
   async function salvarNoHistorico() {
@@ -214,12 +214,10 @@ export default function Passo1({
     onLimparResto();
   }
 
-  const multInteiro = Number.isInteger(multiplicador);
-  const multCasas = multInteiro
-    ? 0
-    : Math.round(multiplicador * 10) / 10 === multiplicador
-      ? 1
-      : 2;
+  const multiplicadorExibido = multiplicador.toLocaleString("pt-BR", {
+    minimumFractionDigits: Number.isInteger(multiplicador) ? 0 : 1,
+    maximumFractionDigits: 4,
+  });
 
   return (
     <>
@@ -275,7 +273,7 @@ export default function Passo1({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="quiz-label">Multiplicador</span>
             <span className="calc-mult-value">
-              {multiplicador.toFixed(multCasas)}×
+              {multiplicadorExibido}×
             </span>
           </div>
           <input
@@ -283,13 +281,17 @@ export default function Passo1({
             className="calc-range"
             min={MULT_MIN}
             max={MULT_MAX}
-            step={0.1}
+            step="any"
             value={multiplicador}
-            onChange={(e) => setMultiplicador(Number(e.target.value))}
+            onChange={(e) =>
+              setMultiplicador(
+                Math.round(Number(e.target.value) * 10) / 10,
+              )
+            }
           />
           <p className="calc-warn">
             <span aria-hidden="true">⚠</span> Valor recomendado: <b>2</b>. Se
-            preferir, utilize um valor entre <b>1</b> e <b>2</b> para adequar
+            preferir, utilize um valor entre <b>1</b> e <b>3</b> para adequar
             a margem.
           </p>
         </div>

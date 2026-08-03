@@ -53,7 +53,7 @@ export const DEFAULT_MARKUP_TIERS: MarkupTier[] = [
 
 /* ---------- multiplicador do custo da hora ---------- */
 export const MULT_MIN = 1;
-export const MULT_MAX = 2;
+export const MULT_MAX = 3;
 export const MULT_DEFAULT = 2;
 
 /* ---------- ajuste manual do markup da peça ---------- */
