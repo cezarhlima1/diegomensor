@@ -5,7 +5,6 @@ export type HeroBullet = string | { firstLine: string; secondLine: string };
 
 export type DestraveCopy = {
   eventLine: string;
-  heroTitle?: string;
   heroBackgroundImage?: boolean;
   headline: HeadlineSegment[];
   bulletsIntro: string;

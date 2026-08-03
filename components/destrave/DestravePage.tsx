@@ -42,9 +42,11 @@ export default function DestravePage({
   copy: DestraveCopy;
   checkoutUrl?: string;
 }) {
+  const isLp1 = Boolean(copy.heroBackgroundImage);
+
   return (
-    <div className={`destrave-theme ${copy.heroTitle ? "destrave-theme--lp1" : ""}`}>
-      {copy.heroTitle && <DestraveInteractions href={checkoutUrl} ctaLabel={copy.ctaLabel} />}
+    <div className={`destrave-theme ${isLp1 ? "destrave-theme--lp1" : ""}`}>
+      {isLp1 && <DestraveInteractions href={checkoutUrl} ctaLabel={copy.ctaLabel} />}
       {/* 1º BLOCO — herói */}
       <section
         data-hero
@@ -52,12 +54,12 @@ export default function DestravePage({
       >
         <div className="hero-bg" aria-hidden="true" />
         <DestraveGiantWord word="OFICINA" className="-left-6 -bottom-[6%] hidden md:block" />
-        {!copy.heroTitle && (
+        {!isLp1 && (
           <DestraveChainMotif className="dest-chain-motif pointer-events-none absolute -top-2 right-[-40px] w-[420px] max-w-none opacity-[.35] rotate-[-4deg] hidden sm:block" />
         )}
         <div
           className={`wrap grid grid-cols-1 items-center ${
-            copy.heroTitle ? "lg:min-h-[540px] xl:min-h-[640px] lg:flex lg:items-center" : "lg:grid-cols-[1.15fr_.85fr] gap-14"
+            isLp1 ? "lg:min-h-[540px] xl:min-h-[640px] lg:flex lg:items-center" : "lg:grid-cols-[1.15fr_.85fr] gap-14"
           }`}
         >
           <div>
@@ -66,23 +68,18 @@ export default function DestravePage({
               {copy.eventLine}
             </span>
 
-            {copy.heroTitle ? (
-              <>
-                <h1 className="reveal d1 font-display font-black text-[clamp(42px,5.8vw,66px)] leading-[.98] tracking-[-.03em] text-balance mt-7 mb-5 max-w-[20ch]">
-                  {copy.heroTitle}
-                </h1>
-                <p className="reveal d2 font-display font-semibold text-[clamp(20px,2.4vw,28px)] leading-[1.28] text-offwhite text-balance mb-8 max-w-[34ch]">
-                  {copy.headline.map((seg, i) =>
-                    seg.blue ? (
-                      <span key={i} className="text-dest-accent">
-                        {seg.text}
-                      </span>
-                    ) : (
-                      <span key={i}>{seg.text}</span>
-                    )
-                  )}
-                </p>
-              </>
+            {isLp1 ? (
+              <h1 className="reveal d1 font-display font-black text-[clamp(36px,5vw,58px)] leading-[1.05] tracking-[-.03em] text-balance mt-7 mb-8 max-w-[24ch]">
+                {copy.headline.map((seg, i) =>
+                  seg.blue ? (
+                    <span key={i} className="text-dest-accent">
+                      {seg.text}
+                    </span>
+                  ) : (
+                    <span key={i}>{seg.text}</span>
+                  )
+                )}
+              </h1>
             ) : (
               <h1 className="reveal d1 font-display font-black text-[clamp(30px,4.6vw,52px)] my-6 max-w-[18ch]">
                 {copy.headline.map((seg, i) =>
@@ -99,7 +96,7 @@ export default function DestravePage({
 
             <div
               className={`reveal d2 text-left mb-8 ${
-                copy.heroTitle
+                isLp1
                   ? "max-w-[34rem] border-t border-white/25 pt-5"
                   : "max-w-[520px]"
               }`}
@@ -133,7 +130,7 @@ export default function DestravePage({
             </div>
           </div>
 
-          {!copy.heroTitle && (
+          {!isLp1 && (
             <DestraveTicket
               eventLine={copy.eventLine}
               priceOld={copy.finalBlock.priceOld}
@@ -143,7 +140,7 @@ export default function DestravePage({
         </div>
       </section>
 
-      {copy.heroTitle && (
+      {isLp1 && (
         <section className="destrave-ticker" aria-label={tickerText}>
           <div className="destrave-ticker__track" aria-hidden="true">
             <div className="destrave-ticker__group">{tickerLine}</div>
@@ -153,7 +150,7 @@ export default function DestravePage({
       )}
 
       {/* 2º BLOCO */}
-      <section className={`py-[72px] md:py-24 lg:py-28 xl:py-32 ${copy.heroTitle ? "destrave-block2--lp1" : ""}`}>
+      <section className={`py-[72px] md:py-24 lg:py-28 xl:py-32 ${isLp1 ? "destrave-block2--lp1" : ""}`}>
         <div className="wrap text-center max-w-[760px]">
           <h2 className="section-title reveal mx-auto">
             {renderHighlightedText(copy.block2.title, copy.block2.highlightedWords)}
@@ -259,7 +256,7 @@ export default function DestravePage({
       </section>
 
       {/* BLOCO FINAL — oferta */}
-      {copy.heroTitle ? (
+      {isLp1 ? (
         <section className="destrave-offer-hero text-center">
           <div data-dest-tilt className="destrave-offer-hero__inner reveal">
             <div className="destrave-offer-eyebrow">
