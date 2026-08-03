@@ -98,7 +98,6 @@ export default function Calculadora({
   orcamentosIniciais,
   valorHoraHistoricoInicial,
   nomeEmpresa,
-  permiteFiltroDatas,
   permiteEditarOrcamentos,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
@@ -117,8 +116,6 @@ export default function Calculadora({
   valorHoraHistoricoInicial: ValorHoraSalvo[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
-  /** Liberação inicial do filtro por intervalo para o cadastro piloto. */
-  permiteFiltroDatas: boolean;
   /** Liberação piloto para alterar orçamentos já persistidos. */
   permiteEditarOrcamentos: boolean;
 }) {
@@ -154,7 +151,7 @@ export default function Calculadora({
   // membros da empresa; o estado local só reflete as mudanças desta sessão.
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosIniciais);
   // Filtros do histórico: todos por padrão; semana, mês e intervalo
-  // personalizado (este último liberado inicialmente só para o piloto).
+  // personalizado disponíveis para todos os usuários.
   const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>("todos");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -1417,15 +1414,13 @@ export default function Calculadora({
                     >
                       Mês
                     </button>
-                    {permiteFiltroDatas && (
-                      <button
-                        type="button"
-                        className={`calc-filtro-pill ${filtroPeriodo === "personalizado" ? "is-active" : ""}`}
-                        onClick={() => setFiltroPeriodo("personalizado")}
-                      >
-                        Por data
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className={`calc-filtro-pill ${filtroPeriodo === "personalizado" ? "is-active" : ""}`}
+                      onClick={() => setFiltroPeriodo("personalizado")}
+                    >
+                      Por data
+                    </button>
                   </div>
                   <select
                     className="quiz-input calc-filtro-sel"
@@ -1452,7 +1447,7 @@ export default function Calculadora({
                   />
                 </div>
 
-                {permiteFiltroDatas && filtroPeriodo === "personalizado" && (
+                {filtroPeriodo === "personalizado" && (
                   <div className="calc-filtro-datas">
                     <label className="calc-filtro-data-campo">
                       <span>Data inicial</span>

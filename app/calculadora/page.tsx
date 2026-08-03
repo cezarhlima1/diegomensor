@@ -170,7 +170,6 @@ export default async function CalculadoraPage() {
           orcamentosIniciais={orcamentosIniciais}
           valorHoraHistoricoInicial={valorHoraHistoricoInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
-          permiteFiltroDatas={sessao.email === "diegomensor@hotmail.com"}
           permiteEditarOrcamentos={
             sessao.email === "diegomensor@hotmail.com"
           }
