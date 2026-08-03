@@ -275,7 +275,7 @@ export default function DestravePage({
 
             <div className="destrave-event-info">
               <span><Calendar className="w-[18px] h-[18px]" /> 08 de agosto de 2026</span>
-              <span><Clock className="w-[18px] h-[18px]" /> A partir das 8h</span>
+              <span><Clock className="w-[18px] h-[18px]" /> Das 8h30 às 17h</span>
             </div>
 
             <a className="destrave-offer-cta" href={checkoutUrl}>

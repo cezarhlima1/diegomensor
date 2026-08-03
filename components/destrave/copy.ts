@@ -2,7 +2,7 @@ import type { DestraveCopy } from "./types";
 
 /** Página A — transcrita de "Página de captura_LP01_01". */
 export const lp1Copy: DestraveCopy = {
-  eventLine: "Imersão - 08 de agosto · 8h às 18h",
+  eventLine: "Imersão - 08 de agosto · 8h30 às 17h",
   heroTitle: "DESTRAVE a gestão da tua oficina",
   heroBackgroundImage: true,
   headline: [
@@ -50,7 +50,7 @@ export const lp1Copy: DestraveCopy = {
     heading: "Comprando agora você leva",
     items: [
       "01 ingresso para a Imersão DESTRAVE o próximo nível da sua oficina",
-      "Ao vivo, dia 08 de agosto a partir das 8h",
+      "Ao vivo, dia 08 de agosto, das 8h30 às 17h",
       "Valor da segunda cadeira para o seu sócio com 50% de desconto",
       "Slides da imersão",
       "8 horas de conteúdo prático",
@@ -68,7 +68,7 @@ export const lp1Copy: DestraveCopy = {
 
 /** Página B — transcrita de "Página de captura_LP01_02". */
 export const lp2Copy: DestraveCopy = {
-  eventLine: "DESTRAVE o próximo nível da sua oficina | 08 de agosto • 8h às 18h",
+  eventLine: "DESTRAVE o próximo nível da sua oficina | 08 de agosto • 8h30 às 17h",
   headline: [
     { text: "Em um único dia, vamos construir o caminho que sua oficina precisa para " },
     { text: "organizar a gestão e alcançar melhores resultados", blue: true },
@@ -129,7 +129,7 @@ export const destraveFaqs: { q: string; a: string }[] = [
   },
   {
     q: "Quanto tempo dura o encontro?",
-    a: "O evento terá aproximadamente 7 horas e 30 minutos de conteúdo, das 8h às 17h, com intervalo para almoço entre 12h e 13h30.",
+    a: "O evento acontecerá das 8h30 às 17h, com intervalo para almoço entre 12h e 13h30.",
   },
   {
     q: "Estou começando agora. Esse evento é para mim?",
