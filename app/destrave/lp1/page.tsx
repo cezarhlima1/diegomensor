@@ -3,7 +3,6 @@ import FacebookPixel from "@/components/FacebookPixel";
 import ClarityScript from "@/components/ClarityScript";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
-import ClarityScript from "@/components/ClarityScript";
 import DestravePage from "@/components/destrave/DestravePage";
 import { lp1Copy } from "@/components/destrave/copy";
 
