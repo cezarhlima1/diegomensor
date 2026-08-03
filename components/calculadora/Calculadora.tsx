@@ -63,6 +63,7 @@ type PecaAjusteRapido = {
   nome: string;
   quantidade: string;
   valor: string;
+  horas: string;
 };
 type OrcamentoAjusteRapido = {
   id: string;
@@ -70,7 +71,6 @@ type OrcamentoAjusteRapido = {
   nomeCarro: string;
   placa: string;
   valorHora: number;
-  maoDeObra: number;
   pecas: PecaAjusteRapido[];
 };
 
@@ -354,10 +354,15 @@ export default function Calculadora({
       (total, p) => total + parseNum(p.valor),
       0,
     );
+    const totalMaoDeObra = ajusteRapido.pecas.reduce(
+      (total, p) =>
+        total + parseNum(p.horas) * ajusteRapido.valorHora,
+      0,
+    );
     return {
       pecas: totalPecas,
-      maoDeObra: ajusteRapido.maoDeObra,
-      total: totalPecas + ajusteRapido.maoDeObra,
+      maoDeObra: totalMaoDeObra,
+      total: totalPecas + totalMaoDeObra,
     };
   }, [ajusteRapido]);
 
@@ -526,7 +531,20 @@ export default function Calculadora({
   function abrirEdicaoOrcamento(o: Orcamento) {
     if (!permiteEditarOrcamentos) return;
 
-    const pecasRecuperadas: PecaAjusteRapido[] = (o.pecas ?? []).map((peca) => {
+    const temMaoDeObraPorItem = (o.pecas ?? []).some(
+      (peca) => Number(peca.maoDeObra ?? 0) > 0,
+    );
+    const horasTotais =
+      o.valorHora > 0
+        ? Number(o.maoDeObra ?? 0) / o.valorHora
+        : Number(o.horas ?? 0);
+    const pecasRecuperadas: PecaAjusteRapido[] = (o.pecas ?? []).map((peca, index) => {
+      const horas =
+        o.valorHora > 0 && Number(peca.maoDeObra ?? 0) > 0
+          ? Number(peca.maoDeObra) / o.valorHora
+          : !temMaoDeObraPorItem && index === 0
+            ? horasTotais
+            : 0;
       return {
         id: crypto.randomUUID(),
         nome: peca.nome,
@@ -535,6 +553,9 @@ export default function Calculadora({
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }),
+        horas: horas
+          ? horas.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+          : "",
       };
     });
     setAjusteRapido({
@@ -543,7 +564,6 @@ export default function Calculadora({
       nomeCarro: o.nomeCarro,
       placa: o.placa,
       valorHora: o.valorHora,
-      maoDeObra: Number(o.maoDeObra ?? 0),
       pecas: pecasRecuperadas,
     });
     setErroAjuste("");
@@ -560,7 +580,7 @@ export default function Calculadora({
 
   function atualizarPecaAjuste(
     id: string,
-    campo: "nome" | "quantidade" | "valor",
+    campo: "nome" | "quantidade" | "valor" | "horas",
     valor: string,
   ) {
     setAjusteRapido((atual) =>
@@ -587,6 +607,7 @@ export default function Calculadora({
                 nome: "",
                 quantidade: "1",
                 valor: "",
+                horas: "",
               },
             ],
           }
@@ -609,15 +630,25 @@ export default function Calculadora({
     const pecasOrigem =
       ajusteRapido.pecas.length > 0
         ? ajusteRapido.pecas
-        : [{ id: crypto.randomUUID(), nome: "Peça", quantidade: "1", valor: "" }];
-    const pecasAjustadas = pecasOrigem.map((p, index) => ({
+        : [{
+            id: crypto.randomUUID(),
+            nome: "Peça",
+            quantidade: "1",
+            valor: "",
+            horas: "",
+          }];
+    const pecasAjustadas = pecasOrigem.map((p) => ({
       nome: p.nome.trim() || "Peça",
       quantidade: Math.max(1, parseNum(p.quantidade)),
       valor: parseNum(p.valor),
-      maoDeObra: index === 0 ? ajusteRapido.maoDeObra : 0,
+      maoDeObra: parseNum(p.horas) * ajusteRapido.valorHora,
     }));
     const valorPeca = pecasAjustadas.reduce((total, p) => total + p.valor, 0);
-    const maoDeObra = ajusteRapido.maoDeObra;
+    const horas = pecasOrigem.reduce(
+      (total, p) => total + parseNum(p.horas),
+      0,
+    );
+    const maoDeObra = horas * ajusteRapido.valorHora;
     const resultado = await editarOrcamento(
       empresaId,
       ajusteRapido.id,
@@ -626,10 +657,7 @@ export default function Calculadora({
         nomeCarro: ajusteRapido.nomeCarro,
         placa: ajusteRapido.placa,
         valorHora: ajusteRapido.valorHora,
-        horas:
-          ajusteRapido.valorHora > 0
-            ? maoDeObra / ajusteRapido.valorHora
-            : 0,
+        horas,
         maoDeObra,
         pecas: pecasAjustadas,
         valorPeca,
@@ -1693,27 +1721,14 @@ export default function Calculadora({
                   />
                 </label>
                 <label className="grid gap-1.5">
-                  <span className="quiz-label">Valor da hora</span>
+                  <span className="quiz-label">
+                    Valor da hora <span className="calc-lock-tag">🔒 base fixa</span>
+                  </span>
                   <span className="calc-money calc-money--locked">
                     <span className="calc-money-prefix">R$</span>
                     <input
                       readOnly
                       value={ajusteRapido.valorHora.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    />
-                  </span>
-                </label>
-                <label className="grid gap-1.5">
-                  <span className="quiz-label">
-                    Mão de obra <span className="calc-lock-tag">🔒 fixa</span>
-                  </span>
-                  <span className="calc-money calc-money--locked">
-                    <span className="calc-money-prefix">R$</span>
-                    <input
-                      readOnly
-                      value={ajusteRapido.maoDeObra.toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -1789,6 +1804,29 @@ export default function Calculadora({
                         }
                       />
                     </label>
+                    <label>
+                      <span>Horas</span>
+                      <input
+                        className="quiz-input"
+                        inputMode="decimal"
+                        value={peca.horas}
+                        onChange={(e) =>
+                          atualizarPecaAjuste(
+                            peca.id,
+                            "horas",
+                            maskMoneyTyping(e.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                    <div className="calc-ajuste-item-mao">
+                      <span>Mão de obra</span>
+                      <b>
+                        {brl(
+                          parseNum(peca.horas) * ajusteRapido.valorHora,
+                        )}
+                      </b>
+                    </div>
                     <button
                       type="button"
                       className="calc-ajuste-item-excluir"
@@ -1800,6 +1838,33 @@ export default function Calculadora({
                   </div>
                 ))}
               </div>
+
+              {ajusteRapido.pecas.length > 0 && (
+                <div className="calc-ajuste-detalhes">
+                  <span className="quiz-label">Detalhamento do orçamento</span>
+                  {ajusteRapido.pecas.map((peca) => {
+                    const valorPecas = parseNum(peca.valor);
+                    const horas = parseNum(peca.horas);
+                    const maoDeObra = horas * ajusteRapido.valorHora;
+                    return (
+                      <div className="calc-ajuste-detalhe" key={peca.id}>
+                        <div>
+                          <b>{peca.nome.trim() || "Peça"}</b>
+                          <small>
+                            Qtd. {Math.max(1, parseNum(peca.quantidade))} ·{" "}
+                            {horas.toLocaleString("pt-BR", {
+                              maximumFractionDigits: 2,
+                            })}h
+                          </small>
+                        </div>
+                        <span>Peças <b>{brl(valorPecas)}</b></span>
+                        <span>Mão de obra <b>{brl(maoDeObra)}</b></span>
+                        <strong>{brl(valorPecas + maoDeObra)}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="calc-ajuste-totais">
                 <span>Peças <b>{brl(totaisAjusteRapido.pecas)}</b></span>
