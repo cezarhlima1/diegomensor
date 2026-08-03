@@ -467,6 +467,7 @@ export default function Calculadora({
   async function salvarOrcamento() {
     setSalvandoOrcamento(true);
     setErroOrcamento("");
+    const editandoId = orcamentoEditandoId;
     const dados = {
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
@@ -478,8 +479,8 @@ export default function Calculadora({
       valorPeca: pecasTotal,
       total: totalOrcamento,
     };
-    const resultado = orcamentoEditandoId
-      ? await editarOrcamento(empresaId, orcamentoEditandoId, dados)
+    const resultado = editandoId
+      ? await editarOrcamento(empresaId, editandoId, dados)
       : await criarOrcamento(empresaId, dados);
     setSalvandoOrcamento(false);
     if (!resultado.ok) {
@@ -487,12 +488,25 @@ export default function Calculadora({
       return;
     }
     setOrcamentos((prev) =>
-      orcamentoEditandoId
+      editandoId
         ? prev.map((o) =>
-            o.id === orcamentoEditandoId ? resultado.orcamento : o,
+            o.id === editandoId ? resultado.orcamento : o,
           )
         : [resultado.orcamento, ...prev],
     );
+    if (editandoId) {
+      const pecaVazia = novaPeca();
+      setOrcamentoEditandoId("");
+      setValorHoraEdicao(null);
+      setNomeCliente("");
+      setNomeCarro("");
+      setPlaca("");
+      setPecas([pecaVazia]);
+      setExpandedId(pecaVazia.id);
+      setSelectedIds(new Set());
+      setValorHoraSelId("");
+      setStep(2);
+    }
     setJustSaved(true);
     window.setTimeout(() => setJustSaved(false), 2600);
   }
