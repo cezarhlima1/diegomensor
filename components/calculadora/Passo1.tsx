@@ -21,6 +21,7 @@ import {
 import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
 import {
   atualizarStatusValorHora,
+  excluirValorHora,
   salvarPasso1,
   salvarValorHora,
 } from "./actions";
@@ -90,6 +91,7 @@ export default function Passo1({
   const [erroValorHora, setErroValorHora] = useState("");
   const [okValorHora, setOkValorHora] = useState(false);
   const [mudandoStatusId, setMudandoStatusId] = useState("");
+  const [excluindoValorHoraId, setExcluindoValorHoraId] = useState("");
 
   const totalCustos = useMemo(() => somaCustos(custos), [custos]);
   const hora = useMemo(
@@ -199,6 +201,34 @@ export default function Passo1({
     if (!r.ok) {
       onHistoricoChange(anterior);
       setErroValorHora(r.error);
+    }
+  }
+
+  async function excluirDoHistorico(registro: ValorHoraSalvo) {
+    if (excluindoValorHoraId) return;
+    if (
+      !window.confirm(
+        `Excluir "${registro.nome}" do histórico de valor hora?`,
+      )
+    ) {
+      return;
+    }
+
+    setErroValorHora("");
+    setExcluindoValorHoraId(registro.id);
+    try {
+      const resultado = await excluirValorHora(empresaId, registro.id);
+      if (!resultado.ok) {
+        setErroValorHora(resultado.error);
+        return;
+      }
+      onHistoricoChange(historico.filter((h) => h.id !== registro.id));
+    } catch {
+      setErroValorHora(
+        "Não foi possível excluir o valor hora. Tente novamente.",
+      );
+    } finally {
+      setExcluindoValorHoraId("");
     }
   }
 
@@ -430,6 +460,16 @@ export default function Passo1({
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  className="calc-hist-del calc-vh-del"
+                  onClick={() => excluirDoHistorico(h)}
+                  disabled={excluindoValorHoraId === h.id}
+                  aria-label={`Excluir valor hora ${h.nome}`}
+                  title="Excluir valor hora"
+                >
+                  {excluindoValorHoraId === h.id ? "…" : "×"}
+                </button>
               </li>
             ))}
           </ul>

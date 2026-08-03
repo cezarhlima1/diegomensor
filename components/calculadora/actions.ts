@@ -595,3 +595,37 @@ export async function atualizarStatusValorHora(
 
   return { ok: true };
 }
+
+/** Exclui um valor hora salvo. Restrito a admin da empresa proprietária. */
+export async function excluirValorHora(
+  empresaId: string,
+  registroId: string
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo || vinculo.papel !== "admin") {
+    return { ok: false, error: ERRO_SEM_PERMISSAO };
+  }
+  if (!idValido(registroId)) {
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("valor_hora_historico")
+    .delete()
+    .eq("id", registroId)
+    .eq("empresa_id", empresaId)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error(
+      "excluirValorHora: falha ao remover valor_hora_historico:",
+      error?.message ?? "registro não encontrado"
+    );
+    return { ok: false, error: ERRO_GENERICO };
+  }
+
+  return { ok: true };
+}

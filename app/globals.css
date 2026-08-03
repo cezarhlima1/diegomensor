@@ -1784,6 +1784,7 @@ a:focus-visible, button:focus-visible {
   .calc-vh-status--ativo { color: var(--color-blue); background: rgba(4,149,240,.1); border-color: rgba(4,149,240,.32); }
   .calc-vh-status--ativo:hover:not(:disabled) { background: rgba(4,149,240,.18); border-color: rgba(4,149,240,.55); }
   .calc-vh-status--inativo { color: var(--color-muted); background: rgba(143,178,204,.08); border-color: var(--color-line); }
+  .calc-vh-del:disabled { opacity: .55; cursor: wait; }
 }
 
 @layer components {
