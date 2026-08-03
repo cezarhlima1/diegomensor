@@ -63,7 +63,6 @@ type PecaAjusteRapido = {
   nome: string;
   quantidade: string;
   valor: string;
-  maoDeObra: string;
 };
 type OrcamentoAjusteRapido = {
   id: string;
@@ -71,6 +70,7 @@ type OrcamentoAjusteRapido = {
   nomeCarro: string;
   placa: string;
   valorHora: number;
+  maoDeObra: number;
   pecas: PecaAjusteRapido[];
 };
 
@@ -354,14 +354,10 @@ export default function Calculadora({
       (total, p) => total + parseNum(p.valor),
       0,
     );
-    const totalMaoDeObra = ajusteRapido.pecas.reduce(
-      (total, p) => total + parseNum(p.maoDeObra),
-      0,
-    );
     return {
       pecas: totalPecas,
-      maoDeObra: totalMaoDeObra,
-      total: totalPecas + totalMaoDeObra,
+      maoDeObra: ajusteRapido.maoDeObra,
+      total: totalPecas + ajusteRapido.maoDeObra,
     };
   }, [ajusteRapido]);
 
@@ -539,10 +535,6 @@ export default function Calculadora({
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }),
-        maoDeObra: Number(peca.maoDeObra ?? 0).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }),
       };
     });
     setAjusteRapido({
@@ -551,6 +543,7 @@ export default function Calculadora({
       nomeCarro: o.nomeCarro,
       placa: o.placa,
       valorHora: o.valorHora,
+      maoDeObra: Number(o.maoDeObra ?? 0),
       pecas: pecasRecuperadas,
     });
     setErroAjuste("");
@@ -567,7 +560,7 @@ export default function Calculadora({
 
   function atualizarPecaAjuste(
     id: string,
-    campo: "nome" | "quantidade" | "valor" | "maoDeObra",
+    campo: "nome" | "quantidade" | "valor",
     valor: string,
   ) {
     setAjusteRapido((atual) =>
@@ -594,7 +587,6 @@ export default function Calculadora({
                 nome: "",
                 quantidade: "1",
                 valor: "",
-                maoDeObra: "",
               },
             ],
           }
@@ -614,17 +606,18 @@ export default function Calculadora({
     if (!ajusteRapido || salvandoAjuste) return;
     setSalvandoAjuste(true);
     setErroAjuste("");
-    const pecasAjustadas = ajusteRapido.pecas.map((p) => ({
+    const pecasOrigem =
+      ajusteRapido.pecas.length > 0
+        ? ajusteRapido.pecas
+        : [{ id: crypto.randomUUID(), nome: "Peça", quantidade: "1", valor: "" }];
+    const pecasAjustadas = pecasOrigem.map((p, index) => ({
       nome: p.nome.trim() || "Peça",
       quantidade: Math.max(1, parseNum(p.quantidade)),
       valor: parseNum(p.valor),
-      maoDeObra: parseNum(p.maoDeObra),
+      maoDeObra: index === 0 ? ajusteRapido.maoDeObra : 0,
     }));
     const valorPeca = pecasAjustadas.reduce((total, p) => total + p.valor, 0);
-    const maoDeObra = pecasAjustadas.reduce(
-      (total, p) => total + (p.maoDeObra ?? 0),
-      0,
-    );
+    const maoDeObra = ajusteRapido.maoDeObra;
     const resultado = await editarOrcamento(
       empresaId,
       ajusteRapido.id,
@@ -1712,6 +1705,21 @@ export default function Calculadora({
                     />
                   </span>
                 </label>
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">
+                    Mão de obra <span className="calc-lock-tag">🔒 fixa</span>
+                  </span>
+                  <span className="calc-money calc-money--locked">
+                    <span className="calc-money-prefix">R$</span>
+                    <input
+                      readOnly
+                      value={ajusteRapido.maoDeObra.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    />
+                  </span>
+                </label>
               </div>
 
               <div className="calc-divider" />
@@ -1776,28 +1784,6 @@ export default function Calculadora({
                           atualizarPecaAjuste(
                             peca.id,
                             "valor",
-                            formatMoneyBlur(e.target.value),
-                          )
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>Mão de obra (R$)</span>
-                      <input
-                        className="quiz-input"
-                        inputMode="decimal"
-                        value={peca.maoDeObra}
-                        onChange={(e) =>
-                          atualizarPecaAjuste(
-                            peca.id,
-                            "maoDeObra",
-                            maskMoneyTyping(e.target.value),
-                          )
-                        }
-                        onBlur={(e) =>
-                          atualizarPecaAjuste(
-                            peca.id,
-                            "maoDeObra",
                             formatMoneyBlur(e.target.value),
                           )
                         }
