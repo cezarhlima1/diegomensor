@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import nextDynamic from "next/dynamic";
 import type { Papel } from "@/lib/db/types";
+import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import {
   DEFAULT_SUFIXO_ORCAMENTO,
   MARKUP_MIN,
@@ -506,15 +507,20 @@ export default function Calculadora({
       valorPeca: pecasTotal,
       total: totalOrcamento,
     };
-    const resultado = await criarOrcamento(empresaId, dados);
-    setSalvandoOrcamento(false);
-    if (!resultado.ok) {
-      setErroOrcamento(resultado.error);
-      return;
+    try {
+      const resultado = await criarOrcamento(empresaId, dados);
+      if (!resultado.ok) {
+        setErroOrcamento(resultado.error);
+        return;
+      }
+      setOrcamentos((prev) => [resultado.orcamento, ...prev]);
+      setJustSaved(true);
+      window.setTimeout(() => setJustSaved(false), 2600);
+    } catch {
+      setErroOrcamento(ERRO_GENERICO);
+    } finally {
+      setSalvandoOrcamento(false);
     }
-    setOrcamentos((prev) => [resultado.orcamento, ...prev]);
-    setJustSaved(true);
-    window.setTimeout(() => setJustSaved(false), 2600);
   }
 
   function novoOrcamento() {
@@ -649,30 +655,35 @@ export default function Calculadora({
       0,
     );
     const maoDeObra = horas * ajusteRapido.valorHora;
-    const resultado = await editarOrcamento(
-      empresaId,
-      ajusteRapido.id,
-      {
-        nomeCliente: ajusteRapido.nomeCliente,
-        nomeCarro: ajusteRapido.nomeCarro,
-        placa: ajusteRapido.placa,
-        valorHora: ajusteRapido.valorHora,
-        horas,
-        maoDeObra,
-        pecas: pecasAjustadas,
-        valorPeca,
-        total: valorPeca + maoDeObra,
-      },
-    );
-    setSalvandoAjuste(false);
-    if (!resultado.ok) {
-      setErroAjuste(resultado.error);
-      return;
+    try {
+      const resultado = await editarOrcamento(
+        empresaId,
+        ajusteRapido.id,
+        {
+          nomeCliente: ajusteRapido.nomeCliente,
+          nomeCarro: ajusteRapido.nomeCarro,
+          placa: ajusteRapido.placa,
+          valorHora: ajusteRapido.valorHora,
+          horas,
+          maoDeObra,
+          pecas: pecasAjustadas,
+          valorPeca,
+          total: valorPeca + maoDeObra,
+        },
+      );
+      if (!resultado.ok) {
+        setErroAjuste(resultado.error);
+        return;
+      }
+      setOrcamentos((prev) =>
+        prev.map((o) => (o.id === resultado.orcamento.id ? resultado.orcamento : o)),
+      );
+      setAjusteRapido(null);
+    } catch {
+      setErroAjuste(ERRO_GENERICO);
+    } finally {
+      setSalvandoAjuste(false);
     }
-    setOrcamentos((prev) =>
-      prev.map((o) => (o.id === resultado.orcamento.id ? resultado.orcamento : o)),
-    );
-    setAjusteRapido(null);
   }
 
   async function excluirOrcamentoDoAjuste() {
@@ -680,14 +691,19 @@ export default function Calculadora({
     if (!window.confirm("Excluir este orçamento? Esta ação não pode ser desfeita.")) return;
     const id = ajusteRapido.id;
     setSalvandoAjuste(true);
-    const resultado = await excluirOrcamento(empresaId, id);
-    setSalvandoAjuste(false);
-    if (!resultado.ok) {
-      setErroAjuste(resultado.error);
-      return;
+    try {
+      const resultado = await excluirOrcamento(empresaId, id);
+      if (!resultado.ok) {
+        setErroAjuste(resultado.error);
+        return;
+      }
+      setOrcamentos((prev) => prev.filter((o) => o.id !== id));
+      setAjusteRapido(null);
+    } catch {
+      setErroAjuste(ERRO_GENERICO);
+    } finally {
+      setSalvandoAjuste(false);
     }
-    setOrcamentos((prev) => prev.filter((o) => o.id !== id));
-    setAjusteRapido(null);
   }
 
   function reenviarWhatsApp(o: Orcamento) {
@@ -769,8 +785,12 @@ export default function Calculadora({
   async function removerOrcamento(id: string) {
     const anterior = orcamentos;
     setOrcamentos((prev) => prev.filter((o) => o.id !== id));
-    const resultado = await excluirOrcamento(empresaId, id);
-    if (!resultado.ok) setOrcamentos(anterior);
+    try {
+      const resultado = await excluirOrcamento(empresaId, id);
+      if (!resultado.ok) setOrcamentos(anterior);
+    } catch {
+      setOrcamentos(anterior);
+    }
   }
 
   async function alterarStatusOrcamento(id: string, status: StatusOrcamento) {
@@ -779,9 +799,14 @@ export default function Calculadora({
     setOrcamentos((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status } : o)),
     );
-    const resultado = await atualizarStatusOrcamento(empresaId, id, status);
-    setAtualizandoStatusId("");
-    if (!resultado.ok) setOrcamentos(anterior);
+    try {
+      const resultado = await atualizarStatusOrcamento(empresaId, id, status);
+      if (!resultado.ok) setOrcamentos(anterior);
+    } catch {
+      setOrcamentos(anterior);
+    } finally {
+      setAtualizandoStatusId("");
+    }
   }
 
   // Passos exibidos: funcionário não tem o Passo 1; a numeração da UI é o
