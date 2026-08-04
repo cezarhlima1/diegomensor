@@ -5,6 +5,7 @@ import Calculadora from "@/components/calculadora/Calculadora";
 import Footer from "@/components/Footer";
 import HeaderLogado from "@/components/auth/HeaderLogado";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
+import { empresaTemEdicaoDeOrcamentos } from "@/lib/features/calculadora";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   Orcamento,
@@ -32,6 +33,9 @@ export default async function CalculadoraPage() {
   // página revalida (cobre também usuário autenticado sem empresa).
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
+  const permiteEditarOrcamentos = await empresaTemEdicaoDeOrcamentos(
+    sessao.empresaAtiva.id,
+  );
 
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
   // funcionário nem a query acontece, então os dados nunca saem do servidor
@@ -170,9 +174,7 @@ export default async function CalculadoraPage() {
           orcamentosIniciais={orcamentosIniciais}
           valorHoraHistoricoInicial={valorHoraHistoricoInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
-          permiteEditarOrcamentos={
-            sessao.email === "diegomensor@hotmail.com"
-          }
+          permiteEditarOrcamentos={permiteEditarOrcamentos}
         />
       </main>
       <Footer />

@@ -2,6 +2,7 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
+import { empresaTemEdicaoDeOrcamentos } from "@/lib/features/calculadora";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import type { ResultadoAuth } from "@/components/auth/actions";
 import {
@@ -27,7 +28,6 @@ import {
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
 const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
-const EMAIL_PILOTO_EDICAO = "diegomensor@hotmail.com";
 
 /** Teto de caracteres por campo persistido — a máscara pt-BR nunca passa disso. */
 const MAX_CHARS_CAMPO = 20;
@@ -309,8 +309,8 @@ export async function criarOrcamento(
 
 /**
  * Atualiza um orçamento existente. Durante o piloto, a permissão é validada
- * no servidor pelo e-mail autenticado; ocultar o botão no client não é a
- * barreira de segurança.
+ * no servidor pela empresa ativa: todos os membros da empresa do cadastro
+ * piloto podem editar; ocultar o botão no client não é a barreira de segurança.
  */
 export async function editarOrcamento(
   empresaId: string,
@@ -322,10 +322,8 @@ export async function editarOrcamento(
   if (!vinculo) {
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
-  if (
-    sessao?.email !== EMAIL_PILOTO_EDICAO ||
-    !idValido(orcamentoId)
-  ) {
+  const empresaPiloto = await empresaTemEdicaoDeOrcamentos(empresaId);
+  if (!empresaPiloto || !idValido(orcamentoId)) {
     return {
       ok: false,
       error: "A edição de orçamentos ainda não está liberada para este cadastro.",
