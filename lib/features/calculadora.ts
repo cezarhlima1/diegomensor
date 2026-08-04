@@ -1,7 +1,10 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-const EMAIL_PILOTO_EDICAO = "diegomensor@hotmail.com";
+const EMAILS_PILOTO_EDICAO = [
+  "diegomensor@hotmail.com",
+  "diego.mensor@hotmail.com",
+] as const;
 
 /**
  * Libera a edição de orçamentos para todos os membros das empresas às quais
@@ -12,11 +15,30 @@ export async function empresaTemEdicaoDeOrcamentos(
   empresaId: string,
 ): Promise<boolean> {
   const admin = createSupabaseAdminClient();
+  const filtroEmails = EMAILS_PILOTO_EDICAO.map(
+    (email) => `email.ilike.${email}`,
+  ).join(",");
+  const { data: perfis, error: erroPerfis } = await admin
+    .from("profiles")
+    .select("id")
+    .or(filtroEmails);
+
+  if (erroPerfis) {
+    console.error(
+      "empresaTemEdicaoDeOrcamentos: falha ao localizar cadastros piloto:",
+      erroPerfis.message,
+    );
+    return false;
+  }
+
+  const idsPiloto = (perfis ?? []).map((perfil) => perfil.id);
+  if (idsPiloto.length === 0) return false;
+
   const { data, error } = await admin
     .from("empresa_usuarios")
-    .select("user_id, profiles!inner(email)")
+    .select("user_id")
     .eq("empresa_id", empresaId)
-    .eq("profiles.email", EMAIL_PILOTO_EDICAO)
+    .in("user_id", idsPiloto)
     .limit(1);
 
   if (error) {
