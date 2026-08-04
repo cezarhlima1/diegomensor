@@ -1568,70 +1568,77 @@ export default function Calculadora({
                         </span>
                       </div>
                       <div className="calc-hist-vals">
-                        <span>
-                          <i>Mão de obra</i> {brl(o.maoDeObra ?? o.valorHora ?? 0)}
+                        <span className="calc-hist-valor">
+                          <i>Mão de obra</i>
+                          <b>{brl(o.maoDeObra ?? o.valorHora ?? 0)}</b>
                         </span>
-                        <span>
-                          <i>Peças</i> {brl(o.valorPeca)}
+                        <span className="calc-hist-valor">
+                          <i>Peças</i>
+                          <b>{brl(o.valorPeca)}</b>
                         </span>
-                        <span className="calc-hist-total">
-                          <i>Total</i> {brl(o.total)}
+                        <span className="calc-hist-valor calc-hist-total">
+                          <i>Total do orçamento</i>
+                          <b>{brl(o.total)}</b>
                         </span>
                       </div>
-                      <select
-                        className={`calc-hist-status ${
-                          o.status === "Aprovado"
-                            ? "calc-hist-status--aprovado"
-                            : o.status === "Não aprovado"
-                              ? "calc-hist-status--reprovado"
-                              : "calc-hist-status--pendente"
-                        }`}
-                        value={o.status}
-                        onChange={(e) =>
-                          alterarStatusOrcamento(
-                            o.id,
-                            e.target.value as StatusOrcamento,
-                          )
-                        }
-                        disabled={atualizandoStatusId === o.id}
-                        aria-label={`Status do orçamento ${o.nomeCarro}`}
-                      >
-                        <option value="Aguardando aprovação">
-                          Aguardando aprovação
-                        </option>
-                        <option value="Aprovado">Aprovado</option>
-                        <option value="Não aprovado">Não aprovado</option>
-                      </select>
-                      <button
-                        className="calc-hist-wa calc-hist-copy"
-                        onClick={() => copiarOrcamentoHistorico(o)}
-                        aria-label={`Copiar orçamento ${o.nomeCarro}`}
-                      >
-                        {copiadoId === o.id ? "✓ Copiado" : "Copiar"}
-                      </button>
-                      <button
-                        className="calc-hist-wa"
-                        onClick={() => reenviarWhatsApp(o)}
-                        aria-label={`Enviar orçamento ${o.nomeCarro} no WhatsApp`}
-                      >
-                        WhatsApp
-                      </button>
-                      {permiteEditarOrcamentos && (
-                        <button
-                          className="calc-hist-wa calc-hist-edit"
-                          onClick={() => abrirEdicaoOrcamento(o)}
-                          aria-label={`Editar orçamento ${o.nomeCarro}`}
+                      <div className="calc-hist-controls">
+                        <select
+                          className={`calc-hist-status ${
+                            o.status === "Aprovado"
+                              ? "calc-hist-status--aprovado"
+                              : o.status === "Não aprovado"
+                                ? "calc-hist-status--reprovado"
+                                : "calc-hist-status--pendente"
+                          }`}
+                          value={o.status}
+                          onChange={(e) =>
+                            alterarStatusOrcamento(
+                              o.id,
+                              e.target.value as StatusOrcamento,
+                            )
+                          }
+                          disabled={atualizandoStatusId === o.id}
+                          aria-label={`Status do orçamento ${o.nomeCarro}`}
                         >
-                          Editar
-                        </button>
-                      )}
-                      <button
-                        className="calc-hist-del"
-                        onClick={() => removerOrcamento(o.id)}
-                        aria-label={`Remover orçamento ${o.nomeCarro}`}
-                      >
-                        ×
-                      </button>
+                          <option value="Aguardando aprovação">
+                            Aguardando aprovação
+                          </option>
+                          <option value="Aprovado">Aprovado</option>
+                          <option value="Não aprovado">Não aprovado</option>
+                        </select>
+                        <div className="calc-hist-actions">
+                          <button
+                            className="calc-hist-wa calc-hist-copy"
+                            onClick={() => copiarOrcamentoHistorico(o)}
+                            aria-label={`Copiar orçamento ${o.nomeCarro}`}
+                          >
+                            {copiadoId === o.id ? "✓ Copiado" : "Copiar"}
+                          </button>
+                          <button
+                            className="calc-hist-wa"
+                            onClick={() => reenviarWhatsApp(o)}
+                            aria-label={`Enviar orçamento ${o.nomeCarro} no WhatsApp`}
+                          >
+                            WhatsApp
+                          </button>
+                          {permiteEditarOrcamentos && (
+                            <button
+                              className="calc-hist-wa calc-hist-edit"
+                              onClick={() => abrirEdicaoOrcamento(o)}
+                              aria-label={`Editar orçamento ${o.nomeCarro}`}
+                            >
+                              Editar
+                            </button>
+                          )}
+                          <button
+                            className="calc-hist-del"
+                            onClick={() => removerOrcamento(o.id)}
+                            aria-label={`Remover orçamento ${o.nomeCarro}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

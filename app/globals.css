@@ -700,17 +700,21 @@ a:focus-visible, button:focus-visible {
   .calc-empty-num { font-family: var(--font-display); font-weight: 900; font-size: 72px; line-height: 1; color: rgba(143,178,204,.18); }
   .calc-empty-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; margin-top: 6px; }
 
-  .calc-hist { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); transition: border-color .2s ease, transform .2s ease; }
+  .calc-hist { display: grid; gap: 14px; padding: 18px; border-radius: 14px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); transition: border-color .2s ease, transform .2s ease; }
   .calc-hist:hover { border-color: rgba(4,149,240,.4); transform: translateY(-2px); }
-  .calc-hist-main { display: grid; gap: 2px; min-width: 0; flex: 1; }
+  .calc-hist-main { display: grid; gap: 4px; min-width: 0; padding-bottom: 2px; }
   .calc-hist-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; }
   .calc-hist-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .calc-hist-placa { flex: none; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--color-blue); background: rgba(4,149,240,.12); border: 1px solid rgba(4,149,240,.3); border-radius: 6px; padding: 1px 6px; }
   .calc-hist-date { font-family: var(--font-mono); font-size: 11px; color: var(--color-muted-dim); }
-  .calc-hist-vals { display: flex; gap: 18px; flex-wrap: wrap; }
-  .calc-hist-vals span { font-family: var(--font-mono); font-size: 14px; color: var(--color-offwhite); }
+  .calc-hist-vals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .calc-hist-valor { display: grid; gap: 4px; min-width: 0; padding: 11px 12px; border-radius: 10px; background: rgba(143,178,204,.045); border: 1px solid rgba(143,178,204,.1); font-family: var(--font-mono); color: var(--color-offwhite); }
+  .calc-hist-valor b { overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-variant-numeric: tabular-nums; }
   .calc-hist-vals i { display: block; font-style: normal; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted-dim); }
-  .calc-hist-total span, .calc-hist-total { color: var(--color-brand-green); font-weight: 700; }
+  .calc-hist-total { background: rgba(47,210,122,.06); border-color: rgba(47,210,122,.16); }
+  .calc-hist-total b { color: var(--color-brand-green); font-weight: 700; }
+  .calc-hist-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--color-line); }
+  .calc-hist-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .calc-hist-status { flex: none; appearance: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
   .calc-hist-status--pendente { color: var(--color-amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.32); }
   .calc-hist-status--pendente:hover:not(:disabled) { background: rgba(245,166,35,.18); border-color: rgba(245,166,35,.55); }
@@ -722,7 +726,16 @@ a:focus-visible, button:focus-visible {
   .calc-hist-status option { background: var(--color-card); color: var(--color-offwhite); text-transform: none; }
   .calc-hist-del { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; line-height: 1; color: var(--color-muted); background: rgba(143,178,204,.06); border: 1px solid var(--color-line); cursor: pointer; transition: color .2s ease, background .2s ease, border-color .2s ease; }
   .calc-hist-del:hover { color: var(--color-brand-red); background: rgba(240,88,76,.1); border-color: rgba(240,88,76,.4); }
-  @media (max-width: 560px) { .calc-hist { flex-wrap: wrap; } .calc-hist-vals { width: 100%; } }
+  @media (max-width: 560px) {
+    .calc-hist { padding: 15px; gap: 12px; }
+    .calc-hist-vals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .calc-hist-total { grid-column: 1 / -1; }
+    .calc-hist-controls { align-items: stretch; flex-direction: column; }
+    .calc-hist-status { width: 100%; }
+    .calc-hist-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .calc-hist-actions .calc-hist-wa { width: 100%; }
+    .calc-hist-actions .calc-hist-del { width: 100%; }
+  }
 
   /* ---------- histórico: totais por status ---------- */
   .calc-totais { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
