@@ -18,7 +18,12 @@ import {
   type StatusValorHora,
   type ValorHoraSalvo,
 } from "./calcLogic";
-import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
+import {
+  AnimatedBRL,
+  MoneyField,
+  useConfirmacaoExclusao,
+  usePulse,
+} from "./calcUi";
 import {
   atualizarStatusValorHora,
   excluirValorHora,
@@ -92,6 +97,7 @@ export default function Passo1({
   const [okValorHora, setOkValorHora] = useState(false);
   const [mudandoStatusId, setMudandoStatusId] = useState("");
   const [excluindoValorHoraId, setExcluindoValorHoraId] = useState("");
+  const { pedirConfirmacao, dialogConfirmacao } = useConfirmacaoExclusao();
 
   const totalCustos = useMemo(() => somaCustos(custos), [custos]);
   const hora = useMemo(
@@ -206,13 +212,7 @@ export default function Passo1({
 
   async function excluirDoHistorico(registro: ValorHoraSalvo) {
     if (excluindoValorHoraId) return;
-    if (
-      !window.confirm(
-        `Excluir "${registro.nome}" do histórico de valor hora?`,
-      )
-    ) {
-      return;
-    }
+    if (!(await pedirConfirmacao())) return;
 
     setErroValorHora("");
     setExcluindoValorHoraId(registro.id);
@@ -236,7 +236,8 @@ export default function Passo1({
     setCustos((prev) => ({ ...prev, [key]: value }));
   }
 
-  function limparCampos() {
+  async function limparCampos() {
+    if (!(await pedirConfirmacao())) return;
     setCustos({});
     setHorasMes("");
     setMecanicos("");
@@ -484,6 +485,7 @@ export default function Passo1({
           Avançar para a peça →
         </button>
       </div>
+      {dialogConfirmacao}
     </>
   );
 }

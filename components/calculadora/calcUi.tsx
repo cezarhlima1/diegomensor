@@ -8,6 +8,56 @@
 import { useEffect, useRef, useState } from "react";
 import { brl, formatMoneyBlur, maskMoneyTyping } from "./calcLogic";
 
+/** Confirmação visual padronizada para qualquer exclusão da calculadora. */
+export function useConfirmacaoExclusao() {
+  const [aberta, setAberta] = useState(false);
+  const resolverRef = useRef<((confirmado: boolean) => void) | null>(null);
+
+  function pedirConfirmacao(): Promise<boolean> {
+    resolverRef.current?.(false);
+    setAberta(true);
+    return new Promise((resolve) => {
+      resolverRef.current = resolve;
+    });
+  }
+
+  function responder(confirmado: boolean) {
+    setAberta(false);
+    resolverRef.current?.(confirmado);
+    resolverRef.current = null;
+  }
+
+  useEffect(
+    () => () => {
+      resolverRef.current?.(false);
+    },
+    [],
+  );
+
+  const dialogConfirmacao = aberta ? (
+    <div className="calc-confirm-overlay" role="presentation">
+      <div
+        className="calc-confirm-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="calc-confirm-titulo"
+      >
+        <h2 id="calc-confirm-titulo">Tem certeza que deseja excluir?</h2>
+        <div className="calc-confirm-acoes">
+          <button type="button" className="btn btn--ghost" onClick={() => responder(false)}>
+            Não
+          </button>
+          <button type="button" className="btn calc-confirm-sim" onClick={() => responder(true)}>
+            Sim
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return { pedirConfirmacao, dialogConfirmacao };
+}
+
 export function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&

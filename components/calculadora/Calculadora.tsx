@@ -35,7 +35,12 @@ import {
   type StatusOrcamento,
   type ValorHoraSalvo,
 } from "./calcLogic";
-import { AnimatedBRL, MoneyField, usePulse } from "./calcUi";
+import {
+  AnimatedBRL,
+  MoneyField,
+  useConfirmacaoExclusao,
+  usePulse,
+} from "./calcUi";
 import {
   atualizarStatusOrcamento,
   criarOrcamento,
@@ -63,7 +68,10 @@ type PecaAjusteRapido = {
   id: string;
   nome: string;
   quantidade: string;
-  valor: string;
+  /** Custo unitário antes do markup. */
+  custo: string;
+  /** null usa automaticamente a faixa configurada em "Valor da peça". */
+  markup: number | null;
   horas: string;
 };
 type OrcamentoAjusteRapido = {
@@ -74,6 +82,23 @@ type OrcamentoAjusteRapido = {
   valorHora: number;
   pecas: PecaAjusteRapido[];
 };
+
+function valorPecaAjuste(
+  peca: PecaAjusteRapido,
+  tiers: MarkupTier[],
+): number {
+  return precoPecaItem(
+    {
+      id: peca.id,
+      nome: peca.nome,
+      custo: peca.custo,
+      markup: peca.markup,
+      quantidade: peca.quantidade,
+      horas: peca.horas,
+    },
+    tiers,
+  );
+}
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Custo da hora",
@@ -182,6 +207,7 @@ export default function Calculadora({
   const [atualizandoStatusId, setAtualizandoStatusId] = useState("");
   const [justSaved, setJustSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { pedirConfirmacao, dialogConfirmacao } = useConfirmacaoExclusao();
 
   // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
   const [hydrated, setHydrated] = useState(false);
@@ -356,7 +382,7 @@ export default function Calculadora({
   const totaisAjusteRapido = useMemo(() => {
     if (!ajusteRapido) return { pecas: 0, maoDeObra: 0, total: 0 };
     const totalPecas = ajusteRapido.pecas.reduce(
-      (total, p) => total + parseNum(p.valor),
+      (total, p) => total + valorPecaAjuste(p, tiers),
       0,
     );
     const totalMaoDeObra = ajusteRapido.pecas.reduce(
@@ -369,7 +395,7 @@ export default function Calculadora({
       maoDeObra: totalMaoDeObra,
       total: totalPecas + totalMaoDeObra,
     };
-  }, [ajusteRapido]);
+  }, [ajusteRapido, tiers]);
 
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
@@ -421,7 +447,8 @@ export default function Calculadora({
     setExpandedId(p.id);
   }
 
-  function removePeca(id: string) {
+  async function removePeca(id: string) {
+    if (!(await pedirConfirmacao())) return;
     setPecas((prev) => {
       const next = prev.filter((p) => p.id !== id);
       const list = next.length > 0 ? next : [novaPeca()];
@@ -451,7 +478,8 @@ export default function Calculadora({
     );
   }
 
-  function removeSelectedPecas() {
+  async function removeSelectedPecas() {
+    if (!(await pedirConfirmacao())) return;
     setPecas((prev) => {
       const next = prev.filter((p) => !selectedIds.has(p.id));
       const list = next.length > 0 ? next : [novaPeca()];
@@ -559,10 +587,15 @@ export default function Calculadora({
         id: crypto.randomUUID(),
         nome: peca.nome,
         quantidade: String(Math.max(1, Number(peca.quantidade) || 1)),
-        valor: Number(peca.valor).toLocaleString("pt-BR", {
+        // Orçamentos antigos guardam apenas o preço final. Dividir pela
+        // quantidade e usar markup zero preserva exatamente esse valor.
+        custo: (
+          Number(peca.valor) / Math.max(1, Number(peca.quantidade) || 1)
+        ).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }),
+        markup: 0,
         horas: horas
           ? horas.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
           : "",
@@ -590,8 +623,8 @@ export default function Calculadora({
 
   function atualizarPecaAjuste(
     id: string,
-    campo: "nome" | "quantidade" | "valor" | "horas",
-    valor: string,
+    campo: "nome" | "quantidade" | "custo" | "horas" | "markup",
+    valor: string | number | null,
   ) {
     setAjusteRapido((atual) =>
       atual
@@ -616,7 +649,8 @@ export default function Calculadora({
                 id: crypto.randomUUID(),
                 nome: "",
                 quantidade: "1",
-                valor: "",
+                custo: "",
+                markup: null,
                 horas: "",
               },
             ],
@@ -625,7 +659,8 @@ export default function Calculadora({
     );
   }
 
-  function excluirPecaAjuste(id: string) {
+  async function excluirPecaAjuste(id: string) {
+    if (!(await pedirConfirmacao())) return;
     setAjusteRapido((atual) =>
       atual
         ? { ...atual, pecas: atual.pecas.filter((p) => p.id !== id) }
@@ -644,13 +679,14 @@ export default function Calculadora({
             id: crypto.randomUUID(),
             nome: "Peça",
             quantidade: "1",
-            valor: "",
+            custo: "",
+            markup: null,
             horas: "",
           }];
     const pecasAjustadas = pecasOrigem.map((p) => ({
       nome: p.nome.trim() || "Peça",
       quantidade: Math.max(1, parseNum(p.quantidade)),
-      valor: parseNum(p.valor),
+      valor: valorPecaAjuste(p, tiers),
       maoDeObra: parseNum(p.horas) * ajusteRapido.valorHora,
     }));
     const valorPeca = pecasAjustadas.reduce((total, p) => total + p.valor, 0);
@@ -692,7 +728,7 @@ export default function Calculadora({
 
   async function excluirOrcamentoDoAjuste() {
     if (!ajusteRapido || salvandoAjuste) return;
-    if (!window.confirm("Excluir este orçamento? Esta ação não pode ser desfeita.")) return;
+    if (!(await pedirConfirmacao())) return;
     const id = ajusteRapido.id;
     setSalvandoAjuste(true);
     try {
@@ -787,6 +823,7 @@ export default function Calculadora({
   }
 
   async function removerOrcamento(id: string) {
+    if (!(await pedirConfirmacao())) return;
     const anterior = orcamentos;
     setOrcamentos((prev) => prev.filter((o) => o.id !== id));
     try {
@@ -1880,26 +1917,53 @@ export default function Calculadora({
                       />
                     </label>
                     <label>
-                      <span>Peças (R$)</span>
+                      <span>Custo unitário (R$)</span>
                       <input
                         className="quiz-input"
                         inputMode="decimal"
-                        value={peca.valor}
+                        value={peca.custo}
                         onChange={(e) =>
                           atualizarPecaAjuste(
                             peca.id,
-                            "valor",
+                            "custo",
                             maskMoneyTyping(e.target.value),
                           )
                         }
                         onBlur={(e) =>
                           atualizarPecaAjuste(
                             peca.id,
-                            "valor",
+                            "custo",
                             formatMoneyBlur(e.target.value),
                           )
                         }
                       />
+                    </label>
+                    <label>
+                      <span>Markup</span>
+                      <span className="calc-ajuste-markup">
+                        <input
+                          className="quiz-input"
+                          inputMode="numeric"
+                          value={String(
+                            peca.markup ??
+                              tierForCost(parseNum(peca.custo), tiers).markup,
+                          )}
+                          onChange={(e) =>
+                            atualizarPecaAjuste(
+                              peca.id,
+                              "markup",
+                              Math.max(
+                                MARKUP_MIN,
+                                Math.min(
+                                  MARKUP_MAX,
+                                  Number(e.target.value.replace(/\D/g, "")) || 0,
+                                ),
+                              ),
+                            )
+                          }
+                        />
+                        <span>%</span>
+                      </span>
                     </label>
                     <label>
                       <span>Horas</span>
@@ -1917,11 +1981,9 @@ export default function Calculadora({
                       />
                     </label>
                     <div className="calc-ajuste-item-mao">
-                      <span>Mão de obra</span>
+                      <span>Preço da peça</span>
                       <b>
-                        {brl(
-                          parseNum(peca.horas) * ajusteRapido.valorHora,
-                        )}
+                        {brl(valorPecaAjuste(peca, tiers))}
                       </b>
                     </div>
                     <button
@@ -1940,7 +2002,7 @@ export default function Calculadora({
                 <div className="calc-ajuste-detalhes">
                   <span className="quiz-label">Detalhamento do orçamento</span>
                   {ajusteRapido.pecas.map((peca) => {
-                    const valorPecas = parseNum(peca.valor);
+                    const valorPecas = valorPecaAjuste(peca, tiers);
                     const horas = parseNum(peca.horas);
                     const maoDeObra = horas * ajusteRapido.valorHora;
                     return (
@@ -2006,6 +2068,7 @@ export default function Calculadora({
             </div>
           </div>
         )}
+        {dialogConfirmacao}
       </div>
     </section>
   );

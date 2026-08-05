@@ -1759,7 +1759,7 @@ a:focus-visible, button:focus-visible {
   }
   .calc-ajuste-itens { display: grid; gap: 10px; margin-top: 12px; }
   .calc-ajuste-item {
-    display: grid; grid-template-columns: minmax(150px, 1.4fr) 70px minmax(120px, 1fr) 80px minmax(120px, .9fr) auto;
+    display: grid; grid-template-columns: minmax(140px, 1.4fr) 60px minmax(110px, 1fr) 76px 70px minmax(110px, .9fr) auto;
     align-items: end; gap: 10px; padding: 12px; border: 1px solid var(--color-line);
     border-radius: 12px; background: rgba(11,13,17,.4);
   }
@@ -1769,6 +1769,8 @@ a:focus-visible, button:focus-visible {
     letter-spacing: .07em; text-transform: uppercase; color: var(--color-muted);
   }
   .calc-ajuste-item .quiz-input { min-width: 0; padding: 10px; font-size: 13px; }
+  .calc-ajuste-markup { display: flex; align-items: center; gap: 5px; }
+  .calc-ajuste-markup > span { color: var(--color-muted); font-family: var(--font-mono); }
   .calc-ajuste-item-mao { display: grid; gap: 5px; align-self: stretch; align-content: end; }
   .calc-ajuste-item-mao > span {
     font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
@@ -1815,6 +1817,25 @@ a:focus-visible, button:focus-visible {
   .calc-ajuste-excluir {
     border: 0; background: none; color: var(--color-brand-red); font-family: var(--font-mono);
     font-size: 11px; font-weight: 700; text-decoration: underline; cursor: pointer;
+  }
+  .calc-confirm-overlay {
+    position: fixed; inset: 0; z-index: 120; display: grid; place-items: center;
+    padding: 20px; background: rgba(2,6,10,.78); backdrop-filter: blur(5px);
+  }
+  .calc-confirm-modal {
+    width: min(430px, 100%); padding: 26px; border: 1px solid rgba(240,88,76,.4);
+    border-radius: 18px; background: linear-gradient(165deg, #111b24, #0b1117);
+    box-shadow: 0 24px 80px rgba(0,0,0,.65); text-align: center;
+  }
+  .calc-confirm-modal h2 {
+    color: var(--color-offwhite); font-family: var(--font-display);
+    font-size: clamp(18px, 4vw, 23px); font-weight: 700;
+  }
+  .calc-confirm-acoes {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px;
+  }
+  .calc-confirm-sim {
+    background: var(--color-brand-red); border-color: var(--color-brand-red);
   }
   @media (max-width: 560px) {
     .calc-filtro-grupo { width: 100%; overflow-x: auto; border-radius: 14px; }
