@@ -99,7 +99,7 @@ export default async function CalculadoraPage() {
     const { data, error } = await supabase
       .from("orcamentos")
       .select(
-        "id, nome_cliente, nome_carro, placa, contato_cliente, origem, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
+        "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
       )
       .eq("empresa_id", sessao.empresaAtiva.id)
       .order("created_at", { ascending: false });
@@ -108,22 +108,25 @@ export default async function CalculadoraPage() {
         `calculadora: falha ao carregar orcamentos: ${error.message}`
       );
     }
-    orcamentosIniciais = (data ?? []).map((o) => ({
-      id: o.id,
-      nomeCliente: o.nome_cliente,
-      nomeCarro: o.nome_carro,
-      placa: o.placa,
-      contatoCliente: o.contato_cliente,
-      origem: o.origem as Orcamento["origem"],
-      valorHora: Number(o.valor_hora),
-      horas: Number(o.horas),
-      maoDeObra: Number(o.mao_de_obra),
-      pecas: (o.pecas ?? []) as PecaResumo[],
-      valorPeca: Number(o.valor_peca),
-      total: Number(o.total),
-      status: o.status as StatusOrcamento,
-      data: o.created_at,
-    }));
+    orcamentosIniciais = (data ?? []).map((o) => {
+      const pecas = (o.pecas ?? []) as PecaResumo[];
+      return {
+        id: o.id,
+        nomeCliente: o.nome_cliente,
+        nomeCarro: o.nome_carro,
+        placa: o.placa,
+        contatoCliente: pecas[0]?.contatoCliente ?? "",
+        origem: pecas[0]?.origem ?? null,
+        valorHora: Number(o.valor_hora),
+        horas: Number(o.horas),
+        maoDeObra: Number(o.mao_de_obra),
+        pecas,
+        valorPeca: Number(o.valor_peca),
+        total: Number(o.total),
+        status: o.status as StatusOrcamento,
+        data: o.created_at,
+      };
+    });
   }
 
   // Histórico de valores hora: legível por QUALQUER membro (RLS "select se

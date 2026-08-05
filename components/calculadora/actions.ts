@@ -25,7 +25,6 @@ import {
   type ValorHoraSalvo,
 } from "./calcLogic";
 
-const EMAIL_RECURSOS_TESTE = "diego.mensor@hotmail.com";
 const ORIGENS_VALIDAS: OrigemCliente[] = [
   "Ligação",
   "WhatsApp",
@@ -215,6 +214,15 @@ function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
             ),
           )
         : undefined,
+    contatoCliente:
+      p?.contatoCliente != null
+        ? String(p.contatoCliente).trim().slice(0, 30)
+        : undefined,
+    origem:
+      p?.origem != null &&
+      ORIGENS_VALIDAS.includes(p.origem as OrigemCliente)
+        ? (p.origem as OrigemCliente)
+        : undefined,
   }));
 }
 
@@ -233,8 +241,6 @@ function paraOrcamento(row: {
   nome_cliente: string;
   nome_carro: string;
   placa: string;
-  contato_cliente: string;
-  origem: string | null;
   valor_hora: number;
   horas: number;
   mao_de_obra: number;
@@ -249,10 +255,8 @@ function paraOrcamento(row: {
     nomeCliente: row.nome_cliente,
     nomeCarro: row.nome_carro,
     placa: row.placa,
-    contatoCliente: row.contato_cliente,
-    origem: ORIGENS_VALIDAS.includes(row.origem as OrigemCliente)
-      ? (row.origem as OrigemCliente)
-      : null,
+    contatoCliente: ((row.pecas ?? []) as PecaResumo[])[0]?.contatoCliente ?? "",
+    origem: ((row.pecas ?? []) as PecaResumo[])[0]?.origem ?? null,
     valorHora: Number(row.valor_hora),
     horas: Number(row.horas),
     maoDeObra: Number(row.mao_de_obra),
@@ -265,7 +269,7 @@ function paraOrcamento(row: {
 }
 
 const SELECT_ORCAMENTO =
-  "id, nome_cliente, nome_carro, placa, contato_cliente, origem, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
+  "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
 
 export type ResultadoCriarOrcamento =
   | { ok: true; orcamento: Orcamento }
@@ -300,14 +304,22 @@ export async function criarOrcamento(
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
 
-  const pecas = sanitizarPecas(dados.pecas ?? []);
+  const pecasComMetadados = (dados.pecas ?? []).map((peca, index) =>
+    index === 0
+      ? {
+          ...peca,
+          contatoCliente: dados.contatoCliente,
+          origem: dados.origem,
+        }
+      : peca,
+  );
+  const pecas = sanitizarPecas(pecasComMetadados);
   const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
   const maoDeObra = pecas.reduce(
     (total, peca) => total + (peca.maoDeObra ?? 0),
     0
   );
   const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
-  const permiteRecursosTeste = sessao?.email === EMAIL_RECURSOS_TESTE;
 
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
@@ -318,14 +330,6 @@ export async function criarOrcamento(
       nome_carro:
         dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
       placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
-      contato_cliente: permiteRecursosTeste
-        ? String(dados.contatoCliente ?? "").trim().slice(0, 30)
-        : "",
-      origem:
-        permiteRecursosTeste &&
-        ORIGENS_VALIDAS.includes(dados.origem as OrigemCliente)
-          ? dados.origem
-          : null,
       valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
       horas: limitarNumero(dados.horas, MAX_HORAS),
       mao_de_obra: maoDeObra,
@@ -366,14 +370,22 @@ export async function editarOrcamento(
     };
   }
 
-  const pecas = sanitizarPecas(dados.pecas ?? []);
+  const pecasComMetadados = (dados.pecas ?? []).map((peca, index) =>
+    index === 0
+      ? {
+          ...peca,
+          contatoCliente: dados.contatoCliente,
+          origem: dados.origem,
+        }
+      : peca,
+  );
+  const pecas = sanitizarPecas(pecasComMetadados);
   const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
   const maoDeObra = pecas.reduce(
     (total, peca) => total + (peca.maoDeObra ?? 0),
     0
   );
   const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
-  const permiteRecursosTeste = sessao?.email === EMAIL_RECURSOS_TESTE;
   const dadosAtualizados: Record<string, unknown> = {
     nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
     nome_carro:
@@ -386,16 +398,6 @@ export async function editarOrcamento(
     valor_peca: valorPeca,
     total,
   };
-  if (permiteRecursosTeste) {
-    dadosAtualizados.contato_cliente = String(
-      dados.contatoCliente ?? "",
-    ).trim().slice(0, 30);
-    dadosAtualizados.origem = ORIGENS_VALIDAS.includes(
-      dados.origem as OrigemCliente,
-    )
-      ? dados.origem
-      : null;
-  }
 
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin

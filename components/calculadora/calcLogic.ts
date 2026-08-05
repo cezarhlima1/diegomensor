@@ -240,6 +240,9 @@ export type PecaResumo = {
   custo?: number;
   /** Markup efetivo usado no cálculo; ausente em orçamentos antigos. */
   markup?: number;
+  /** Metadados do orçamento guardados no primeiro item do snapshot JSON. */
+  contatoCliente?: string;
+  origem?: OrigemCliente | null;
 };
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
