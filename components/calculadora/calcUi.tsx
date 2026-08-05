@@ -6,6 +6,7 @@
 // estes componentes/hooks.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { brl, formatMoneyBlur, maskMoneyTyping } from "./calcLogic";
 
 /** Confirmação visual padronizada para qualquer exclusão da calculadora. */
@@ -34,26 +35,40 @@ export function useConfirmacaoExclusao() {
     [],
   );
 
-  const dialogConfirmacao = aberta ? (
-    <div className="calc-confirm-overlay" role="presentation">
-      <div
-        className="calc-confirm-modal"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="calc-confirm-titulo"
-      >
-        <h2 id="calc-confirm-titulo">Tem certeza que deseja excluir?</h2>
-        <div className="calc-confirm-acoes">
-          <button type="button" className="btn btn--ghost" onClick={() => responder(false)}>
-            Não
-          </button>
-          <button type="button" className="btn calc-confirm-sim" onClick={() => responder(true)}>
-            Sim
-          </button>
-        </div>
-      </div>
-    </div>
-  ) : null;
+  const dialogConfirmacao =
+    aberta && typeof document !== "undefined"
+      ? createPortal(
+          <div className="calc-confirm-overlay" role="presentation">
+            <div
+              className="calc-confirm-modal"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="calc-confirm-titulo"
+            >
+              <h2 id="calc-confirm-titulo">
+                Tem certeza que deseja excluir?
+              </h2>
+              <div className="calc-confirm-acoes">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => responder(false)}
+                >
+                  Não
+                </button>
+                <button
+                  type="button"
+                  className="btn calc-confirm-sim"
+                  onClick={() => responder(true)}
+                >
+                  Sim
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return { pedirConfirmacao, dialogConfirmacao };
 }
