@@ -1600,7 +1600,7 @@ export default function Calculadora({
                 {permiteVerCustoPecas && (
                   <div className="calc-origens">
                     <div className="calc-origens-cabecalho">
-                      <span>Saldo de origem</span>
+                      <span>Origem de clientes</span>
                       <small>Clientes nos resultados filtrados</small>
                     </div>
                     <div className="calc-origens-grid">
