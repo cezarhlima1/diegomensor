@@ -1853,10 +1853,9 @@ a:focus-visible, button:focus-visible {
   .calc-origens-cabecalho > small { color: var(--color-muted-dim); font-family: var(--font-mono); font-size: 9px; }
   .calc-origens-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .calc-origens-grid > div {
-    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px;
     padding: 10px 12px; border-radius: 10px; background: rgba(143,178,204,.045);
   }
-  .calc-origens-grid i { color: var(--color-blue); font-style: normal; font-size: 12px; }
   .calc-origens-grid span { color: var(--color-muted); font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; }
   .calc-origens-grid b { color: var(--color-offwhite); font-family: var(--font-mono); font-size: 18px; }
   .calc-hist-cliente-extra {

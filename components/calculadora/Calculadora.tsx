@@ -1614,17 +1614,14 @@ export default function Calculadora({
                       </div>
                       <div className="calc-origens-grid">
                         <div>
-                          <i>☎</i>
                           <span>Ligação</span>
                           <b>{saldoOrigens.ligacao}</b>
                         </div>
                         <div>
-                          <i>◉</i>
                           <span>WhatsApp</span>
                           <b>{saldoOrigens.whatsapp}</b>
                         </div>
                         <div>
-                          <i>●</i>
                           <span>Pessoalmente</span>
                           <b>{saldoOrigens.pessoalmente}</b>
                         </div>
