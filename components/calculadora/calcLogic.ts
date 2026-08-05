@@ -236,6 +236,10 @@ export type PecaResumo = {
   valor: number;
   quantidade?: number;
   maoDeObra?: number;
+  /** Custo unitário usado no cálculo; ausente em orçamentos antigos. */
+  custo?: number;
+  /** Markup efetivo usado no cálculo; ausente em orçamentos antigos. */
+  markup?: number;
 };
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */

@@ -495,6 +495,8 @@ export default function Calculadora({
       quantidade: quantidadePeca(p),
       valor: precoPecaItem(p, tiers),
       maoDeObra: maoDeObraPeca(p, valorHoraOrcamento),
+      custo: parseNum(p.custo),
+      markup: markupDaPeca(p, tiers),
     }));
   }
 
@@ -587,15 +589,16 @@ export default function Calculadora({
         id: crypto.randomUUID(),
         nome: peca.nome,
         quantidade: String(Math.max(1, Number(peca.quantidade) || 1)),
-        // Orçamentos antigos guardam apenas o preço final. Dividir pela
-        // quantidade e usar markup zero preserva exatamente esse valor.
+        // Orçamentos novos preservam custo e markup. Para os antigos,
+        // reconstruímos pelo preço final sem alterar o total já registrado.
         custo: (
+          peca.custo ??
           Number(peca.valor) / Math.max(1, Number(peca.quantidade) || 1)
         ).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }),
-        markup: 0,
+        markup: peca.markup ?? 0,
         horas: horas
           ? horas.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
           : "",
@@ -688,6 +691,9 @@ export default function Calculadora({
       quantidade: Math.max(1, parseNum(p.quantidade)),
       valor: valorPecaAjuste(p, tiers),
       maoDeObra: parseNum(p.horas) * ajusteRapido.valorHora,
+      custo: parseNum(p.custo),
+      markup:
+        p.markup ?? tierForCost(parseNum(p.custo), tiers).markup,
     }));
     const valorPeca = pecasAjustadas.reduce((total, p) => total + p.valor, 0);
     const horas = pecasOrigem.reduce(

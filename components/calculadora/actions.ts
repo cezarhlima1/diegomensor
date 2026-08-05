@@ -194,6 +194,20 @@ function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
       p?.maoDeObra != null
         ? limitarNumero(p.maoDeObra, MAX_VALOR)
         : undefined,
+    custo:
+      p?.custo != null
+        ? limitarNumero(p.custo, MAX_VALOR)
+        : undefined,
+    markup:
+      p?.markup != null
+        ? Math.max(
+            0,
+            Math.min(
+              Number.isFinite(Number(p.markup)) ? Number(p.markup) : 0,
+              MARKUP_MAX,
+            ),
+          )
+        : undefined,
   }));
 }
 
