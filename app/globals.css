@@ -45,6 +45,11 @@
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; scroll-padding-top: 90px; -webkit-text-size-adjust: 100%; }
+html:has(.calc-page) {
+  scroll-behavior: auto;
+  scrollbar-gutter: stable;
+}
+.calc-page .cta-reveal { animation: none; }
 
 body {
   background: var(--color-bg);
@@ -725,12 +730,17 @@ a:focus-visible, button:focus-visible {
   .calc-saved { font-family: var(--font-mono); font-size: 13px; color: var(--color-brand-green); text-align: center; }
 
   /* ---------- histórico ---------- */
+  .calc-hist-lista {
+    min-height: clamp(360px, 50vh, 600px);
+    align-content: start;
+    overflow-anchor: none;
+  }
   .calc-empty { text-align: center; padding: 56px 20px; background: linear-gradient(170deg, var(--color-card), #0e151c); border: 1px dashed rgba(143,178,204,.28); border-radius: var(--radius-lg); }
   .calc-empty-num { font-family: var(--font-display); font-weight: 900; font-size: 72px; line-height: 1; color: rgba(143,178,204,.18); }
   .calc-empty-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; margin-top: 6px; }
 
   .calc-hist { display: grid; gap: 14px; padding: 18px; border-radius: 14px; border: 1px solid var(--color-line); background: linear-gradient(165deg, var(--color-card), #0e151c); transition: border-color .2s ease, transform .2s ease; }
-  .calc-hist:hover { border-color: rgba(4,149,240,.4); transform: translateY(-2px); }
+  .calc-hist:hover { border-color: rgba(4,149,240,.4); }
   .calc-hist-main { display: grid; gap: 4px; min-width: 0; padding-bottom: 2px; }
   .calc-hist-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; }
   .calc-hist-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

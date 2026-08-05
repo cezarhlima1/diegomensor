@@ -862,7 +862,7 @@ export default function Calculadora({
   const stepsVisiveis: Step[] = ehAdmin ? [1, 2, 3] : [2, 3];
 
   return (
-    <section className="relative min-h-[100svh] py-20 sm:py-24">
+    <section className="calc-page relative min-h-[100svh] py-20 sm:py-24">
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[920px]">
         {/* ---------- cabeçalho ---------- */}
@@ -1636,7 +1636,7 @@ export default function Calculadora({
                     Novo orçamento
                   </button>
                 </div>
-                <div className="grid gap-3">
+                <div className="grid gap-3 calc-hist-lista">
                   {orcamentosFiltrados.length === 0 && (
                     <p className="calc-card-sub text-center py-8">
                       Nenhum orçamento encontrado com os filtros atuais.
