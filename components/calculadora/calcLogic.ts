@@ -178,13 +178,6 @@ export type Peca = {
   horas: string;
 };
 
-/** Nome e custo reutilizáveis no catálogo de peças da empresa. */
-export type PecaCatalogo = {
-  id: string;
-  nome: string;
-  custo: number;
-};
-
 export function novaPeca(): Peca {
   return {
     id:

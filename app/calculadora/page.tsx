@@ -9,7 +9,6 @@ import { empresaTemEdicaoDeOrcamentos } from "@/lib/features/calculadora";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   Orcamento,
-  PecaCatalogo,
   PecaResumo,
   Passo1Dados,
   Passo2ConfigDados,
@@ -151,29 +150,6 @@ export default async function CalculadoraPage() {
     }));
   }
 
-  // Catálogo piloto de peças: enviado apenas ao login principal do Diego.
-  // Falha na leitura não bloqueia a calculadora nem o salvamento de orçamento.
-  let catalogoPecasInicial: PecaCatalogo[] = [];
-  if (sessao.email === "diegomensor@hotmail.com") {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("pecas_catalogo")
-      .select("id, nome, custo")
-      .eq("empresa_id", sessao.empresaAtiva.id)
-      .order("nome", { ascending: true });
-    if (error) {
-      console.error(
-        `calculadora: falha ao carregar pecas_catalogo: ${error.message}`,
-      );
-    } else {
-      catalogoPecasInicial = (data ?? []).map((peca) => ({
-        id: peca.id,
-        nome: peca.nome,
-        custo: Number(peca.custo),
-      }));
-    }
-  }
-
   return (
     <>
       <HeaderLogado nomeEmpresa={sessao.empresaAtiva.nome}>
@@ -200,10 +176,6 @@ export default async function CalculadoraPage() {
           nomeEmpresa={sessao.empresaAtiva.nome}
           permiteEditarOrcamentos={permiteEditarOrcamentos}
           historicoCompacto={sessao.email === "diegomensor@hotmail.com"}
-          catalogoPecasInicial={catalogoPecasInicial}
-          permiteCatalogoPecas={
-            sessao.email === "diegomensor@hotmail.com"
-          }
         />
       </main>
       <Footer />
