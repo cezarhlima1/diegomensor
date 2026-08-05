@@ -769,9 +769,12 @@ a:focus-visible, button:focus-visible {
   .calc-hist-resumo .calc-hist-main { flex: 1; padding: 0; }
   .calc-hist-resumo-meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex: none; }
   .calc-hist-resumo-meta > strong {
-    min-width: 90px; color: var(--color-brand-green); font-family: var(--font-mono);
+    min-width: 90px; color: var(--color-offwhite); font-family: var(--font-mono);
     font-size: 14px; text-align: right; font-variant-numeric: tabular-nums;
   }
+  .calc-hist-resumo-meta > strong.is-pendente { color: var(--color-amber); }
+  .calc-hist-resumo-meta > strong.is-aprovado { color: var(--color-brand-green); }
+  .calc-hist-resumo-meta > strong.is-reprovado { color: var(--color-brand-red); }
   .calc-hist-origem-tag {
     flex: none; padding: 4px 7px; border-radius: 6px;
     background: rgba(143,178,204,.055); color: var(--color-muted-dim);
@@ -800,7 +803,10 @@ a:focus-visible, button:focus-visible {
     display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
     border: 0; border-radius: 7px; background: none; cursor: pointer;
   }
-  .calc-hist-status--compacto { max-width: 180px; padding: 6px 11px; font-size: 9px; }
+  .calc-hist-status--compacto {
+    width: 190px; max-width: none; padding: 6px 12px; font-size: 9px;
+    white-space: nowrap;
+  }
   .calc-hist-detalhes { display: grid; gap: 14px; padding: 0 16px 16px; border-top: 1px solid var(--color-line); }
   .calc-hist-detalhes .calc-hist-vals { margin-top: 14px; }
   .calc-hist-status { flex: none; appearance: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
@@ -826,7 +832,9 @@ a:focus-visible, button:focus-visible {
     .calc-hist-resumo { align-items: flex-start; padding: 13px 14px; gap: 10px; }
     .calc-hist-resumo-meta { display: grid; grid-template-columns: auto auto; gap: 7px 8px; }
     .calc-hist-origem-tag { grid-column: 1 / -1; justify-self: end; }
-    .calc-hist-status--compacto { grid-column: 1 / -1; justify-self: end; width: auto; max-width: 155px; }
+    .calc-hist-status--compacto {
+      grid-column: 1 / -1; justify-self: end; width: 178px; max-width: 100%;
+    }
     .calc-hist-resumo-meta > strong { min-width: 0; }
     .calc-hist-detalhes { padding: 0 14px 14px; }
   }

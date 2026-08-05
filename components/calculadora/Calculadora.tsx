@@ -1824,7 +1824,17 @@ export default function Calculadora({
                               <option value="Aprovado">Aprovado</option>
                               <option value="Não aprovado">Não aprovado</option>
                             </select>
-                            <strong>{brl(o.total)}</strong>
+                            <strong
+                              className={
+                                o.status === "Aprovado"
+                                  ? "is-aprovado"
+                                  : o.status === "Não aprovado"
+                                    ? "is-reprovado"
+                                    : "is-pendente"
+                              }
+                            >
+                              {brl(o.total)}
+                            </strong>
                             <button
                               type="button"
                               className="calc-hist-chevron-btn"
