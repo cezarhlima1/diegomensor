@@ -26,7 +26,10 @@ export const metadata: Metadata = {
 // build sem env do Supabase tentaria prerender e falharia na checagem de env
 // (que roda antes de cookies() marcar a rota como dinâmica).
 export const dynamic = "force-dynamic";
-const EMAIL_COM_DETALHE_DE_CUSTO = "diego.mensor@hotmail.com";
+const EMAILS_COM_RECURSOS_EXCLUSIVOS = new Set([
+  "diego.mensor@hotmail.com",
+  "diegomensor@hotmail.com",
+]);
 
 export default async function CalculadoraPage() {
   // Defesa em profundidade: o middleware já bloqueia sem sessão, mas a
@@ -34,7 +37,7 @@ export default async function CalculadoraPage() {
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
   const permiteVerCustoPecas =
-    sessao.email === EMAIL_COM_DETALHE_DE_CUSTO;
+    EMAILS_COM_RECURSOS_EXCLUSIVOS.has(sessao.email);
 
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
   // funcionário nem a query acontece, então os dados nunca saem do servidor
