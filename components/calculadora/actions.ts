@@ -2,7 +2,6 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
-import { empresaTemEdicaoDeOrcamentos } from "@/lib/features/calculadora";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import type { ResultadoAuth } from "@/components/auth/actions";
 import {
@@ -308,9 +307,9 @@ export async function criarOrcamento(
 }
 
 /**
- * Atualiza um orçamento existente. Durante o piloto, a permissão é validada
- * no servidor pela empresa ativa: todos os membros da empresa do cadastro
- * piloto podem editar; ocultar o botão no client não é a barreira de segurança.
+ * Atualiza um orçamento existente. A permissão é validada no servidor pelo
+ * vínculo do usuário com a empresa; ocultar o botão no client não é a barreira
+ * de segurança.
  */
 export async function editarOrcamento(
   empresaId: string,
@@ -322,11 +321,10 @@ export async function editarOrcamento(
   if (!vinculo) {
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
-  const empresaPiloto = await empresaTemEdicaoDeOrcamentos(empresaId);
-  if (!empresaPiloto || !idValido(orcamentoId)) {
+  if (!idValido(orcamentoId)) {
     return {
       ok: false,
-      error: "A edição de orçamentos ainda não está liberada para este cadastro.",
+      error: "Orçamento inválido.",
     };
   }
 

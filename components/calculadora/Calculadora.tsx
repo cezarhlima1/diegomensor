@@ -118,9 +118,9 @@ export default function Calculadora({
   valorHoraHistoricoInicial: ValorHoraSalvo[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
-  /** Liberação piloto para alterar orçamentos já persistidos. */
+  /** Permite alterar orçamentos já persistidos. */
   permiteEditarOrcamentos: boolean;
-  /** Visual resumido e expansível do histórico, em teste no login principal. */
+  /** Visual resumido e expansível do histórico. */
   historicoCompacto: boolean;
 }) {
   const ehAdmin = papel === "admin";
