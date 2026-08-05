@@ -1598,18 +1598,19 @@ export default function Calculadora({
                       className={`calc-hist ${historicoCompacto ? "calc-hist--compacto" : ""}`}
                     >
                       {historicoCompacto ? (
-                        <button
-                          type="button"
-                          className="calc-hist-resumo"
-                          onClick={() =>
-                            setOrcamentoAbertoId((atual) =>
-                              atual === o.id ? "" : o.id,
-                            )
-                          }
-                          aria-expanded={orcamentoAbertoId === o.id}
-                          aria-controls={`orcamento-detalhes-${o.id}`}
-                        >
-                          <span className="calc-hist-main">
+                        <div className="calc-hist-resumo">
+                          <button
+                            type="button"
+                            className="calc-hist-resumo-toggle"
+                            onClick={() =>
+                              setOrcamentoAbertoId((atual) =>
+                                atual === o.id ? "" : o.id,
+                              )
+                            }
+                            aria-expanded={orcamentoAbertoId === o.id}
+                            aria-controls={`orcamento-detalhes-${o.id}`}
+                          >
+                            <span className="calc-hist-main">
                             <span className="calc-hist-name">
                               <span className="calc-hist-name-text">
                                 {o.nomeCliente || o.nomeCarro}
@@ -1622,30 +1623,53 @@ export default function Calculadora({
                               {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
                               {formatData(o.data)}
                             </span>
-                          </span>
+                            </span>
+                          </button>
                           <span className="calc-hist-resumo-meta">
-                            <span
-                              className={`calc-hist-resumo-status ${
+                            <select
+                              className={`calc-hist-status calc-hist-status--compacto ${
                                 o.status === "Aprovado"
-                                  ? "is-aprovado"
+                                  ? "calc-hist-status--aprovado"
                                   : o.status === "Não aprovado"
-                                    ? "is-reprovado"
-                                    : "is-pendente"
+                                    ? "calc-hist-status--reprovado"
+                                    : "calc-hist-status--pendente"
                               }`}
+                              value={o.status}
+                              onChange={(e) =>
+                                alterarStatusOrcamento(
+                                  o.id,
+                                  e.target.value as StatusOrcamento,
+                                )
+                              }
+                              disabled={atualizandoStatusId === o.id}
+                              aria-label={`Status do orçamento ${o.nomeCarro}`}
                             >
-                              {o.status}
-                            </span>
+                              <option value="Aguardando aprovação">Aguardando aprovação</option>
+                              <option value="Aprovado">Aprovado</option>
+                              <option value="Não aprovado">Não aprovado</option>
+                            </select>
                             <strong>{brl(o.total)}</strong>
-                            <span
-                              className={`calc-hist-chevron ${
-                                orcamentoAbertoId === o.id ? "is-open" : ""
-                              }`}
-                              aria-hidden="true"
+                            <button
+                              type="button"
+                              className="calc-hist-chevron-btn"
+                              onClick={() =>
+                                setOrcamentoAbertoId((atual) =>
+                                  atual === o.id ? "" : o.id,
+                                )
+                              }
+                              aria-label={orcamentoAbertoId === o.id ? "Fechar detalhes" : "Abrir detalhes"}
                             >
-                              ▾
-                            </span>
+                              <span
+                                className={`calc-hist-chevron ${
+                                  orcamentoAbertoId === o.id ? "is-open" : ""
+                                }`}
+                                aria-hidden="true"
+                              >
+                                ▾
+                              </span>
+                            </button>
                           </span>
-                        </button>
+                        </div>
                       ) : (
                         <div className="calc-hist-main">
                           <span className="calc-hist-name">
@@ -1681,8 +1705,8 @@ export default function Calculadora({
                           <b>{brl(o.total)}</b>
                         </span>
                       </div>
-                      <div className="calc-hist-controls">
-                        <select
+                      <div className={`calc-hist-controls ${historicoCompacto ? "is-compacto" : ""}`}>
+                        {!historicoCompacto && <select
                           className={`calc-hist-status ${
                             o.status === "Aprovado"
                               ? "calc-hist-status--aprovado"
@@ -1705,7 +1729,7 @@ export default function Calculadora({
                           </option>
                           <option value="Aprovado">Aprovado</option>
                           <option value="Não aprovado">Não aprovado</option>
-                        </select>
+                        </select>}
                         <div className="calc-hist-actions">
                           <button
                             className="calc-hist-wa calc-hist-copy"
