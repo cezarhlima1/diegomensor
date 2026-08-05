@@ -206,6 +206,7 @@ export default function Calculadora({
   const [expInicio, setExpInicio] = useState("");
   const [expFim, setExpFim] = useState("");
   const [exportando, setExportando] = useState(false);
+  const [exportacaoAberta, setExportacaoAberta] = useState(false);
   // Histórico de valores hora: alimentado pelo Passo 1 (admin) e usado no
   // Passo 3 — o orçamento mostra o padrão e deixa escolher outro ativo.
   const [histValorHora, setHistValorHora] = useState<ValorHoraSalvo[]>(
@@ -846,6 +847,12 @@ export default function Calculadora({
         .map((o) => ({
           Data: formatData(o.data),
           Cliente: o.nomeCliente,
+          ...(permiteVerCustoPecas
+            ? {
+                Contato: o.contatoCliente ?? "",
+                Origem: o.origem ?? "",
+              }
+            : {}),
           Veículo: o.nomeCarro,
           Placa: o.placa,
           "Valor hora (R$)": o.valorHora,
@@ -862,9 +869,25 @@ export default function Calculadora({
         wb,
         `orcamentos-${new Date().toISOString().slice(0, 10)}.xlsx`,
       );
+      setExportacaoAberta(false);
     } finally {
       setExportando(false);
     }
+  }
+
+  function abrirExportacao() {
+    const agora = new Date();
+    const primeiroDia = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const ultimoDia = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+    const paraInputData = (data: Date) => {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, "0");
+      const dia = String(data.getDate()).padStart(2, "0");
+      return `${ano}-${mes}-${dia}`;
+    };
+    setExpInicio(paraInputData(primeiroDia));
+    setExpFim(paraInputData(ultimoDia));
+    setExportacaoAberta(true);
   }
 
   async function removerOrcamento(id: string) {
@@ -1734,9 +1757,20 @@ export default function Calculadora({
                       ? "orçamento encontrado"
                       : "orçamentos encontrados"}
                   </p>
-                  <button className="btn" onClick={novoOrcamento}>
-                    Novo orçamento
-                  </button>
+                  <div className="calc-hist-top-actions">
+                    {permiteVerCustoPecas && (
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={abrirExportacao}
+                      >
+                        Exportar
+                      </button>
+                    )}
+                    <button type="button" className="btn" onClick={novoOrcamento}>
+                      Novo orçamento
+                    </button>
+                  </div>
                 </div>
                 <div className="grid gap-3 calc-hist-lista">
                   {orcamentosFiltrados.length === 0 && (
@@ -2041,7 +2075,7 @@ export default function Calculadora({
                   ))}
                 </div>
 
-                <div className="calc-card mt-8">
+                {!permiteVerCustoPecas && <div className="calc-card mt-8">
                   <p className="calc-card-kicker">Relatório</p>
                   <h2 className="calc-card-title">Exportar histórico em XLSX</h2>
                   <p className="calc-card-sub">
@@ -2075,7 +2109,7 @@ export default function Calculadora({
                   >
                     {exportando ? "Gerando…" : "Exportar XLSX"}
                   </button>
-                </div>
+                </div>}
               </>
             )}
           </div>
@@ -2394,6 +2428,82 @@ export default function Calculadora({
                     {salvandoAjuste ? "Salvando…" : "Salvar alterações"}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {permiteVerCustoPecas && exportacaoAberta && (
+          <div
+            className="calc-export-overlay"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !exportando) {
+                setExportacaoAberta(false);
+              }
+            }}
+          >
+            <div
+              className="calc-export-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="calc-export-titulo"
+            >
+              <div className="calc-export-cabecalho">
+                <div>
+                  <p className="calc-card-kicker">Histórico</p>
+                  <h2 id="calc-export-titulo">Exportar XLSX</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExportacaoAberta(false)}
+                  disabled={exportando}
+                  aria-label="Fechar exportação"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="calc-card-sub">
+                Escolha o período que deseja incluir na planilha.
+              </p>
+              <div className="calc-grid-2 mt-5">
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">De</span>
+                  <input
+                    type="date"
+                    className="quiz-input"
+                    value={expInicio}
+                    max={expFim || undefined}
+                    onChange={(e) => setExpInicio(e.target.value)}
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="quiz-label">Até</span>
+                  <input
+                    type="date"
+                    className="quiz-input"
+                    value={expFim}
+                    min={expInicio || undefined}
+                    onChange={(e) => setExpFim(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="calc-export-acoes">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => setExportacaoAberta(false)}
+                  disabled={exportando}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={exportarXlsx}
+                  disabled={exportando || !expInicio || !expFim || expInicio > expFim}
+                >
+                  {exportando ? "Gerando…" : "Exportar XLSX"}
+                </button>
               </div>
             </div>
           </div>
