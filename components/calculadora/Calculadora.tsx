@@ -126,6 +126,7 @@ export default function Calculadora({
   nomeEmpresa,
   permiteEditarOrcamentos,
   historicoCompacto,
+  permiteVerCustoPecas,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -147,6 +148,8 @@ export default function Calculadora({
   permiteEditarOrcamentos: boolean;
   /** Visual resumido e expansível do histórico. */
   historicoCompacto: boolean;
+  /** Acesso restrito ao detalhamento interno de custo das peças. */
+  permiteVerCustoPecas: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -188,6 +191,7 @@ export default function Calculadora({
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
   const [orcamentoAbertoId, setOrcamentoAbertoId] = useState("");
+  const [detalheCustoId, setDetalheCustoId] = useState("");
   const [ajusteRapido, setAjusteRapido] =
     useState<OrcamentoAjusteRapido | null>(null);
   const [salvandoAjuste, setSalvandoAjuste] = useState(false);
@@ -1751,6 +1755,56 @@ export default function Calculadora({
                           <b>{brl(o.total)}</b>
                         </span>
                       </div>
+                      {permiteVerCustoPecas && detalheCustoId === o.id && (
+                        <div className="calc-hist-custos">
+                          <span className="calc-hist-custos-titulo">
+                            Detalhe interno das peças
+                          </span>
+                          {(o.pecas ?? []).map((peca, index) => {
+                            const quantidade = Math.max(
+                              1,
+                              Number(peca.quantidade) || 1,
+                            );
+                            const temCusto =
+                              peca.custo != null &&
+                              Number.isFinite(Number(peca.custo));
+                            const custoTotal = temCusto
+                              ? Number(peca.custo) * quantidade
+                              : null;
+                            return (
+                              <div
+                                className="calc-hist-custo-item"
+                                key={`${o.id}-${index}`}
+                              >
+                                <div>
+                                  <b>{peca.nome || "Peça"}</b>
+                                  <small>Qtd. {quantidade}</small>
+                                </div>
+                                <span>
+                                  <i>Custo sem markup</i>
+                                  <b>
+                                    {custoTotal != null
+                                      ? brl(custoTotal)
+                                      : "Não registrado"}
+                                  </b>
+                                </span>
+                                <span>
+                                  <i>Markup aplicado</i>
+                                  <b>
+                                    {peca.markup != null
+                                      ? `${peca.markup}%`
+                                      : "Não registrado"}
+                                  </b>
+                                </span>
+                                <strong>
+                                  <i>Valor final</i>
+                                  <b>{brl(Number(peca.valor) || 0)}</b>
+                                </strong>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className={`calc-hist-controls ${historicoCompacto ? "is-compacto" : ""}`}>
                         {!historicoCompacto && <select
                           className={`calc-hist-status ${
@@ -1777,6 +1831,22 @@ export default function Calculadora({
                           <option value="Não aprovado">Não aprovado</option>
                         </select>}
                         <div className="calc-hist-actions">
+                          {permiteVerCustoPecas && (
+                            <button
+                              type="button"
+                              className="calc-hist-wa calc-hist-detail"
+                              onClick={() =>
+                                setDetalheCustoId((atual) =>
+                                  atual === o.id ? "" : o.id,
+                                )
+                              }
+                              aria-expanded={detalheCustoId === o.id}
+                            >
+                              {detalheCustoId === o.id
+                                ? "Fechar detalhe"
+                                : "Detalhe"}
+                            </button>
+                          )}
                           <button
                             className="calc-hist-wa calc-hist-copy"
                             onClick={() => copiarOrcamentoHistorico(o)}
