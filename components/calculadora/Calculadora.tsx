@@ -29,6 +29,7 @@ import {
   tiersFromMarkups,
   type MarkupTier,
   type Orcamento,
+  type PecaCatalogo,
   type Passo1Dados,
   type Passo2ConfigDados,
   type Peca,
@@ -90,6 +91,15 @@ function inicioDaSemana(agora: Date): Date {
   return d;
 }
 
+function normalizarNomeCatalogo(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
 export default function Calculadora({
   papel,
   empresaId,
@@ -101,6 +111,8 @@ export default function Calculadora({
   nomeEmpresa,
   permiteEditarOrcamentos,
   historicoCompacto,
+  catalogoPecasInicial,
+  permiteCatalogoPecas,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -122,6 +134,10 @@ export default function Calculadora({
   permiteEditarOrcamentos: boolean;
   /** Visual resumido e expansível do histórico, em teste no login principal. */
   historicoCompacto: boolean;
+  /** Catálogo de nomes e custos disponível no piloto. */
+  catalogoPecasInicial: PecaCatalogo[];
+  /** Gate do catálogo no login principal do Diego. */
+  permiteCatalogoPecas: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -135,6 +151,8 @@ export default function Calculadora({
   // Passo #02 — markup por faixa: vem do banco (calc_config), qualquer
   // membro lê/edita e reutiliza os valores que a empresa definiu.
   const [pecas, setPecas] = useState<Peca[]>([]);
+  const [catalogoPecas, setCatalogoPecas] =
+    useState<PecaCatalogo[]>(catalogoPecasInicial);
   const [expandedId, setExpandedId] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tiers, setTiers] = useState<MarkupTier[]>(() =>
@@ -408,6 +426,35 @@ export default function Calculadora({
     );
   }
 
+  function alterarNomePeca(id: string, nome: string) {
+    const cadastrada = permiteCatalogoPecas
+      ? catalogoPecas.find(
+          (peca) =>
+            normalizarNomeCatalogo(peca.nome) ===
+            normalizarNomeCatalogo(nome),
+        )
+      : undefined;
+    setPecas((prev) =>
+      prev.map((peca) =>
+        peca.id === id
+          ? {
+              ...peca,
+              nome,
+              ...(cadastrada
+                ? {
+                    nome: cadastrada.nome,
+                    custo: cadastrada.custo.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }),
+                  }
+                : {}),
+            }
+          : peca,
+      ),
+    );
+  }
+
   function setPecaMarkup(id: string, value: number) {
     const clamped = Math.max(MARKUP_MIN, Math.min(MARKUP_MAX, value));
     setPecas((prev) =>
@@ -500,6 +547,27 @@ export default function Calculadora({
   async function salvarOrcamento() {
     setSalvandoOrcamento(true);
     setErroOrcamento("");
+    const catalogoAtualizacoes: { nome: string; custo: number }[] = [];
+    if (permiteCatalogoPecas) {
+      for (const peca of pecasValidas) {
+        const nome = peca.nome.trim();
+        const custo = parseNum(peca.custo);
+        if (!nome || custo <= 0) continue;
+        const cadastrada = catalogoPecas.find(
+          (item) =>
+            normalizarNomeCatalogo(item.nome) ===
+            normalizarNomeCatalogo(nome),
+        );
+        if (!cadastrada) {
+          catalogoAtualizacoes.push({ nome, custo });
+        } else if (Math.abs(cadastrada.custo - custo) >= 0.01) {
+          const atualizar = window.confirm(
+            `"${cadastrada.nome}" está cadastrada por ${brl(cadastrada.custo)}. Atualizar para ${brl(custo)}?`,
+          );
+          if (atualizar) catalogoAtualizacoes.push({ nome, custo });
+        }
+      }
+    }
     const dados = {
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
@@ -510,6 +578,7 @@ export default function Calculadora({
       pecas: pecasResumo(),
       valorPeca: pecasTotal,
       total: totalOrcamento,
+      catalogoAtualizacoes,
     };
     try {
       const resultado = await criarOrcamento(empresaId, dados);
@@ -518,6 +587,19 @@ export default function Calculadora({
         return;
       }
       setOrcamentos((prev) => [resultado.orcamento, ...prev]);
+      if (resultado.catalogoAtualizado?.length) {
+        setCatalogoPecas((atual) => {
+          const porNome = new Map(
+            atual.map((peca) => [normalizarNomeCatalogo(peca.nome), peca]),
+          );
+          for (const peca of resultado.catalogoAtualizado ?? []) {
+            porNome.set(normalizarNomeCatalogo(peca.nome), peca);
+          }
+          return Array.from(porNome.values()).sort((a, b) =>
+            a.nome.localeCompare(b.nome, "pt-BR"),
+          );
+        });
+      }
       setJustSaved(true);
       window.setTimeout(() => setJustSaved(false), 2600);
     } catch {
@@ -954,10 +1036,32 @@ export default function Calculadora({
                                     className="quiz-input"
                                     placeholder="ex.: Pastilha de freio"
                                     value={p.nome}
+                                    list={
+                                      permiteCatalogoPecas
+                                        ? `catalogo-pecas-${p.id}`
+                                        : undefined
+                                    }
                                     onChange={(e) =>
-                                      setPecaField(p.id, "nome", e.target.value)
+                                      alterarNomePeca(p.id, e.target.value)
                                     }
                                   />
+                                  {permiteCatalogoPecas && (
+                                    <>
+                                      <datalist id={`catalogo-pecas-${p.id}`}>
+                                        {catalogoPecas.map((peca) => (
+                                          <option
+                                            key={peca.id}
+                                            value={peca.nome}
+                                          >
+                                            {brl(peca.custo)}
+                                          </option>
+                                        ))}
+                                      </datalist>
+                                      <small className="calc-catalogo-hint">
+                                        Digite para buscar uma peça já cadastrada.
+                                      </small>
+                                    </>
+                                  )}
                                 </label>
                                 <label className="grid gap-1.5 calc-qtd">
                                   <span className="quiz-label">Qtd.</span>

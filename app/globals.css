@@ -558,6 +558,7 @@ a:focus-visible, button:focus-visible {
   .calc-card-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(21px, 3vw, 28px); margin-top: 6px; }
   .calc-card-sub { color: var(--color-muted); font-size: 14.5px; margin-top: 8px; }
   .calc-edit-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--color-muted-dim); }
+  .calc-catalogo-hint { color: var(--color-muted-dim); font-size: 11px; line-height: 1.3; }
 
   /* ---------- grades de campos ---------- */
   .calc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }

@@ -17,6 +17,7 @@ import {
   parseNum,
   somaCustos,
   type Orcamento,
+  type PecaCatalogo,
   type PecaResumo,
   type Passo1Dados,
   type Passo2ConfigDados,
@@ -242,7 +243,11 @@ const SELECT_ORCAMENTO =
   "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
 
 export type ResultadoCriarOrcamento =
-  | { ok: true; orcamento: Orcamento }
+  | {
+      ok: true;
+      orcamento: Orcamento;
+      catalogoAtualizado?: PecaCatalogo[];
+    }
   | { ok: false; error: string };
 
 type DadosOrcamento = {
@@ -255,7 +260,17 @@ type DadosOrcamento = {
   pecas: PecaResumo[];
   valorPeca: number;
   total: number;
+  catalogoAtualizacoes?: { nome: string; custo: number }[];
 };
+
+function normalizarNomePeca(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
 
 /**
  * Cria um orçamento no histórico da empresa, sempre com status inicial
@@ -304,7 +319,61 @@ export async function criarOrcamento(
     return { ok: false, error: ERRO_GENERICO };
   }
 
-  return { ok: true, orcamento: paraOrcamento(data) };
+  let catalogoAtualizado: PecaCatalogo[] | undefined;
+  if (
+    sessao?.email === "diegomensor@hotmail.com" &&
+    dados.catalogoAtualizacoes?.length
+  ) {
+    const atualizacoesSanitizadas = dados.catalogoAtualizacoes
+      .slice(0, MAX_PECAS)
+      .map((peca) => ({
+        empresa_id: empresaId,
+        nome: String(peca.nome ?? "").trim().slice(0, MAX_CHARS_NOME),
+        nome_normalizado: normalizarNomePeca(String(peca.nome ?? "")),
+        custo: limitarNumero(peca.custo, MAX_VALOR),
+      }))
+      .filter(
+        (peca) =>
+          peca.nome &&
+          peca.nome_normalizado &&
+          peca.custo > 0,
+      );
+    const atualizacoes = Array.from(
+      new Map(
+        atualizacoesSanitizadas.map((peca) => [
+          peca.nome_normalizado,
+          peca,
+        ]),
+      ).values(),
+    );
+
+    if (atualizacoes.length > 0) {
+      const { data: catalogo, error: erroCatalogo } = await admin
+        .from("pecas_catalogo")
+        .upsert(atualizacoes, {
+          onConflict: "empresa_id,nome_normalizado",
+        })
+        .select("id, nome, custo");
+      if (erroCatalogo) {
+        console.error(
+          "criarOrcamento: orçamento salvo, mas falhou ao atualizar catálogo:",
+          erroCatalogo.message,
+        );
+      } else {
+        catalogoAtualizado = (catalogo ?? []).map((peca) => ({
+          id: peca.id,
+          nome: peca.nome,
+          custo: Number(peca.custo),
+        }));
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    orcamento: paraOrcamento(data),
+    catalogoAtualizado,
+  };
 }
 
 /**
