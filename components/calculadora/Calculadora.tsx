@@ -1583,45 +1583,55 @@ export default function Calculadora({
               </div>
             ) : (
               <>
-                <div className="calc-totais">
-                  <div className="calc-totais-item calc-totais-item--pendente">
-                    <span className="calc-totais-k">Total pendente</span>
-                    <span className="calc-totais-v">{brl(totalPendente)}</span>
+                <div className={permiteVerCustoPecas ? "calc-dashboard-metricas" : ""}>
+                  {permiteVerCustoPecas && (
+                    <div className="calc-dashboard-cabecalho">
+                      <div>
+                        <span>Visão geral</span>
+                        <small>Resumo dos resultados filtrados</small>
+                      </div>
+                    </div>
+                  )}
+                  <div className="calc-totais">
+                    <div className="calc-totais-item calc-totais-item--pendente">
+                      <span className="calc-totais-k">Total pendente</span>
+                      <span className="calc-totais-v">{brl(totalPendente)}</span>
+                    </div>
+                    <div className="calc-totais-item calc-totais-item--aprovado">
+                      <span className="calc-totais-k">Total aprovado</span>
+                      <span className="calc-totais-v">{brl(totalAprovado)}</span>
+                    </div>
+                    <div className="calc-totais-item calc-totais-item--reprovado">
+                      <span className="calc-totais-k">Total não aprovado</span>
+                      <span className="calc-totais-v">{brl(totalReprovado)}</span>
+                    </div>
                   </div>
-                  <div className="calc-totais-item calc-totais-item--aprovado">
-                    <span className="calc-totais-k">Total aprovado</span>
-                    <span className="calc-totais-v">{brl(totalAprovado)}</span>
-                  </div>
-                  <div className="calc-totais-item calc-totais-item--reprovado">
-                    <span className="calc-totais-k">Total não aprovado</span>
-                    <span className="calc-totais-v">{brl(totalReprovado)}</span>
-                  </div>
+                  {permiteVerCustoPecas && (
+                    <div className="calc-origens">
+                      <div className="calc-origens-cabecalho">
+                        <span>Origem de clientes</span>
+                        <small>Quantidade por canal</small>
+                      </div>
+                      <div className="calc-origens-grid">
+                        <div>
+                          <i>☎</i>
+                          <span>Ligação</span>
+                          <b>{saldoOrigens.ligacao}</b>
+                        </div>
+                        <div>
+                          <i>◉</i>
+                          <span>WhatsApp</span>
+                          <b>{saldoOrigens.whatsapp}</b>
+                        </div>
+                        <div>
+                          <i>●</i>
+                          <span>Pessoalmente</span>
+                          <b>{saldoOrigens.pessoalmente}</b>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {permiteVerCustoPecas && (
-                  <div className="calc-origens">
-                    <div className="calc-origens-cabecalho">
-                      <span>Origem de clientes</span>
-                      <small>Clientes nos resultados filtrados</small>
-                    </div>
-                    <div className="calc-origens-grid">
-                      <div>
-                        <i>☎</i>
-                        <span>Ligação</span>
-                        <b>{saldoOrigens.ligacao}</b>
-                      </div>
-                      <div>
-                        <i>◉</i>
-                        <span>WhatsApp</span>
-                        <b>{saldoOrigens.whatsapp}</b>
-                      </div>
-                      <div>
-                        <i>●</i>
-                        <span>Pessoalmente</span>
-                        <b>{saldoOrigens.pessoalmente}</b>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="calc-hist-filtros">
                   <div className="calc-filtro-grupo" role="group" aria-label="Filtrar por período">
