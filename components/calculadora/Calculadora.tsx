@@ -1664,14 +1664,24 @@ export default function Calculadora({
                     >
                       {historicoCompacto ? (
                         <div className="calc-hist-resumo">
-                          <button
-                            type="button"
+                          <div
                             className="calc-hist-resumo-toggle"
                             onClick={() =>
                               setOrcamentoAbertoId((atual) =>
                                 atual === o.id ? "" : o.id,
                               )
                             }
+                            onKeyDown={(e) => {
+                              if (e.target !== e.currentTarget) return;
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setOrcamentoAbertoId((atual) =>
+                                  atual === o.id ? "" : o.id,
+                                );
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
                             aria-expanded={orcamentoAbertoId === o.id}
                             aria-controls={`orcamento-detalhes-${o.id}`}
                           >
@@ -1681,7 +1691,23 @@ export default function Calculadora({
                                 {o.nomeCliente || o.nomeCarro}
                               </span>
                               {o.placa && (
-                                <span className="calc-hist-placa">{o.placa}</span>
+                                <>
+                                  <span className="calc-hist-placa">{o.placa}</span>
+                                  <button
+                                    type="button"
+                                    className="calc-hist-placa-copy"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copiarPlacaHistorico(o);
+                                    }}
+                                    aria-label={`Copiar placa ${o.placa}`}
+                                    title="Copiar placa"
+                                  >
+                                    {placaCopiadaId === o.id
+                                      ? "✓"
+                                      : "Copiar"}
+                                  </button>
+                                </>
                               )}
                             </span>
                             <span className="calc-hist-date">
@@ -1689,21 +1715,8 @@ export default function Calculadora({
                               {formatData(o.data)}
                             </span>
                             </span>
-                          </button>
+                          </div>
                           <span className="calc-hist-resumo-meta">
-                            {o.placa && (
-                              <button
-                                type="button"
-                                className="calc-hist-placa-copy"
-                                onClick={() => copiarPlacaHistorico(o)}
-                                aria-label={`Copiar placa ${o.placa}`}
-                                title="Copiar placa"
-                              >
-                                {placaCopiadaId === o.id
-                                  ? "✓ Copiada"
-                                  : "Copiar placa"}
-                              </button>
-                            )}
                             <select
                               className={`calc-hist-status calc-hist-status--compacto ${
                                 o.status === "Aprovado"
