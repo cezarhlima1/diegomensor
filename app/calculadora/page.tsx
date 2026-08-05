@@ -36,8 +36,27 @@ export default async function CalculadoraPage() {
   // página revalida (cobre também usuário autenticado sem empresa).
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
-  const permiteVerCustoPecas =
+  let permiteVerCustoPecas =
     EMAILS_COM_RECURSOS_EXCLUSIVOS.has(sessao.email);
+
+  // Os recursos também são liberados para os funcionários das empresas
+  // administradas por uma das duas contas exclusivas. A consulta usa RLS:
+  // o usuário atual só consegue enxergar membros da própria empresa.
+  if (!permiteVerCustoPecas) {
+    const supabase = await createSupabaseServerClient();
+    const { data: administradores } = await supabase
+      .from("empresa_usuarios")
+      .select("papel, profiles ( email )")
+      .eq("empresa_id", sessao.empresaAtiva.id)
+      .eq("papel", "admin");
+
+    permiteVerCustoPecas = (administradores ?? []).some((vinculo) => {
+      const perfil = vinculo.profiles as unknown as { email?: string } | null;
+      return EMAILS_COM_RECURSOS_EXCLUSIVOS.has(
+        perfil?.email?.trim().toLowerCase() ?? "",
+      );
+    });
+  }
 
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
   // funcionário nem a query acontece, então os dados nunca saem do servidor
