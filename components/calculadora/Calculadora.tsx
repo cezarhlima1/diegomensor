@@ -190,6 +190,7 @@ export default function Calculadora({
   const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
+  const [placaCopiadaId, setPlacaCopiadaId] = useState("");
   const [orcamentoAbertoId, setOrcamentoAbertoId] = useState("");
   const [detalheCustoId, setDetalheCustoId] = useState("");
   const [ajusteRapido, setAjusteRapido] =
@@ -790,6 +791,20 @@ export default function Calculadora({
       );
     } catch {
       // clipboard indisponível: ignora
+    }
+  }
+
+  async function copiarPlacaHistorico(o: Orcamento) {
+    if (!o.placa) return;
+    try {
+      await navigator.clipboard.writeText(o.placa);
+      setPlacaCopiadaId(o.id);
+      window.setTimeout(
+        () => setPlacaCopiadaId((atual) => (atual === o.id ? "" : atual)),
+        1800,
+      );
+    } catch {
+      // Clipboard indisponível: mantém a lista sem alterações.
     }
   }
 
@@ -1676,6 +1691,19 @@ export default function Calculadora({
                             </span>
                           </button>
                           <span className="calc-hist-resumo-meta">
+                            {o.placa && (
+                              <button
+                                type="button"
+                                className="calc-hist-placa-copy"
+                                onClick={() => copiarPlacaHistorico(o)}
+                                aria-label={`Copiar placa ${o.placa}`}
+                                title="Copiar placa"
+                              >
+                                {placaCopiadaId === o.id
+                                  ? "✓ Copiada"
+                                  : "Copiar placa"}
+                              </button>
+                            )}
                             <select
                               className={`calc-hist-status calc-hist-status--compacto ${
                                 o.status === "Aprovado"

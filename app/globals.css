@@ -772,6 +772,15 @@ a:focus-visible, button:focus-visible {
     min-width: 90px; color: var(--color-brand-green); font-family: var(--font-mono);
     font-size: 14px; text-align: right; font-variant-numeric: tabular-nums;
   }
+  .calc-hist-placa-copy {
+    flex: none; padding: 6px 9px; border: 1px solid rgba(4,149,240,.28);
+    border-radius: 7px; background: rgba(4,149,240,.07); color: var(--color-blue);
+    font-family: var(--font-mono); font-size: 8.5px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
+  }
+  .calc-hist-placa-copy:hover {
+    border-color: rgba(4,149,240,.5); background: rgba(4,149,240,.13);
+  }
   .calc-hist-resumo-status {
     padding: 5px 9px; border-radius: 100px; font-family: var(--font-mono);
     font-size: 9px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
@@ -810,6 +819,7 @@ a:focus-visible, button:focus-visible {
     .calc-hist-actions .calc-hist-del { width: 100%; }
     .calc-hist-resumo { align-items: flex-start; padding: 13px 14px; gap: 10px; }
     .calc-hist-resumo-meta { display: grid; grid-template-columns: auto auto; gap: 7px 8px; }
+    .calc-hist-placa-copy { grid-column: 1 / -1; justify-self: end; }
     .calc-hist-status--compacto { grid-column: 1 / -1; justify-self: end; width: auto; max-width: 155px; }
     .calc-hist-resumo-meta > strong { min-width: 0; }
     .calc-hist-detalhes { padding: 0 14px 14px; }
