@@ -715,6 +715,30 @@ a:focus-visible, button:focus-visible {
   .calc-hist-total b { color: var(--color-brand-green); font-weight: 700; }
   .calc-hist-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--color-line); }
   .calc-hist-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .calc-hist--compacto { gap: 0; padding: 0; overflow: hidden; }
+  .calc-hist-resumo {
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    width: 100%; padding: 14px 16px; border: 0; background: none; color: inherit;
+    text-align: left; cursor: pointer;
+  }
+  .calc-hist-resumo:hover { background: rgba(4,149,240,.035); }
+  .calc-hist-resumo .calc-hist-main { flex: 1; padding: 0; }
+  .calc-hist-resumo-meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex: none; }
+  .calc-hist-resumo-meta > strong {
+    min-width: 90px; color: var(--color-brand-green); font-family: var(--font-mono);
+    font-size: 14px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .calc-hist-resumo-status {
+    padding: 5px 9px; border-radius: 100px; font-family: var(--font-mono);
+    font-size: 9px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  }
+  .calc-hist-resumo-status.is-pendente { color: var(--color-amber); background: rgba(245,166,35,.1); }
+  .calc-hist-resumo-status.is-aprovado { color: var(--color-brand-green); background: rgba(47,210,122,.1); }
+  .calc-hist-resumo-status.is-reprovado { color: var(--color-brand-red); background: rgba(240,88,76,.1); }
+  .calc-hist-chevron { color: var(--color-muted); font-size: 16px; transition: transform .2s ease; }
+  .calc-hist-chevron.is-open { transform: rotate(180deg); }
+  .calc-hist-detalhes { display: grid; gap: 14px; padding: 0 16px 16px; border-top: 1px solid var(--color-line); }
+  .calc-hist-detalhes .calc-hist-vals { margin-top: 14px; }
   .calc-hist-status { flex: none; appearance: none; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 100px; padding: 7px 13px; border: 1px solid transparent; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
   .calc-hist-status--pendente { color: var(--color-amber); background: rgba(245,166,35,.1); border-color: rgba(245,166,35,.32); }
   .calc-hist-status--pendente:hover:not(:disabled) { background: rgba(245,166,35,.18); border-color: rgba(245,166,35,.55); }
@@ -735,6 +759,11 @@ a:focus-visible, button:focus-visible {
     .calc-hist-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .calc-hist-actions .calc-hist-wa { width: 100%; }
     .calc-hist-actions .calc-hist-del { width: 100%; }
+    .calc-hist-resumo { align-items: flex-start; padding: 13px 14px; }
+    .calc-hist-resumo-meta { display: grid; grid-template-columns: auto auto; gap: 7px 10px; }
+    .calc-hist-resumo-status { grid-column: 1 / -1; justify-self: end; }
+    .calc-hist-resumo-meta > strong { min-width: 0; }
+    .calc-hist-detalhes { padding: 0 14px 14px; }
   }
 
   /* ---------- histórico: totais por status ---------- */

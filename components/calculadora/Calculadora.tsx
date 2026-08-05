@@ -100,6 +100,7 @@ export default function Calculadora({
   valorHoraHistoricoInicial,
   nomeEmpresa,
   permiteEditarOrcamentos,
+  historicoCompacto,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -119,6 +120,8 @@ export default function Calculadora({
   nomeEmpresa: string;
   /** Liberação piloto para alterar orçamentos já persistidos. */
   permiteEditarOrcamentos: boolean;
+  /** Visual resumido e expansível do histórico, em teste no login principal. */
+  historicoCompacto: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -159,6 +162,7 @@ export default function Calculadora({
   const [filtroStatus, setFiltroStatus] = useState<"" | StatusOrcamento>("");
   const [busca, setBusca] = useState("");
   const [copiadoId, setCopiadoId] = useState("");
+  const [orcamentoAbertoId, setOrcamentoAbertoId] = useState("");
   const [ajusteRapido, setAjusteRapido] =
     useState<OrcamentoAjusteRapido | null>(null);
   const [salvandoAjuste, setSalvandoAjuste] = useState(false);
@@ -1552,22 +1556,81 @@ export default function Calculadora({
                     </p>
                   )}
                   {orcamentosFiltrados.map((o) => (
-                    <div key={o.id} className="calc-hist">
-                      <div className="calc-hist-main">
-                        <span className="calc-hist-name">
-                          <span className="calc-hist-name-text">
-                            {o.nomeCliente || o.nomeCarro}
+                    <div
+                      key={o.id}
+                      className={`calc-hist ${historicoCompacto ? "calc-hist--compacto" : ""}`}
+                    >
+                      {historicoCompacto ? (
+                        <button
+                          type="button"
+                          className="calc-hist-resumo"
+                          onClick={() =>
+                            setOrcamentoAbertoId((atual) =>
+                              atual === o.id ? "" : o.id,
+                            )
+                          }
+                          aria-expanded={orcamentoAbertoId === o.id}
+                          aria-controls={`orcamento-detalhes-${o.id}`}
+                        >
+                          <span className="calc-hist-main">
+                            <span className="calc-hist-name">
+                              <span className="calc-hist-name-text">
+                                {o.nomeCliente || o.nomeCarro}
+                              </span>
+                              {o.placa && (
+                                <span className="calc-hist-placa">{o.placa}</span>
+                              )}
+                            </span>
+                            <span className="calc-hist-date">
+                              {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
+                              {formatData(o.data)}
+                            </span>
                           </span>
-                          {o.placa && (
-                            <span className="calc-hist-placa">{o.placa}</span>
-                          )}
-                        </span>
-                        <span className="calc-hist-date">
-                          {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
-                          {formatData(o.data)}
-                        </span>
-                      </div>
-                      <div className="calc-hist-vals">
+                          <span className="calc-hist-resumo-meta">
+                            <span
+                              className={`calc-hist-resumo-status ${
+                                o.status === "Aprovado"
+                                  ? "is-aprovado"
+                                  : o.status === "Não aprovado"
+                                    ? "is-reprovado"
+                                    : "is-pendente"
+                              }`}
+                            >
+                              {o.status}
+                            </span>
+                            <strong>{brl(o.total)}</strong>
+                            <span
+                              className={`calc-hist-chevron ${
+                                orcamentoAbertoId === o.id ? "is-open" : ""
+                              }`}
+                              aria-hidden="true"
+                            >
+                              ▾
+                            </span>
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="calc-hist-main">
+                          <span className="calc-hist-name">
+                            <span className="calc-hist-name-text">
+                              {o.nomeCliente || o.nomeCarro}
+                            </span>
+                            {o.placa && (
+                              <span className="calc-hist-placa">{o.placa}</span>
+                            )}
+                          </span>
+                          <span className="calc-hist-date">
+                            {o.nomeCliente ? `${o.nomeCarro} · ` : ""}
+                            {formatData(o.data)}
+                          </span>
+                        </div>
+                      )}
+                      {(!historicoCompacto || orcamentoAbertoId === o.id) && (
+                        <div
+                          id={`orcamento-detalhes-${o.id}`}
+                          className="calc-hist-detalhes"
+                        >
+                          <div className="calc-hist-vals">
                         <span className="calc-hist-valor">
                           <i>Mão de obra</i>
                           <b>{brl(o.maoDeObra ?? o.valorHora ?? 0)}</b>
@@ -1639,6 +1702,8 @@ export default function Calculadora({
                           </button>
                         </div>
                       </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
