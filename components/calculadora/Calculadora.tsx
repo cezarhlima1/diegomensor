@@ -29,6 +29,7 @@ import {
   tiersFromMarkups,
   type MarkupTier,
   type Orcamento,
+  type OrigemCliente,
   type Passo1Dados,
   type Passo2ConfigDados,
   type Peca,
@@ -79,6 +80,8 @@ type OrcamentoAjusteRapido = {
   nomeCliente: string;
   nomeCarro: string;
   placa: string;
+  contatoCliente: string;
+  origem: OrigemCliente | "";
   valorHora: number;
   pecas: PecaAjusteRapido[];
 };
@@ -173,6 +176,8 @@ export default function Calculadora({
   const [nomeCliente, setNomeCliente] = useState("");
   const [nomeCarro, setNomeCarro] = useState("");
   const [placa, setPlaca] = useState("");
+  const [contatoCliente, setContatoCliente] = useState("");
+  const [origem, setOrigem] = useState<OrigemCliente | "">("");
   const [sufixoOrcamento, setSufixoOrcamento] = useState(
     passo2ConfigInicial?.sufixoOrcamento ?? DEFAULT_SUFIXO_ORCAMENTO,
   );
@@ -381,6 +386,14 @@ export default function Calculadora({
         .reduce((acc, o) => acc + o.total, 0),
     [orcamentosFiltrados],
   );
+  const saldoOrigens = useMemo(
+    () => ({
+      ligacao: orcamentosFiltrados.filter((o) => o.origem === "Ligação").length,
+      whatsapp: orcamentosFiltrados.filter((o) => o.origem === "WhatsApp").length,
+      pessoalmente: orcamentosFiltrados.filter((o) => o.origem === "Pessoalmente").length,
+    }),
+    [orcamentosFiltrados],
+  );
   const totaisAjusteRapido = useMemo(() => {
     if (!ajusteRapido) return { pecas: 0, maoDeObra: 0, total: 0 };
     const totalPecas = ajusteRapido.pecas.reduce(
@@ -413,6 +426,8 @@ export default function Calculadora({
     setNomeCliente("");
     setNomeCarro("");
     setPlaca("");
+    setContatoCliente("");
+    setOrigem("");
     clearInputs(empresaId);
   }
 
@@ -534,6 +549,8 @@ export default function Calculadora({
       nomeCliente: nomeCliente.trim(),
       nomeCarro: nomeCarro.trim() || "Sem nome",
       placa: placa.trim(),
+      contatoCliente,
+      origem: origem || null,
       valorHora: valorHoraOrcamento,
       horas: pecasValidas.reduce((acc, p) => acc + parseNum(p.horas), 0),
       maoDeObra: maoDeObraTotal,
@@ -563,6 +580,8 @@ export default function Calculadora({
     setNomeCliente("");
     setNomeCarro("");
     setPlaca("");
+    setContatoCliente("");
+    setOrigem("");
     setPecas([p]);
     setExpandedId(p.id);
     setSelectedIds(new Set());
@@ -611,6 +630,8 @@ export default function Calculadora({
       nomeCliente: o.nomeCliente,
       nomeCarro: o.nomeCarro,
       placa: o.placa,
+      contatoCliente: o.contatoCliente ?? "",
+      origem: o.origem ?? "",
       valorHora: o.valorHora,
       pecas: pecasRecuperadas,
     });
@@ -618,7 +639,7 @@ export default function Calculadora({
   }
 
   function atualizarAjusteRapido(
-    campo: "nomeCliente" | "nomeCarro" | "placa",
+    campo: "nomeCliente" | "nomeCarro" | "placa" | "contatoCliente" | "origem",
     valor: string,
   ) {
     setAjusteRapido((atual) =>
@@ -711,6 +732,8 @@ export default function Calculadora({
           nomeCliente: ajusteRapido.nomeCliente,
           nomeCarro: ajusteRapido.nomeCarro,
           placa: ajusteRapido.placa,
+          contatoCliente: ajusteRapido.contatoCliente,
+          origem: ajusteRapido.origem || null,
           valorHora: ajusteRapido.valorHora,
           horas,
           maoDeObra,
@@ -1257,6 +1280,38 @@ export default function Calculadora({
                       </label>
                     </div>
 
+                    {permiteVerCustoPecas && (
+                      <div className="calc-grid-2 calc-campos-teste">
+                        <label className="grid gap-1.5">
+                          <span className="quiz-label">Contato</span>
+                          <input
+                            type="tel"
+                            inputMode="tel"
+                            className="quiz-input"
+                            placeholder="ex.: (51) 99999-9999"
+                            value={contatoCliente}
+                            maxLength={30}
+                            onChange={(e) => setContatoCliente(e.target.value)}
+                          />
+                        </label>
+                        <label className="grid gap-1.5">
+                          <span className="quiz-label">Origem</span>
+                          <select
+                            className="quiz-input"
+                            value={origem}
+                            onChange={(e) =>
+                              setOrigem(e.target.value as OrigemCliente | "")
+                            }
+                          >
+                            <option value="">Selecione a origem</option>
+                            <option value="Ligação">Ligação</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Pessoalmente">Pessoalmente</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+
                     <div className="calc-grid-2">
                       <label className="grid gap-1.5">
                         <span className="quiz-label">Placa do veículo</span>
@@ -1542,6 +1597,31 @@ export default function Calculadora({
                     <span className="calc-totais-v">{brl(totalReprovado)}</span>
                   </div>
                 </div>
+                {permiteVerCustoPecas && (
+                  <div className="calc-origens">
+                    <div className="calc-origens-cabecalho">
+                      <span>Saldo de origem</span>
+                      <small>Clientes nos resultados filtrados</small>
+                    </div>
+                    <div className="calc-origens-grid">
+                      <div>
+                        <i>☎</i>
+                        <span>Ligação</span>
+                        <b>{saldoOrigens.ligacao}</b>
+                      </div>
+                      <div>
+                        <i>◉</i>
+                        <span>WhatsApp</span>
+                        <b>{saldoOrigens.whatsapp}</b>
+                      </div>
+                      <div>
+                        <i>●</i>
+                        <span>Pessoalmente</span>
+                        <b>{saldoOrigens.pessoalmente}</b>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="calc-hist-filtros">
                   <div className="calc-filtro-grupo" role="group" aria-label="Filtrar por período">
@@ -1717,6 +1797,11 @@ export default function Calculadora({
                             </span>
                           </div>
                           <span className="calc-hist-resumo-meta">
+                            {permiteVerCustoPecas && o.origem && (
+                              <span className="calc-hist-origem-tag">
+                                {o.origem}
+                              </span>
+                            )}
                             <select
                               className={`calc-hist-status calc-hist-status--compacto ${
                                 o.status === "Aprovado"
@@ -1782,7 +1867,7 @@ export default function Calculadora({
                           id={`orcamento-detalhes-${o.id}`}
                           className="calc-hist-detalhes"
                         >
-                          <div className="calc-hist-vals">
+                      <div className="calc-hist-vals">
                         <span className="calc-hist-valor">
                           <i>Mão de obra</i>
                           <b>{brl(o.maoDeObra ?? o.valorHora ?? 0)}</b>
@@ -1796,6 +1881,19 @@ export default function Calculadora({
                           <b>{brl(o.total)}</b>
                         </span>
                       </div>
+                      {permiteVerCustoPecas &&
+                        (o.contatoCliente || o.origem) && (
+                          <div className="calc-hist-cliente-extra">
+                            <span>
+                              <i>Contato</i>
+                              <b>{o.contatoCliente || "Não informado"}</b>
+                            </span>
+                            <span>
+                              <i>Origem</i>
+                              <b>{o.origem || "Não informada"}</b>
+                            </span>
+                          </div>
+                        )}
                       {permiteVerCustoPecas && detalheCustoId === o.id && (
                         <div className="calc-hist-custos">
                           <span className="calc-hist-custos-titulo">
@@ -2011,6 +2109,40 @@ export default function Calculadora({
                     }
                   />
                 </label>
+                {permiteVerCustoPecas && (
+                  <>
+                    <label className="grid gap-1.5">
+                      <span className="quiz-label">Contato</span>
+                      <input
+                        type="tel"
+                        className="quiz-input"
+                        value={ajusteRapido.contatoCliente}
+                        maxLength={30}
+                        onChange={(e) =>
+                          atualizarAjusteRapido(
+                            "contatoCliente",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="quiz-label">Origem</span>
+                      <select
+                        className="quiz-input"
+                        value={ajusteRapido.origem}
+                        onChange={(e) =>
+                          atualizarAjusteRapido("origem", e.target.value)
+                        }
+                      >
+                        <option value="">Selecione a origem</option>
+                        <option value="Ligação">Ligação</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Pessoalmente">Pessoalmente</option>
+                      </select>
+                    </label>
+                  </>
+                )}
                 <label className="grid gap-1.5">
                   <span className="quiz-label">Veículo</span>
                   <input

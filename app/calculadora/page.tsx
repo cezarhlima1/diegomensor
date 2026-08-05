@@ -99,7 +99,7 @@ export default async function CalculadoraPage() {
     const { data, error } = await supabase
       .from("orcamentos")
       .select(
-        "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
+        "id, nome_cliente, nome_carro, placa, contato_cliente, origem, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
       )
       .eq("empresa_id", sessao.empresaAtiva.id)
       .order("created_at", { ascending: false });
@@ -113,6 +113,8 @@ export default async function CalculadoraPage() {
       nomeCliente: o.nome_cliente,
       nomeCarro: o.nome_carro,
       placa: o.placa,
+      contatoCliente: o.contato_cliente,
+      origem: o.origem as Orcamento["origem"],
       valorHora: Number(o.valor_hora),
       horas: Number(o.horas),
       maoDeObra: Number(o.mao_de_obra),

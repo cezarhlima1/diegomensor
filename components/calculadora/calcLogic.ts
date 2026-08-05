@@ -244,12 +244,15 @@ export type PecaResumo = {
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
 export type StatusOrcamento = "Aguardando aprovação" | "Aprovado" | "Não aprovado";
+export type OrigemCliente = "Ligação" | "WhatsApp" | "Pessoalmente";
 
 export type Orcamento = {
   id: string;
   nomeCliente: string;
   nomeCarro: string;
   placa: string;
+  contatoCliente?: string;
+  origem?: OrigemCliente | null;
   valorHora: number;
   horas: number;
   maoDeObra: number;

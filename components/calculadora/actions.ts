@@ -16,6 +16,7 @@ import {
   parseNum,
   somaCustos,
   type Orcamento,
+  type OrigemCliente,
   type PecaResumo,
   type Passo1Dados,
   type Passo2ConfigDados,
@@ -24,6 +25,12 @@ import {
   type ValorHoraSalvo,
 } from "./calcLogic";
 
+const EMAIL_RECURSOS_TESTE = "diego.mensor@hotmail.com";
+const ORIGENS_VALIDAS: OrigemCliente[] = [
+  "Ligação",
+  "WhatsApp",
+  "Pessoalmente",
+];
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
 const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
@@ -226,6 +233,8 @@ function paraOrcamento(row: {
   nome_cliente: string;
   nome_carro: string;
   placa: string;
+  contato_cliente: string;
+  origem: string | null;
   valor_hora: number;
   horas: number;
   mao_de_obra: number;
@@ -240,6 +249,10 @@ function paraOrcamento(row: {
     nomeCliente: row.nome_cliente,
     nomeCarro: row.nome_carro,
     placa: row.placa,
+    contatoCliente: row.contato_cliente,
+    origem: ORIGENS_VALIDAS.includes(row.origem as OrigemCliente)
+      ? (row.origem as OrigemCliente)
+      : null,
     valorHora: Number(row.valor_hora),
     horas: Number(row.horas),
     maoDeObra: Number(row.mao_de_obra),
@@ -252,7 +265,7 @@ function paraOrcamento(row: {
 }
 
 const SELECT_ORCAMENTO =
-  "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
+  "id, nome_cliente, nome_carro, placa, contato_cliente, origem, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at";
 
 export type ResultadoCriarOrcamento =
   | { ok: true; orcamento: Orcamento }
@@ -262,6 +275,8 @@ type DadosOrcamento = {
   nomeCliente: string;
   nomeCarro: string;
   placa: string;
+  contatoCliente?: string;
+  origem?: OrigemCliente | null;
   valorHora: number;
   horas: number;
   maoDeObra: number;
@@ -292,6 +307,7 @@ export async function criarOrcamento(
     0
   );
   const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+  const permiteRecursosTeste = sessao?.email === EMAIL_RECURSOS_TESTE;
 
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
@@ -302,6 +318,14 @@ export async function criarOrcamento(
       nome_carro:
         dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
       placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
+      contato_cliente: permiteRecursosTeste
+        ? String(dados.contatoCliente ?? "").trim().slice(0, 30)
+        : "",
+      origem:
+        permiteRecursosTeste &&
+        ORIGENS_VALIDAS.includes(dados.origem as OrigemCliente)
+          ? dados.origem
+          : null,
       valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
       horas: limitarNumero(dados.horas, MAX_HORAS),
       mao_de_obra: maoDeObra,
@@ -349,22 +373,34 @@ export async function editarOrcamento(
     0
   );
   const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+  const permiteRecursosTeste = sessao?.email === EMAIL_RECURSOS_TESTE;
+  const dadosAtualizados: Record<string, unknown> = {
+    nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
+    nome_carro:
+      dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
+    placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
+    valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
+    horas: limitarNumero(dados.horas, MAX_HORAS),
+    mao_de_obra: maoDeObra,
+    pecas,
+    valor_peca: valorPeca,
+    total,
+  };
+  if (permiteRecursosTeste) {
+    dadosAtualizados.contato_cliente = String(
+      dados.contatoCliente ?? "",
+    ).trim().slice(0, 30);
+    dadosAtualizados.origem = ORIGENS_VALIDAS.includes(
+      dados.origem as OrigemCliente,
+    )
+      ? dados.origem
+      : null;
+  }
 
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("orcamentos")
-    .update({
-      nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
-      nome_carro:
-        dados.nomeCarro.trim().slice(0, MAX_CHARS_NOME) || "Sem nome",
-      placa: dados.placa.trim().slice(0, MAX_CHARS_PLACA).toUpperCase(),
-      valor_hora: limitarNumero(dados.valorHora, MAX_VALOR),
-      horas: limitarNumero(dados.horas, MAX_HORAS),
-      mao_de_obra: maoDeObra,
-      pecas,
-      valor_peca: valorPeca,
-      total,
-    })
+    .update(dadosAtualizados)
     .eq("id", orcamentoId)
     .eq("empresa_id", empresaId)
     .select(SELECT_ORCAMENTO)
