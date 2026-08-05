@@ -289,9 +289,6 @@ export default function Calculadora({
     () => tierForCost(expandedCustoNum, tiers),
     [expandedCustoNum, tiers],
   );
-  const expandedMarkup = expandedPeca
-    ? markupDaPeca(expandedPeca, tiers)
-    : expandedTier.markup;
 
   const pecasValidas = useMemo(
     () => pecas.filter((p) => parseNum(p.custo) > 0),
@@ -1122,6 +1119,43 @@ export default function Calculadora({
                 </div>
 
                 <div className={`calc-readout mt-6 ${pulsePeca ? "is-pulsing" : ""}`}>
+                  {pecasValidas.length > 0 && (
+                    <div className="calc-pecas-detalhamento">
+                      <span className="calc-pecas-detalhamento-titulo">
+                        Detalhamento das peças
+                      </span>
+                      {pecasValidas.map((p) => {
+                        const quantidade = quantidadePeca(p);
+                        const custoUnitario = parseNum(p.custo);
+                        const custoOriginal = custoUnitario * quantidade;
+                        const markup = markupDaPeca(p, tiers);
+                        const valorFinal = precoPecaItem(p, tiers);
+                        return (
+                          <div className="calc-peca-detalhe" key={p.id}>
+                            <div className="calc-peca-detalhe-identificacao">
+                              <b>{p.nome.trim() || "Peça"}</b>
+                              <small>
+                                {quantidade} {quantidade === 1 ? "unidade" : "unidades"}
+                                {quantidade > 1 && ` · ${brl(custoUnitario)} cada`}
+                              </small>
+                            </div>
+                            <span>
+                              <i>Custo original</i>
+                              <b>{brl(custoOriginal)}</b>
+                            </span>
+                            <span>
+                              <i>Markup aplicado</i>
+                              <b>{markup}%</b>
+                            </span>
+                            <strong>
+                              <i>Valor final</i>
+                              <b>{brl(valorFinal)}</b>
+                            </strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="calc-readout-breakdown">
                     <div>
                       <span className="calc-readout-k">Peças</span>
@@ -1130,9 +1164,15 @@ export default function Calculadora({
                       </span>
                     </div>
                     <div>
-                      <span className="calc-readout-k">Markup da peça atual</span>
+                      <span className="calc-readout-k">Custo original total</span>
                       <span className="calc-readout-v">
-                        {expandedCustoNum > 0 ? `${expandedMarkup}%` : "—"}
+                        {brl(
+                          pecasValidas.reduce(
+                            (total, p) =>
+                              total + parseNum(p.custo) * quantidadePeca(p),
+                            0,
+                          ),
+                        )}
                       </span>
                     </div>
                   </div>

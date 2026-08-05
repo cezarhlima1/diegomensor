@@ -678,6 +678,35 @@ a:focus-visible, button:focus-visible {
   .calc-readout > * { position: relative; z-index: 1; }
   .calc-readout-breakdown { display: flex; flex-wrap: wrap; gap: 18px 32px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--color-line); }
   .calc-readout-breakdown > div { display: grid; gap: 3px; }
+  .calc-pecas-detalhamento {
+    display: grid; gap: 8px; padding-bottom: 16px;
+    border-bottom: 1px solid rgba(143,178,204,.16);
+  }
+  .calc-pecas-detalhamento-titulo {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted);
+  }
+  .calc-peca-detalhe {
+    display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(105px, auto));
+    align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
+    background: rgba(143,178,204,.045); border: 1px solid rgba(143,178,204,.1);
+  }
+  .calc-peca-detalhe-identificacao { display: grid; gap: 3px; min-width: 0; }
+  .calc-peca-detalhe-identificacao > b {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--color-offwhite); font-family: var(--font-display); font-size: 14px;
+  }
+  .calc-peca-detalhe-identificacao > small {
+    color: var(--color-muted-dim); font-family: var(--font-mono); font-size: 9.5px;
+  }
+  .calc-peca-detalhe > span,
+  .calc-peca-detalhe > strong { display: grid; gap: 3px; font-family: var(--font-mono); }
+  .calc-peca-detalhe i {
+    color: var(--color-muted-dim); font-size: 8.5px; font-style: normal;
+    letter-spacing: .07em; text-transform: uppercase;
+  }
+  .calc-peca-detalhe b { color: var(--color-offwhite); font-size: 12px; }
+  .calc-peca-detalhe > strong b { color: var(--color-blue); }
   .calc-readout-k { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
   .calc-readout-v { font-family: var(--font-mono); font-weight: 700; font-size: 16px; color: var(--color-offwhite); font-variant-numeric: tabular-nums; }
   .calc-readout-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -1867,6 +1896,8 @@ a:focus-visible, button:focus-visible {
     .calc-ajuste-acoes { align-items: stretch; flex-direction: column-reverse; }
     .calc-ajuste-acoes > div { display: grid; }
     .calc-ajuste-excluir { min-height: 40px; }
+    .calc-peca-detalhe { grid-template-columns: 1fr 1fr; }
+    .calc-peca-detalhe-identificacao { grid-column: 1 / -1; }
   }
 
   /* Passo 1: valor hora final editável no readout */
