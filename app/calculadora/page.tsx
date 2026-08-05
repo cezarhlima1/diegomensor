@@ -29,6 +29,8 @@ export const dynamic = "force-dynamic";
 const EMAILS_COM_RECURSOS_EXCLUSIVOS = new Set([
   "diego.mensor@hotmail.com",
   "diegomensor@hotmail.com",
+  "automecanicamensor@gmail.com",
+  "mensorautomecanica@gmail.com",
 ]);
 
 export default async function CalculadoraPage() {
