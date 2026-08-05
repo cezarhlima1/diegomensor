@@ -478,10 +478,10 @@ export default function Passo1({
       </div>
 
       <div className="flex justify-between items-center mt-7 gap-3">
-        <button className="calc-back" onClick={limparCampos}>
+        <button type="button" className="calc-back" onClick={limparCampos}>
           Limpar campos
         </button>
-        <button className="btn" onClick={onAvancar}>
+        <button type="button" className="btn" onClick={onAvancar}>
           Avançar para a peça →
         </button>
       </div>

@@ -400,7 +400,6 @@ export default function Calculadora({
   /* ---------- navegação ---------- */
   function goToStep(next: Step) {
     setStep(next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Limpa os Passos 2-3 (peças, cliente, rascunho local). O botão fica no
@@ -413,7 +412,6 @@ export default function Calculadora({
     setNomeCarro("");
     setPlaca("");
     clearInputs(empresaId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function setTierMarkup(index: number, value: string) {
@@ -558,14 +556,16 @@ export default function Calculadora({
   }
 
   function novoOrcamento() {
+    const p = novaPeca();
     setErroOrcamento("");
     setNomeCliente("");
     setNomeCarro("");
     setPlaca("");
-    setPecas((prev) => prev.map((p) => ({ ...p, horas: "" })));
+    setPecas([p]);
+    setExpandedId(p.id);
+    setSelectedIds(new Set());
     setView("calc");
-    setStep(3);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setStep(2);
   }
 
   function abrirEdicaoOrcamento(o: Orcamento) {
