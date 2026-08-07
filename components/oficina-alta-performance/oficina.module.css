@@ -823,3 +823,41 @@
 @media(max-width:700px){
   .audienceSection{background:radial-gradient(circle at 50% 4%,rgba(4,149,240,.2),transparent 36%),linear-gradient(#fff 0 24px,#e9f6fd 24px)}
 }
+
+/* Módulos em acordeão: cada etapa revela o próprio conteúdo no clique. */
+.processSection .sectionIntro{max-width:900px}
+.processSection .sectionIntro h2 em{color:#0495f0;font-style:normal}
+.moduleAccordion{max-width:980px;margin:48px auto 0;border:1px solid #d2dfe7;border-radius:20px;background:#fff;box-shadow:0 22px 55px rgba(7,17,26,.07);overflow:hidden}
+.moduleAccordionItem{border-bottom:1px solid #dce6ec;transition:background .25s ease}
+.moduleAccordionItem:last-child{border-bottom:0}
+.moduleAccordionItem>button{display:grid;grid-template-columns:115px minmax(0,1fr) 38px;align-items:center;width:100%;min-height:78px;padding:14px 22px;border:0;background:transparent;color:#07111a;text-align:left;cursor:pointer}
+.moduleAccordionItem>button span{color:#087fc7;font:750 9px var(--font-jetbrains);letter-spacing:.1em}
+.moduleAccordionItem>button b{font:680 17px var(--font-archivo)}
+.moduleAccordionItem>button i{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#edf7fc;color:#087fc7;font:700 20px/1 var(--font-archivo);font-style:normal}
+.moduleAccordionOpen{background:linear-gradient(135deg,#f7fbfd,#edf7fc)}
+.moduleAccordionOpen>button{padding-bottom:10px}
+.moduleInlineDetail{padding:0 22px 25px 137px;animation:moduleExpand .35s cubic-bezier(.2,.8,.2,1)}
+.moduleInlineDetail>p{max-width:680px;margin:0 0 20px;color:#405767;font-size:14px;line-height:1.7}
+.moduleInlineDetail>div{display:flex;flex-wrap:wrap;gap:10px}
+.moduleInlineDetail>div>span{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d4e4ed;border-radius:999px;background:#fff;color:#405767;font-size:11px}
+@keyframes moduleExpand{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+.processClosing{max-width:980px;margin:28px auto 0;padding:30px 36px;border:1px solid rgba(4,149,240,.32);border-radius:18px;background:linear-gradient(135deg,#07111a,#102b3c);box-shadow:0 22px 55px rgba(7,17,26,.15)}
+.processClosing p{max-width:850px;margin:auto;color:#e0eaf0;font:620 17px/1.7 var(--font-archivo);text-align:center}
+@media(hover:hover) and (pointer:fine){
+  .moduleAccordionItem:not(.moduleAccordionOpen):hover{background:#f6fafc}
+  .moduleAccordionItem>button:hover i{transform:rotate(90deg);background:#dff2fc}
+  .moduleAccordionItem>button i{transition:transform .25s ease,background .25s ease}
+}
+@media(max-width:700px){
+  .moduleAccordion{margin-top:32px;border-radius:16px}
+  .moduleAccordionItem>button{grid-template-columns:1fr 34px;min-height:70px;padding:13px 15px}
+  .moduleAccordionItem>button span{grid-column:1;display:block;margin-bottom:5px}
+  .moduleAccordionItem>button b{grid-column:1;font-size:15px}
+  .moduleAccordionItem>button i{grid-column:2;grid-row:1/3;width:30px;height:30px}
+  .moduleInlineDetail{padding:0 15px 20px}
+  .moduleInlineDetail>p{font-size:13px}
+  .moduleInlineDetail>div{display:grid}
+  .moduleInlineDetail>div>span{border-radius:10px}
+  .processClosing{margin-top:20px;padding:25px 20px}
+  .processClosing p{font-size:15px;line-height:1.65}
+}

@@ -49,7 +49,7 @@ function Check() {
 }
 
 export default function OficinaAltaPerformance() {
-  const [activeModule, setActiveModule] = useState(0);
+  const [activeModule, setActiveModule] = useState<number | null>(0);
   const [progress, setProgress] = useState(0);
   const pageRef = useRef<HTMLElement>(null);
 
@@ -243,33 +243,31 @@ export default function OficinaAltaPerformance() {
       <section className={styles.processSection} id="processos">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>O que você vai receber</span>
-            <h2>Um passo a passo completo e no detalhe para organizar toda a operação da sua oficina.</h2>
-            <p>Você terá acesso ao passo a passo de cada etapa da operação. Clique em cada processo para conhecer os detalhes.</p>
+            <h2>Eu não vou poupar conteúdo. Eu vou te entregar <em>TUDO</em> sobre gestão de oficina.</h2>
+            <p>Tudo que eu validei durante 14 anos sendo dono e 24 anos estando no chão da oficina.</p>
           </div>
-          <div className={styles.timeline}>
-            <div className={styles.moduleList}>
-              {modules.map(([num, title], i) => (
+          <div className={styles.moduleAccordion}>
+            {modules.map(([num, title, description], i) => {
+              const isOpen = activeModule === i;
+              return (
+                <article className={`${styles.moduleAccordionItem} ${isOpen ? styles.moduleAccordionOpen : ""}`} key={num}>
                 <button
-                  key={num}
                   type="button"
-                  aria-pressed={activeModule === i}
-                  onClick={() => setActiveModule(i)}
-                  className={activeModule === i ? styles.activeModule : ""}
+                  aria-expanded={isOpen}
+                  aria-controls={`module-detail-${num}`}
+                  onClick={() => setActiveModule(isOpen ? null : i)}
                 >
-                  <span>{num}</span><b>{title}</b><i>↗</i>
+                  <span>MÓDULO {Number(num)}</span><b>{title}</b><i>{isOpen ? "−" : "+"}</i>
                 </button>
-              ))}
-            </div>
-            <article className={styles.moduleDetail} key={activeModule}>
-              <span>PROCESSO {modules[activeModule][0]}</span>
-              <h3>{modules[activeModule][1]}</h3>
-              <p>{modules[activeModule][2]}</p>
-              <div><Check /><span>Fluxo passo a passo</span></div>
-              <div><Check /><span>Ferramenta pronta para aplicar</span></div>
-              <div><Check /><span>Orientação prática de implementação</span></div>
-              <small>{activeModule + 1} de {modules.length} processos</small>
-            </article>
+                {isOpen && (
+                  <div className={styles.moduleInlineDetail} id={`module-detail-${num}`}>
+                    <p>{description}</p>
+                    <div><span><Check /> Fluxo passo a passo</span><span><Check /> Ferramenta pronta para aplicar</span><span><Check /> Orientação prática de implementação</span></div>
+                  </div>
+                )}
+                </article>
+              );
+            })}
           </div>
           <div className={styles.materials}>
             <div className={styles.materialsIntro}>
@@ -279,6 +277,9 @@ export default function OficinaAltaPerformance() {
             {["Ferramentas prontas", "Planilhas", "Checklists", "Modelos de documentos", "Materiais de apoio"].map((item, i) => (
               <div className={styles.reveal} key={item}><span>0{i + 1}</span><b>{item}</b><small>Pronto para usar</small></div>
             ))}
+          </div>
+          <div className={`${styles.processClosing} ${styles.reveal}`}>
+            <p>Eu não vou te dizer o que tu deveria fazer. Eu vou te mostrar, de forma simples e objetiva, o caminho para aplicar isso na vida real da tua oficina e construir uma Oficina de Alta Performance.</p>
           </div>
         </div>
       </section>
