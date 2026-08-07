@@ -1111,3 +1111,8 @@
   #problema .splitIntro{gap:18px}
   #problema .splitIntro>p{font-size:14px;line-height:1.7}
 }
+
+#problema .problemConclusion{max-width:760px;margin:32px auto 0;text-align:center}
+@media(max-width:700px){
+  #problema .problemConclusion{margin:24px auto 0;text-align:center}
+}
