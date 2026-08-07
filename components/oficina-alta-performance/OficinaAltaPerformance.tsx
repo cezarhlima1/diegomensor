@@ -138,7 +138,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.growthReveal} ${styles.reveal}`}>
             <span aria-hidden="true">Oficina de Alta Performance®</span>
-            <h2>CHEGOU A HORA DE <em>ORGANIZAR A SUA OFICINA</em> E CONSTRUIR UMA OPERAÇÃO PREPARADA PARA <em>CRESCER AINDA MAIS.</em></h2>
+            <h2>CHEGOU A HORA DE <em>ORGANIZAR A TUA OFICINA</em> E CONSTRUIR UMA OPERAÇÃO PREPARADA PARA <em>CRESCER DE FORMA ACELERADA.</em></h2>
             <div className={styles.growthCopy}>
               <h3>Não importa o tamanho da sua oficina ou o momento em que ela está hoje.</h3>
               <p>O <strong>Oficina de Alta Performance</strong> reúne um método completo de gestão para organizar processos, desenvolver a equipe, melhorar a produtividade e aumentar a lucratividade da operação.</p>
