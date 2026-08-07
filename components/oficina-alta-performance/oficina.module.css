@@ -1073,3 +1073,15 @@
   .processClosing{margin-top:28px;padding:8px 4px}
   .processClosing p{font-size:16px;line-height:1.6}
 }
+
+/* Padronização final do conteúdo dos três bônus. */
+.bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){display:grid;grid-template-rows:auto minmax(64px,auto) 1fr auto;align-items:start;text-align:center}
+.bonusSection .bonusTop{width:100%;align-self:start;justify-content:center}
+.bonusSection .bonusTop span,.bonusSection .bonus:first-child .bonusTop span,.bonusSection .bonus:nth-child(2) .bonusTop span,.bonusSection .bonus:nth-child(3) .bonusTop span{color:#f3d985!important}
+.bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{align-self:center;width:100%;min-height:64px;margin:28px 0 14px;text-align:center}
+.bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{align-self:start;width:100%;min-height:0;margin:0 auto;text-align:center}
+.bonusSection .bonus small,.bonusSection .bonus:first-child small,.bonusSection .bonus:nth-child(2) small,.bonusSection .bonus:nth-child(3) small{align-self:end;justify-self:center;margin-top:24px}
+@media(max-width:700px){
+  .bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){grid-template-rows:auto auto auto auto}
+  .bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{min-height:0;margin-top:25px}
+}
