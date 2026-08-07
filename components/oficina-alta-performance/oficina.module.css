@@ -774,3 +774,7 @@
   .audienceSection .audienceGrid{margin-top:28px}
   .audienceSection .audienceItem{justify-content:center;text-align:center}
 }
+
+/* CTA do Hero alinhado à largura total dos três indicadores. */
+.heroActions{width:min(100%,540px)}
+.heroActions .primaryCta{width:100%}
