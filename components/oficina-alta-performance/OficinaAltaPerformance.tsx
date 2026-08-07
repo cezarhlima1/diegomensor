@@ -358,7 +358,7 @@ export default function OficinaAltaPerformance() {
             <div className={styles.priceCard}>
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
-              <p className={styles.investmentLead}>Para ter uma oficina lucrativa, organizada e menos dependente de você, o investimento é de:</p>
+              <p className={styles.investmentLead}>Para ter uma oficina lucrativa, organizada e menos dependente de você, o investimento é de <strong>APENAS:</strong></p>
               <div className={styles.installment}>
                 <div className={styles.installmentPrefix}>
                   <span>12x</span>
