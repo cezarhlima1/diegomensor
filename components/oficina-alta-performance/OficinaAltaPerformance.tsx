@@ -229,7 +229,11 @@ export default function OficinaAltaPerformance() {
           </div>
           <div className={styles.materials}>
             <div className={styles.materialsIntro}>
-              <strong>Assistir às aulas e ficar perdido em como aplicar dentro da tua realidade? Aqui não. Você vai ter um complemento que te ajude a <em>EXECUTAR</em> de verdade.</strong>
+              <span>Aplicação prática</span>
+              <div>
+                <strong>Assistir às aulas e ficar perdido em como aplicar dentro da tua realidade?</strong>
+                <p>Aqui não. Você vai ter um complemento que te ajude a <em>EXECUTAR</em> de verdade.</p>
+              </div>
             </div>
             {["Ferramentas prontas", "Planilhas", "Checklists", "Modelos de documentos", "Materiais de apoio"].map((item, i) => (
               <div className={styles.reveal} key={item}><span>0{i + 1}</span><b>{item}</b><small>Pronto para usar</small></div>
