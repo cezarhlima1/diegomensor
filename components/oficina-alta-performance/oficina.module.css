@@ -872,3 +872,6 @@
 .materialsIntro strong{max-width:920px;font-size:24px;line-height:1.3;text-align:left}
 .materialsIntro strong em{color:#7fcdfc;font-style:normal}
 @media(max-width:700px){.materialsIntro strong{font-size:19px;line-height:1.4}}
+
+.processSection .sectionIntro{margin-inline:auto;text-align:center}
+.processSection .sectionIntro>p{margin-inline:auto}
