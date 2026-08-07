@@ -560,3 +560,81 @@
   .bonusSection .bonus:first-child h3{margin-top:60px;font-size:23px}
   .bonus:before{right:-40px;top:20px}
 }
+
+/* Revisão visual geral: contenção, ritmo, leitura e breakpoints finais. */
+.page section[id]{scroll-margin-top:132px}
+.page h1,.page h2,.page h3,.page p,.page b,.page strong{overflow-wrap:break-word}
+.heroGrid>*,.splitIntro>*,.resultsGrid>*,.timeline>*,.offer>*,.aboutGrid>*{min-width:0}
+.page img{display:block}
+.pointerGlow{z-index:70}
+.compare{align-items:stretch}
+.before,.after{height:100%}
+.pricingStage .priceCard:hover{transform:none;box-shadow:none}
+@media(hover:hover) and (pointer:fine){
+  .page h1:hover,.page h2:hover,.page h3:hover{transform:scale(1.012)}
+  .page .faqList summary:hover{transform:none}
+}
+
+@media(max-width:1120px){
+  .nav nav{display:none}
+  .hero{min-height:auto}
+  .heroGrid{grid-template-columns:1fr;gap:58px}
+  .heroCopy{max-width:800px}
+  .heroCopy>p{max-width:660px}
+  .platform{width:min(100%,760px);margin-inline:auto}
+}
+
+@media(min-width:701px) and (max-width:1000px){
+  .lightSection,.processSection,.bonusSection,.guarantee,.about,.faq,
+  .darkSection,.results,.transformation,.offerSection{padding-top:78px;padding-bottom:78px}
+  .sectionIntro h2,.splitIntro h2,.centerIntro h2,.aboutCopy h2{font-size:clamp(36px,5.2vw,48px)}
+  .materials>div:last-child{grid-column:1/-1}
+  .footer .shell{grid-template-columns:1fr auto}
+  .footer p{grid-column:1/-1}
+}
+
+@media(max-width:700px){
+  .page section[id]{scroll-margin-top:112px}
+  .shell{width:calc(100% - 32px)}
+  .nav{gap:8px}
+  .navCta{flex:none}
+  .heroGrid{gap:42px}
+  .platform{width:100%;border-radius:17px}
+  .platformTop{padding-inline:13px}
+  .floatCardA,.floatCardB{max-width:48%}
+  .sectionIntro,.splitIntro>div,.splitIntro>p{max-width:100%}
+  .statement{margin-top:12px}
+  .problem h3,.problem p{min-width:0}
+  .resultsGrid{gap:14px}
+  .resultMain figcaption{gap:4px}
+  .moduleDetail{height:auto}
+  .materialsIntro strong{max-width:100%}
+  .compare{align-items:stretch}
+  .offerCopy h2 em{display:inline}
+  .pricingStage .priceCard:hover{transform:none}
+  .guaranteeCard{justify-items:start}
+  .aboutImage{width:100%}
+  .aboutImage>span{right:10px;bottom:10px}
+  .footer .shell{gap:18px}
+  .stickyCta{bottom:max(10px,env(safe-area-inset-bottom));min-height:58px}
+}
+
+@media(max-width:560px){
+  .brand>span:last-child{display:none}
+  .nav{padding-left:10px}
+}
+
+@media(max-width:430px){
+  .cohortBanner strong,.cohortBanner i{display:none}
+  .cohortBanner span{font-size:7px;letter-spacing:.07em}
+  .floatCardA,.floatCardB{display:none}
+  .platformBody{min-height:340px}
+  .hero h1{font-size:clamp(33px,10vw,38px)}
+  .quickProof{gap:9px}
+  .quickProof strong{font-size:14px}
+  .moduleList button,.moduleList .activeModule{padding:12px}
+  .moduleList button b{font-size:10px}
+  .pricingStage{padding-inline:10px}
+  .offerAssurances{gap:7px}
+  .aboutCopy>div{flex-direction:column;gap:14px}
+}
