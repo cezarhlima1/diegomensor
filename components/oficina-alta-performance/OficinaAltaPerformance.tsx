@@ -313,23 +313,6 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
-      <section className={styles.transformation}>
-        <div className={styles.shell}>
-          <div className={`${styles.centerIntro} ${styles.reveal}`}><span className={styles.indexDark}>A transformação</span><h2>Como será a sua oficina depois de aplicar o método.</h2></div>
-          <div className={styles.compare}>
-            <article className={`${styles.before} ${styles.reveal}`}>
-              <span>HOJE</span><h3>Improviso e dependência</h3>
-              {["Tudo depende de você", "Cada funcionário trabalha de um jeito", "Retrabalho faz parte da rotina", "O cliente não percebe valor", "Falta organização", "Você trabalha muito e sente que nunca sai do lugar"].map((x) => <p key={x}><i>×</i>{x}</p>)}
-            </article>
-            <div className={styles.vs}>→</div>
-            <article className={`${styles.after} ${styles.reveal}`}>
-              <span>DEPOIS DO MÉTODO</span><h3>Controle e previsibilidade</h3>
-              {["Processos padronizados", "Equipe alinhada", "Atendimento mais profissional", "Mais produtividade", "Mais controle financeiro", "Mais previsibilidade", "Mais lucro", "Uma oficina menos dependente do dono"].map((x) => <p key={x}><Check />{x}</p>)}
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section className={styles.offerSection} id="investimento">
         <div className={styles.shell}>
           <div className={`${styles.offer} ${styles.reveal}`}>
