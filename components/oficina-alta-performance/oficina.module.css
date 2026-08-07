@@ -1159,6 +1159,8 @@
 .valueTurn>span{color:#7fcdfc;font:800 11px/1 var(--font-jetbrains);letter-spacing:.2em}
 .valueTurn>strong{max-width:720px;margin-top:18px;color:#fff;font:720 clamp(28px,3.5vw,42px)/1.12 var(--font-archivo);letter-spacing:-.035em}
 .valueTurn>del{margin-top:22px;color:#8a9aa5;font:700 clamp(36px,5vw,58px)/1 var(--font-archivo);letter-spacing:-.04em;text-decoration-color:#c95768;text-decoration-thickness:3px}
+.valueTurn>p{max-width:720px;margin:25px auto 0;color:#d6e2e9;font:650 19px/1.5 var(--font-archivo);text-align:center}
+.valueTurn>p strong{color:#81d0ff;font-weight:800}
 @media(max-width:700px){
   .valueStack{margin-top:38px;padding-top:34px}
   .valueStackIntro{gap:12px}
@@ -1172,4 +1174,15 @@
   .experienceNote{font-size:14px;line-height:1.65}
   .valueTurn{margin-top:35px;padding-top:30px}
   .valueTurn>strong{font-size:28px}
+  .valueTurn>p{font-size:16px}
+}
+
+/* Alertas de perda com presença maior após simplificar o bloco. */
+.offerSection .costSignals{gap:12px;margin-top:32px}
+.offerSection .costSignals span{min-width:190px;padding:15px 18px;border-radius:12px;font:750 13px/1 var(--font-archivo)}
+.offerSection .costSignals span:before{width:21px;height:21px;font-size:14px}
+.valueTurn>span{font-size:14px}
+@media(max-width:700px){
+  .offerSection .costSignals{margin-top:25px}
+  .offerSection .costSignals span{min-width:0;padding:14px 16px;font-size:13px}
 }

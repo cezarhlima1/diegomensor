@@ -325,8 +325,6 @@ export default function OficinaAltaPerformance() {
                 <span>Refazer serviços</span>
                 <span>Equipe sem padrão</span>
               </div>
-              <strong className={styles.offerConclusion}>Agora compare isso com o investimento necessário para estruturar uma oficina que pode gerar resultados durante muitos anos.</strong>
-              <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
               <div className={styles.valueStack}>
                 <div className={styles.valueStackIntro}>
                   <p>Se você fosse contratar uma consultoria para organizar a gestão da sua oficina, dificilmente investiria menos de <strong>R$ 5.000.</strong> E aqui eu estou jogando baixo.</p>
@@ -350,6 +348,7 @@ export default function OficinaAltaPerformance() {
                   <span>CONTUDO...</span>
                   <strong>Você não vai precisar investir R$ 17.800.</strong>
                   <del>R$ 17.800,00</del>
+                  <p>Você não vai precisar investir nem <strong>METADE DESSE VALOR.</strong></p>
                 </div>
               </div>
             </div>
