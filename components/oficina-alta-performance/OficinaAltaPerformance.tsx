@@ -327,14 +327,20 @@ export default function OficinaAltaPerformance() {
               <span className={styles.indexDark}>08 — Investimento</span>
               <h2>Quanto custa continuar sem organização?</h2>
               <p>Cobrar errado, refazer serviços e manter uma equipe sem padrão custam todos os meses. Um método bem aplicado continua gerando resultado por anos.</p>
+              <div className={styles.costSignals}>
+                <span>Cobrar errado</span>
+                <span>Refazer serviços</span>
+                <span>Equipe sem padrão</span>
+              </div>
+              <strong className={styles.offerConclusion}>Organizar sua oficina é um investimento que permanece na operação.</strong>
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
             </div>
             <div className={styles.priceCard}>
               <div className={styles.cohortBadge}>
                 <span>Condição exclusiva de primeira turma</span>
               </div>
-              <span>OFICINA DE ALTA PERFORMANCE®</span>
-              <small>CONDIÇÃO DE PAGAMENTO</small>
+              <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
+              <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
               <div className={styles.installment}>
                 <span>12x</span>
                 <div>
@@ -343,8 +349,12 @@ export default function OficinaAltaPerformance() {
                 </div>
               </div>
               <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
-              <a className={styles.primaryCta} href="#garantia">Quero fazer parte <Arrow /></a>
-              <small>Acesso imediato após a confirmação</small>
+              <a className={styles.primaryCta} href="#garantia">Quero fazer parte da primeira turma <Arrow /></a>
+              <div className={styles.offerAssurances}>
+                <span><Check /> Acesso imediato</span>
+                <span><Check /> 7 dias de garantia</span>
+              </div>
+              <small className={styles.accessNote}>Acesso liberado após a confirmação</small>
             </div>
           </div>
         </div>

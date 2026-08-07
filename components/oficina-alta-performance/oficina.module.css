@@ -264,3 +264,55 @@
   .faqList details p{padding:0 20px 22px 32px;font-size:14px;line-height:1.6}
   .footer{padding-top:48px}
 }
+
+/* Investimento: bloco principal de decisão, com hierarquia e proporções
+   próprias para não parecer apenas mais um card da página. */
+.offerSection{position:relative;padding:125px 0;background:radial-gradient(circle at 78% 28%,rgba(4,149,240,.13),transparent 31%),#07111a}
+.offerSection:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:52px 52px;pointer-events:none}
+.offer{position:relative;grid-template-columns:minmax(0,1fr) minmax(410px,.78fr);gap:72px;min-height:650px;padding:72px;border-color:rgba(255,255,255,.13);background:linear-gradient(135deg,rgba(16,31,42,.96),rgba(7,17,26,.98));box-shadow:0 38px 100px rgba(0,0,0,.28)}
+.offerCopy{align-self:center}
+.offerCopy h2{max-width:630px;margin:22px 0 24px;font-size:clamp(44px,4.6vw,62px);line-height:1.01}
+.offerCopy>p{max-width:590px;font-size:16px;line-height:1.75}
+.costSignals{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.costSignals span{padding:9px 12px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.035);color:#aebdc7;font:650 10px var(--font-jetbrains)}
+.offerConclusion{display:block;max-width:560px;margin-top:25px;color:#e8f0f5;font:650 17px/1.5 var(--font-archivo)}
+.offerCopy ul{gap:12px 24px;margin-top:34px;padding-top:28px;border-top:1px solid rgba(255,255,255,.1)}
+.offerCopy li{font-size:13px;color:#e0e8ed}
+.priceCard{align-self:center;min-height:535px;padding:42px 38px 30px;border-color:rgba(4,149,240,.48);border-radius:24px;background:linear-gradient(155deg,#fff,#eef5f9);box-shadow:0 35px 80px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.65) inset}
+.priceCard .cohortBadge{width:calc(100% + 30px);margin:-27px 0 31px;padding:13px 15px}
+.priceCard .offerProduct{color:#162633;font:750 11px var(--font-archivo);letter-spacing:.04em;text-align:center}
+.priceCard .paymentLabel{margin-top:32px;color:#526878;font:700 9px var(--font-jetbrains);letter-spacing:.12em}
+.installment{margin:18px 0 8px;gap:12px}
+.installment>span{padding-bottom:10px;font-size:28px}
+.installment strong{font-size:76px}
+.priceCard .totalPrice{margin:10px 0 30px;font-size:12px}
+.priceCard .primaryCta{min-height:62px;border-radius:12px;font-size:13px;text-align:center}
+.offerAssurances{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:21px}
+.offerAssurances>span{display:flex;align-items:center;justify-content:center;gap:7px;color:#3d5261;font-size:10px}
+.offerAssurances .check{width:17px;height:17px;font-size:8px}
+.priceCard .accessNote{margin-top:15px;color:#667987;font:650 9px var(--font-jetbrains)}
+@media(max-width:1000px){
+  .offerSection{padding:92px 0}
+  .offer{grid-template-columns:1fr;min-height:0;padding:54px;gap:48px}
+  .offerCopy{max-width:700px}
+}
+@media(max-width:700px){
+  .offerSection{padding:62px 0}
+  .offer{padding:24px 18px 18px;gap:34px;border-radius:20px}
+  .offerCopy h2{margin:16px 0 18px;font-size:clamp(32px,9vw,39px);line-height:1.06}
+  .offerCopy>p{font-size:15px;line-height:1.65}
+  .costSignals{margin-top:20px}
+  .costSignals span{padding:8px 10px;font-size:9px}
+  .offerConclusion{margin-top:20px;font-size:15px}
+  .offerCopy ul{grid-template-columns:1fr;margin-top:25px;padding-top:22px;gap:11px}
+  .priceCard{min-height:0;padding:34px 18px 25px;border-radius:18px}
+  .priceCard .cohortBadge{width:calc(100% + 10px);margin:-20px 0 27px;padding:12px 8px}
+  .priceCard .offerProduct{font-size:10px}
+  .priceCard .paymentLabel{margin-top:27px}
+  .installment{gap:8px}
+  .installment>span{font-size:24px}
+  .installment strong{font-size:clamp(58px,18vw,70px)}
+  .priceCard .primaryCta{min-height:58px;padding-inline:13px;font-size:12px}
+  .offerAssurances{grid-template-columns:1fr;gap:9px}
+  .priceCard .accessNote{text-align:center;line-height:1.45}
+}
