@@ -3,3 +3,24 @@
 @media(max-width:700px){.shell{width:min(100% - 28px,1180px)}.nav{top:8px;height:56px}.brand{font-size:10px}.brandMark{width:30px;height:30px}.navCta{height:39px;padding:0 12px;font-size:9px}.hero{padding:125px 0 80px}.heroGrid{gap:55px}.hero h1{font-size:44px}.heroCopy>p{font-size:14px}.heroActions{align-items:stretch;flex-direction:column}.heroActions>span{max-width:none}.quickProof{gap:15px}.quickProof strong{font-size:15px}.platform{transform:none}.platformBody{grid-template-columns:85px 1fr}.platform aside{padding:12px 6px}.platform aside span:not(.avatar){padding:7px 4px;font-size:6px}.platform aside span b{display:none}.dashboard{padding:16px}.dashHeader strong{font-size:16px}.lesson{padding:12px}.dashCards strong{font-size:17px}.floatCardA{left:-8px;bottom:-25px}.floatCardB{right:-7px;top:70px}.lightSection,.processSection,.bonusSection,.guarantee,.about,.faq,.darkSection,.results,.transformation,.offerSection{padding:82px 0}.sectionIntro h2,.centerIntro h2,.aboutCopy h2,.splitIntro h2{font-size:39px}.principles,.bonusGrid{grid-template-columns:1fr}.principle{min-height:200px}.principle h3{margin-top:38px}.statement{align-items:flex-start;flex-direction:column}.problem{grid-template-columns:35px 1fr 20px}.problem p{grid-column:2/3}.audienceGrid{grid-template-columns:1fr}.audienceItem:nth-child(odd){border-right:0}.audienceItem:nth-last-child(2){border-bottom:1px solid var(--line)}.audienceFooter{align-items:flex-start;flex-direction:column;gap:14px}.resultsGrid{grid-template-columns:1fr}.resultMain{min-height:370px}.resultMain figcaption{align-items:flex-start;flex-direction:column}.resultSmall{height:280px}.moduleList button{min-height:52px}.moduleDetail{min-height:400px;padding:30px}.moduleDetail>small{left:30px}.materials{grid-template-columns:1fr 1fr}.compare{grid-template-columns:1fr}.vs{padding:18px;transform:rotate(90deg)}.before,.after{min-height:auto;padding:28px}.offer{gap:45px;padding:22px}.offerCopy ul{grid-template-columns:1fr}.price strong{font-size:65px}.guaranteeCard{grid-template-columns:1fr}.seal{width:130px;height:130px;font-size:48px}.aboutGrid{gap:45px}.aboutImage>span{right:10px}.footer .shell{grid-template-columns:1fr}.stickyCta{display:flex}.footer{padding-bottom:120px}}
 @media(max-width:430px){.brand span:last-child{display:none}.hero h1{font-size:39px}.quickProof{display:grid;grid-template-columns:repeat(3,1fr)}.quickProof span{font-size:6px}.platformBody{grid-template-columns:65px 1fr}.dashboard{padding:12px}.dashCards{grid-template-columns:1fr}.dashCards div:last-child{display:none}.materials{grid-template-columns:1fr}.stickyCta span{display:none}.stickyCta>strong{width:100%;justify-content:center}.faqList summary{grid-template-columns:32px 1fr 20px}.faqList details p{padding-left:32px}.priceCard{padding:28px 20px}}
 @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}.page *{scroll-behavior:auto!important}.platform{transform:none}.primaryCta,.navCta{transition:none}}
+
+/* Contraste revisado: textos pequenos preservam a hierarquia sem perder
+   legibilidade em telas com brilho baixo ou sob luz ambiente. */
+.page{--muted:#526575}
+.heroCopy>p{color:#bcc8d1}
+.heroActions>span,.quickProof span{color:#91a3b0}
+.platform aside span:not(.avatar){color:#8295a3}
+.platformTop,.lesson small,.dashCards span{color:#91a3b0}
+.dashHeader small,.dashCards small{color:#8296a4}
+.floatCardA small,.floatCardB small,.floatCardB span{color:#91a3b0}
+.splitIntro>p,.problem p,.quote cite,.before p,.after p,.offerCopy>p{color:#9cabb6}
+.problem>span,.problem i{color:#8295a3}
+.resultMain figcaption span{color:#afbbc4}
+.moduleList button{color:#526978}
+.moduleList button span,.materials span{color:#667b89}
+.materials small{color:#586e7d}
+.bonus p,.principle p,.aboutCopy>p,.faqList details p{color:#526575}
+.priceCard>small,.priceCard>p{color:#586b79}
+.footer p{color:#a2b0ba}
+.footer small{color:#8295a3}
+.stickyCta small{color:#9aabb7}
