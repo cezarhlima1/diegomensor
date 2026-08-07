@@ -765,14 +765,14 @@
 .audienceSection .shell{margin-top:-54px;padding:58px;border:1px solid #d9e3e9;border-radius:26px;background:#f7f9fa;box-shadow:0 32px 85px rgba(7,17,26,.14)}
 .audienceSection .sectionIntro{max-width:780px;margin-inline:auto;text-align:center}
 .audienceSection .audienceGrid{margin-top:38px}
-.audienceSection .audienceItem{justify-content:center;text-align:center}
+.audienceSection .audienceItem{justify-content:flex-start;text-align:left}
 .audienceSection .audienceCta{align-items:center;flex-direction:column;justify-content:center;text-align:center}
 .audienceSection .audienceCta p{max-width:430px;text-align:center}
 @media(max-width:700px){
   .audienceSection{padding-bottom:62px;background:linear-gradient(#fff 0 24px,#eef2f5 24px)}
   .audienceSection .shell{width:calc(100% - 20px);margin-top:-30px;padding:34px 18px;border-radius:20px}
   .audienceSection .audienceGrid{margin-top:28px}
-  .audienceSection .audienceItem{justify-content:center;text-align:center}
+  .audienceSection .audienceItem{justify-content:flex-start;text-align:left}
 }
 
 /* CTA do Hero alinhado à largura total dos três indicadores. */
