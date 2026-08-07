@@ -24,3 +24,48 @@
 .footer p{color:#a2b0ba}
 .footer small{color:#8295a3}
 .stickyCta small{color:#9aabb7}
+
+/* Escala de leitura orientada à conversão: impacto no Hero, ritmo mais
+   confortável no restante da página e menos esforço para comparar blocos. */
+.hero{min-height:820px;padding:145px 0 90px}
+.heroGrid{gap:52px}
+.hero h1{max-width:650px;font-size:clamp(43px,4.5vw,64px);line-height:1.01}
+.heroCopy>p{max-width:570px;font-size:15px;line-height:1.7}
+.quickProof{margin-top:40px}
+.lightSection,.processSection,.bonusSection,.guarantee,.about,.faq,
+.darkSection,.results,.transformation,.offerSection{padding-top:96px;padding-bottom:96px}
+.sectionIntro{max-width:730px}
+.sectionIntro h2,.centerIntro h2,.aboutCopy h2,
+.splitIntro h2{font-size:clamp(34px,4vw,50px);line-height:1.06}
+.sectionIntro>p,.splitIntro>p{font-size:15px;line-height:1.72}
+.principles,.problemList,.audienceGrid,.resultsGrid,.timeline,
+.bonusGrid,.compare{margin-top:48px}
+.principle{min-height:205px;padding:24px}
+.principle h3{margin-top:38px;font-size:19px}
+.statement{padding:24px}
+.problem{padding-top:21px;padding-bottom:21px}
+.audienceItem{min-height:76px}
+.moduleDetail{min-height:430px;padding:42px}
+.moduleDetail h3{font-size:32px}
+.moduleDetail>small{left:42px}
+.bonus{min-height:235px;padding:26px}
+.bonus h3{margin-top:58px;font-size:19px}
+.before,.after{min-height:420px;padding:32px}
+.before h3,.after h3{font-size:24px}
+.offer{gap:62px;padding:55px}
+.offerCopy h2{font-size:clamp(34px,3.7vw,49px)}
+.guaranteeCard h2{font-size:34px}
+.aboutGrid{gap:65px}
+.faqList{margin-top:42px}
+.faqList summary{min-height:70px}
+
+@media(max-width:700px){
+  .hero{padding-top:112px;padding-bottom:68px}
+  .hero h1{font-size:clamp(35px,10vw,43px)}
+  .lightSection,.processSection,.bonusSection,.guarantee,.about,.faq,
+  .darkSection,.results,.transformation,.offerSection{padding-top:68px;padding-bottom:68px}
+  .sectionIntro h2,.centerIntro h2,.aboutCopy h2,.splitIntro h2{font-size:34px}
+  .principles,.problemList,.audienceGrid,.resultsGrid,.timeline,
+  .bonusGrid,.compare{margin-top:38px}
+  .offer{padding:18px}
+}
