@@ -241,9 +241,6 @@ export default function OficinaAltaPerformance() {
       </section>
 
       <section className={styles.bonusSection}>
-        <div className={styles.bonusOrb} aria-hidden="true">
-          <span>BÔNUS</span><span>BÔNUS</span><span>BÔNUS</span>
-        </div>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <div className={styles.bonusBadge}>Bônus exclusivos de primeira turma</div>

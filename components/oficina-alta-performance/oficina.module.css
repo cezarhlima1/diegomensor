@@ -909,3 +909,25 @@
 @media(prefers-reduced-motion:reduce){
   .bonusSection .bonusBadge,.bonusSection .bonusBadge:after,.bonusSection .bonus,.bonusOrb{animation:none}
 }
+
+/* Revisão premium dos bônus: menos efeitos, hierarquia e contraste limpos. */
+.bonusSection{background:linear-gradient(135deg,#071c2a,#073d61 58%,#075181);color:#fff}
+.bonusSection .bonusBadge{position:static;display:inline-flex;width:auto;min-height:0;margin:0 0 22px;padding:0 0 9px;transform:none;overflow:visible;border:0;border-bottom:2px solid #e5bd5d;border-radius:0;background:transparent;color:#f2d681;font:800 12px var(--font-jetbrains);letter-spacing:.13em;box-shadow:none;animation:none}
+.bonusSection .bonusBadge:after{display:none;animation:none}
+.bonusSection .sectionIntro h2{max-width:800px;font-size:clamp(38px,4.4vw,54px);line-height:1.06}
+.bonusSection .bonusLead{max-width:680px;color:#c8dbe7}
+.bonusSection .bonusGrid{gap:16px;margin-top:42px}
+.bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){min-height:310px;padding:30px;border:0;border-top:3px solid #e4bd5d;border-radius:18px;background:#fff;box-shadow:0 22px 55px rgba(0,12,22,.22);animation:none}
+.bonusSection .bonus:before,.bonusSection .bonus:after{display:none}
+.bonusSection .bonusTop span{color:#8a6507;font-size:10px}
+.bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{margin-top:42px;color:#07111a;font-size:22px;line-height:1.15}
+.bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{color:#405767}
+.bonusSection .bonus small,.bonusSection .bonus:first-child small,.bonusSection .bonus:nth-child(2) small,.bonusSection .bonus:nth-child(3) small{color:#8a6507}
+@media(hover:hover) and (pointer:fine){
+  .bonusSection .bonus:hover,.bonusSection .bonus:first-child:hover,.bonusSection .bonus:nth-child(2):hover,.bonusSection .bonus:nth-child(3):hover{transform:translateY(-6px);border-color:#f0cd75;background:#fff;box-shadow:0 30px 70px rgba(0,12,22,.3)}
+}
+@media(max-width:700px){
+  .bonusSection .bonusBadge{font-size:10px;line-height:1.4}
+  .bonusSection .sectionIntro h2{font-size:34px}
+  .bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){min-height:250px;padding:24px}
+}
