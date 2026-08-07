@@ -15,8 +15,10 @@ const modules = [
   ["08", "Compra de Peças", "Organize cotações, fornecedores, prazos e margens de cada componente."],
   ["09", "Reparo", "Transforme o serviço técnico em uma operação previsível e acompanhável."],
   ["10", "Teste Final", "Crie uma barreira de qualidade antes que o veículo volte ao cliente."],
-  ["11", "Check-out e Entrega", "Finalize cada atendimento com conferência, orientação e profissionalismo."],
-  ["12", "Caixa e Pós-venda", "Feche o ciclo, acompanhe os números e mantenha o relacionamento ativo."],
+  ["11", "Check-out", "Confira o serviço, os registros e o veículo antes de concluir o atendimento."],
+  ["12", "Entrega do Veículo", "Finalize cada atendimento com orientação, clareza e profissionalismo."],
+  ["13", "Caixa", "Organize o fechamento financeiro e acompanhe os números da operação."],
+  ["14", "Pós-venda", "Mantenha o relacionamento ativo e acompanhe a experiência do cliente."],
 ];
 
 const faqs = [
@@ -25,7 +27,6 @@ const faqs = [
   ["As aulas são gravadas?", "Sim. Todo o conteúdo fica disponível para você assistir no seu ritmo."],
   ["Terei suporte?", "Sim. Você participa de encontros quinzenais ao vivo para tirar dúvidas e acompanhar a implementação."],
   ["Preciso ter equipe?", "Não. O método funciona tanto para quem trabalha sozinho quanto para quem já possui uma equipe."],
-  ["Recebo certificado?", "Sim. Ao concluir o treinamento, você recebe seu certificado."],
 ];
 
 const problems = [
