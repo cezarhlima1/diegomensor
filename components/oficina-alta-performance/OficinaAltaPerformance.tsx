@@ -82,6 +82,11 @@ export default function OficinaAltaPerformance() {
       }}
     >
       <div className={styles.pointerGlow} aria-hidden="true" />
+      <div className={styles.cohortBanner}>
+        <span>Condição exclusiva da primeira turma</span>
+        <i aria-hidden="true" />
+        <strong>Disponível somente nesta turma</strong>
+      </div>
       <div className={styles.progress} style={{ width: `${progress}%` }} />
       <header className={styles.nav}>
         <a href="#inicio" className={styles.brand} aria-label="Oficina de Alta Performance — início">
@@ -339,9 +344,6 @@ export default function OficinaAltaPerformance() {
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
             </div>
             <div className={styles.priceCard}>
-              <div className={styles.cohortBadge}>
-                <span>Condição exclusiva de primeira turma</span>
-              </div>
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
               <div className={styles.installment}>

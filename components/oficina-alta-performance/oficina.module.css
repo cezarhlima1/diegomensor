@@ -343,3 +343,25 @@
   .installmentPrefix span{font-size:23px}
   .installment>strong{font-size:clamp(64px,20vw,78px)}
 }
+
+/* Condição da turma sempre visível, independente da seção atual. */
+.cohortBanner{position:fixed;z-index:110;inset:0 0 auto;height:34px;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 16px;overflow:hidden;background:linear-gradient(100deg,#571326,#8a203c,#571326);background-size:220% 100%;color:#fff;box-shadow:0 5px 18px rgba(58,7,22,.28);animation:cohortShift 3.2s ease-in-out infinite}
+.cohortBanner:after{content:"";position:absolute;inset:-80% auto -80% -20%;width:12%;transform:rotate(18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);animation:cohortShine 3.4s ease-in-out infinite}
+.cohortBanner span,.cohortBanner strong{position:relative;z-index:1;font:800 9px var(--font-jetbrains);letter-spacing:.08em;text-transform:uppercase}
+.cohortBanner strong{color:#ffdbe3}
+.cohortBanner i{position:relative;z-index:1;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 9px rgba(255,255,255,.8)}
+.progress{z-index:120;top:34px}
+.nav{top:48px}
+.priceCard{padding-top:42px}
+@media(max-width:700px){
+  .cohortBanner{height:38px;gap:7px;padding-inline:8px}
+  .cohortBanner span,.cohortBanner strong{font-size:7px;letter-spacing:.045em}
+  .progress{top:38px}
+  .nav{top:46px}
+  .hero{padding-top:130px}
+}
+@media(max-width:430px){
+  .cohortBanner{gap:6px}
+  .cohortBanner span,.cohortBanner strong{font-size:6.5px}
+}
+@media(prefers-reduced-motion:reduce){.cohortBanner,.cohortBanner:after{animation:none}}
