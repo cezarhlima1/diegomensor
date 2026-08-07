@@ -793,3 +793,9 @@
   .cohortTrack{animation-duration:9.5s}
 }
 @media(prefers-reduced-motion:reduce){.cohortTrack{animation:none}}
+
+/* O conteúdo do Hero centraliza dentro da coluna, sem mudar sua posição. */
+.heroCopy{text-align:center}
+.heroCopy>p{margin-inline:auto}
+.heroActions,.quickProof{margin-inline:auto}
+.heroCopy .eyebrow{justify-content:center}
