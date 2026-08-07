@@ -159,26 +159,27 @@
 
 /* Navegação visual pelos processos: módulos compactos em grade e painel
    detalhado ao lado. */
-.timeline{grid-template-columns:minmax(0,1.35fr) minmax(360px,.85fr);gap:30px;align-items:start}
-.moduleList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.moduleList button{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;aspect-ratio:1;min-height:0;padding:18px;border:1px solid #d5dfe6;border-radius:16px;background:rgba(255,255,255,.74);box-shadow:0 8px 22px rgba(7,17,26,.035);overflow:hidden}
+.timeline{grid-template-columns:minmax(0,1.65fr) minmax(350px,.85fr);gap:24px;align-items:stretch}
+.moduleList{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;align-content:start}
+.moduleList button{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;aspect-ratio:1;min-height:0;padding:14px;border:1px solid #d5dfe6;border-radius:13px;background:rgba(255,255,255,.74);box-shadow:0 6px 16px rgba(7,17,26,.03);overflow:hidden}
 .moduleList button:before{content:"";position:absolute;inset:auto -35% -55% auto;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(4,149,240,.16),transparent 68%);opacity:0;transition:opacity .25s ease,transform .35s ease}
 .moduleList button span{position:relative;color:#79909f;font-size:9px}
-.moduleList button b{position:relative;max-width:95%;font-size:14px;line-height:1.22}
-.moduleList button i{position:absolute;right:16px;top:15px;color:#9aabb6}
-.moduleList .activeModule{padding:18px;border-color:#07111a;border-radius:16px;background:#07111a;color:#fff;box-shadow:0 18px 38px rgba(7,17,26,.2);transform:translateY(-3px)}
+.moduleList button b{position:relative;max-width:98%;font-size:12px;line-height:1.2}
+.moduleList button i{position:absolute;right:12px;top:11px;color:#9aabb6}
+.moduleList .activeModule{padding:14px;border-color:#07111a;border-radius:13px;background:#07111a;color:#fff;box-shadow:0 14px 28px rgba(7,17,26,.18);transform:translateY(-2px)}
 .moduleList .activeModule:before{opacity:1;transform:scale(1.35)}
-.moduleDetail{animation:moduleDetailIn .38s cubic-bezier(.2,.8,.2,1)}
+.moduleDetail{position:relative;top:auto;align-self:stretch;width:100%;height:100%;min-height:0;animation:moduleDetailIn .38s cubic-bezier(.2,.8,.2,1)}
+@media(min-width:1001px){.moduleList button:nth-child(11){grid-column:2}}
 @keyframes moduleDetailIn{from{opacity:.45;transform:translateX(12px) scale(.985)}to{opacity:1;transform:none}}
 @media(hover:hover) and (pointer:fine){
-  .moduleList button:hover{padding:18px;border-color:rgba(4,149,240,.5);background:#fff;transform:translateY(-5px) rotate(-.35deg);box-shadow:0 18px 35px rgba(7,17,26,.1)}
+  .moduleList button:hover{padding:14px;border-color:rgba(4,149,240,.5);background:#fff;transform:translateY(-4px) rotate(-.35deg);box-shadow:0 15px 30px rgba(7,17,26,.1)}
   .moduleList button:hover:before{opacity:1;transform:scale(1.3)}
-  .moduleList .activeModule:hover{padding:18px;background:#07111a;transform:translateY(-5px) rotate(0)}
+  .moduleList .activeModule:hover{padding:14px;background:#07111a;transform:translateY(-4px) rotate(0)}
 }
 @media(max-width:1000px){
   .timeline{grid-template-columns:1fr}
   .moduleList{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .moduleDetail{position:relative;top:auto}
+  .moduleDetail{position:relative;top:auto;min-height:400px}
 }
 @media(max-width:700px){
   .moduleList{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
