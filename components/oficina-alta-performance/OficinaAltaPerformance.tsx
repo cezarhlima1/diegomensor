@@ -140,6 +140,15 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
+      <section className={styles.growthSection}>
+        <div className={styles.shell}>
+          <div className={`${styles.growthReveal} ${styles.reveal}`}>
+            <span aria-hidden="true">Oficina de Alta Performance®</span>
+            <h2>CHEGOU A HORA DE <em>ORGANIZAR A SUA OFICINA</em> E CONSTRUIR UMA OPERAÇÃO PREPARADA PARA <em>CRESCER AINDA MAIS.</em></h2>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
