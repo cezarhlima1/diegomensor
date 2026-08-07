@@ -1001,3 +1001,7 @@
   .bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{min-height:0;margin-top:32px;font-size:24px}
   .bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{min-height:0}
 }
+
+/* A faixa é a própria divisória de entrada da seção, sem espaço acima. */
+.bonusSection{padding-top:0}
+.bonusSection>.bonusRibbon{margin-top:0}
