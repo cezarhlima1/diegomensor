@@ -166,7 +166,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>01 — O que é o Oficina de Alta Performance?</span>
+            <span className={styles.index}>O que é o Oficina de Alta Performance?</span>
             <h2>O método completo e objetivo de gestão para donos de oficina que querem construir uma empresa organizada e lucrativa.</h2>
             <p>
               Administrar uma oficina vai muito além de consertar carros. O Oficina de Alta
@@ -195,7 +195,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.darkSection}>
         <div className={styles.shell}>
           <div className={`${styles.splitIntro} ${styles.reveal}`}>
-            <div><span className={styles.indexDark}>02 — O problema</span><h2>Por que a maioria das oficinas não cresce?</h2></div>
+            <div><span className={styles.indexDark}>O problema</span><h2>Por que a maioria das oficinas não cresce?</h2></div>
             <p>A maioria dos donos acredita que o problema está na falta de clientes. Outros acham que precisam contratar mais pessoas. E alguns acreditam que o problema é apenas vender mais.</p>
           </div>
           <div className={styles.problemList}>
@@ -212,7 +212,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.lightSection}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>03 — Para quem é</span>
+            <span className={styles.index}>Para quem é</span>
             <h2>Para quem é este treinamento?</h2>
           </div>
           <div className={styles.audienceGrid}>
@@ -236,7 +236,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.results} id="resultados">
         <div className={styles.shell}>
           <div className={`${styles.splitIntro} ${styles.reveal}`}>
-            <div><span className={styles.indexDark}>04 — Resultados</span><h2>Veja o que acontece quando uma oficina deixa o improviso.</h2></div>
+            <div><span className={styles.indexDark}>Resultados</span><h2>Veja o que acontece quando uma oficina deixa o improviso.</h2></div>
             <p>E passa a trabalhar com processos.</p>
           </div>
           <div className={styles.resultsGrid}>
@@ -260,7 +260,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.processSection} id="processos">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>05 — O que você vai receber</span>
+            <span className={styles.index}>O que você vai receber</span>
             <h2>Um passo a passo completo e no detalhe para organizar toda a operação da sua oficina.</h2>
             <p>Você terá acesso ao passo a passo de cada etapa da operação. Clique em cada processo para conhecer os detalhes.</p>
           </div>
@@ -319,7 +319,7 @@ export default function OficinaAltaPerformance() {
 
       <section className={styles.transformation}>
         <div className={styles.shell}>
-          <div className={`${styles.centerIntro} ${styles.reveal}`}><span className={styles.indexDark}>07 — A transformação</span><h2>Como será a sua oficina depois de aplicar o método.</h2></div>
+          <div className={`${styles.centerIntro} ${styles.reveal}`}><span className={styles.indexDark}>A transformação</span><h2>Como será a sua oficina depois de aplicar o método.</h2></div>
           <div className={styles.compare}>
             <article className={`${styles.before} ${styles.reveal}`}>
               <span>HOJE</span><h3>Improviso e dependência</h3>
@@ -338,7 +338,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.offer} ${styles.reveal}`}>
             <div className={styles.offerCopy}>
-              <span className={styles.indexDark}>08 — Investimento</span>
+              <span className={styles.indexDark}>Investimento</span>
               <h2>Quanto custa continuar <em>perdendo dinheiro</em> por <em>falta de organização?</em></h2>
               <p>Quanto custa cobrar errado durante um mês? Quanto custa o retrabalho? Quanto custa uma equipe sem padrão?</p>
               <div className={styles.costSignals}>
@@ -392,14 +392,14 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={styles.aboutGrid}>
             <div className={`${styles.aboutImage} ${styles.reveal}`}><Image src="/diego.jpeg" alt="Diego Mensor, especialista em gestão de oficinas" width={800} height={800} sizes="(max-width: 800px) 100vw, 45vw" /><span><strong>24+</strong> anos dentro de oficina</span></div>
-            <div className={`${styles.aboutCopy} ${styles.reveal}`}><span className={styles.index}>09 — Quem é Diego Mensor?</span><h2>Diego Mensor</h2><p>São mais de 24 anos vivendo a realidade das oficinas e 14 anos como proprietário.</p><p>Depois de enfrentar desafios como falta de processos, sobrecarga, dificuldades na gestão da equipe e crescimento desorganizado, Diego estruturou um método baseado na prática, documentando tudo aquilo que realmente funciona dentro de uma oficina.</p><p>Hoje esse conhecimento está reunido no Oficina de Alta Performance para ajudar outros donos de oficina a organizarem suas operações, aumentarem a lucratividade e construírem empresas menos dependentes do proprietário.</p><div><span><strong>24</strong> anos de experiência</span><span><strong>14</strong> anos como proprietário</span></div></div>
+            <div className={`${styles.aboutCopy} ${styles.reveal}`}><span className={styles.index}>Quem é Diego Mensor?</span><h2>Diego Mensor</h2><p>São mais de 24 anos vivendo a realidade das oficinas e 14 anos como proprietário.</p><p>Depois de enfrentar desafios como falta de processos, sobrecarga, dificuldades na gestão da equipe e crescimento desorganizado, Diego estruturou um método baseado na prática, documentando tudo aquilo que realmente funciona dentro de uma oficina.</p><p>Hoje esse conhecimento está reunido no Oficina de Alta Performance para ajudar outros donos de oficina a organizarem suas operações, aumentarem a lucratividade e construírem empresas menos dependentes do proprietário.</p><div><span><strong>24</strong> anos de experiência</span><span><strong>14</strong> anos como proprietário</span></div></div>
           </div>
         </div>
       </section>
 
       <section className={styles.faq}>
         <div className={styles.shell}>
-          <div className={`${styles.sectionIntro} ${styles.reveal}`}><span className={styles.index}>10 — Perguntas frequentes</span><h2>Informação clara antes da sua decisão.</h2></div>
+          <div className={`${styles.sectionIntro} ${styles.reveal}`}><span className={styles.index}>Perguntas frequentes</span><h2>Informação clara antes da sua decisão.</h2></div>
           <div className={styles.faqList}>
             {faqs.map(([q, a], i) => <details className={styles.reveal} key={q} open={i === 0}><summary><span>{String(i + 1).padStart(2, "0")}</span>{q}<i>+</i></summary><p>{a}</p></details>)}
           </div>
