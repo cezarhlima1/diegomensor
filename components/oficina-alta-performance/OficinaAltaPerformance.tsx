@@ -259,12 +259,18 @@ export default function OficinaAltaPerformance() {
           <div className={styles.timeline}>
             <div className={styles.moduleList}>
               {modules.map(([num, title], i) => (
-                <button key={num} onClick={() => setActiveModule(i)} className={activeModule === i ? styles.activeModule : ""}>
+                <button
+                  key={num}
+                  type="button"
+                  aria-pressed={activeModule === i}
+                  onClick={() => setActiveModule(i)}
+                  className={activeModule === i ? styles.activeModule : ""}
+                >
                   <span>{num}</span><b>{title}</b><i>↗</i>
                 </button>
               ))}
             </div>
-            <article className={styles.moduleDetail}>
+            <article className={styles.moduleDetail} key={activeModule}>
               <span>PROCESSO {modules[activeModule][0]}</span>
               <h3>{modules[activeModule][1]}</h3>
               <p>{modules[activeModule][2]}</p>
