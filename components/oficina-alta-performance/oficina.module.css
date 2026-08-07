@@ -529,7 +529,7 @@
   .bonusSection .bonus h3{margin-top:34px;font-size:19px}
 }
 
-.offerCopy h2 em{color:#ff7189;font-style:normal;text-shadow:0 7px 26px rgba(255,70,103,.16)}
+.offerCopy h2 em{color:#8a203c;font-style:normal;text-shadow:0 1px 0 rgba(255,255,255,.14),0 7px 26px rgba(87,19,38,.3)}
 
 /* Composição editorial dos bônus: um presente principal e dois complementares. */
 .bonusLead{max-width:650px;margin:20px 0 0;color:#e3f4fe;font-size:15px;line-height:1.7}
