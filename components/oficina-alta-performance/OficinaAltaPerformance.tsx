@@ -348,15 +348,21 @@ export default function OficinaAltaPerformance() {
             <div className={styles.priceCard}>
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
+              <p className={styles.investmentLead}>Para ter uma oficina lucrativa, organizada e menos dependente de você, o investimento é de:</p>
               <div className={styles.installment}>
                 <div className={styles.installmentPrefix}>
                   <span>12x</span>
                   <small>de R$</small>
                 </div>
-                <strong>83,08</strong>
+                <strong>83,83</strong>
               </div>
               <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
-              <a className={styles.primaryCta} href="#garantia">Quero fazer parte do Oficina de Alta Performance <Arrow /></a>
+              <div className={styles.dailyCost}>
+                <span>Fazendo as contas, isso representa cerca de</span>
+                <strong>R$ 2,73 por dia</strong>
+              </div>
+              <p className={styles.impactText}>Um investimento simbólico quando comparado ao retorno financeiro e, muito além disso, ao impacto na sua vida profissional e pessoal.</p>
+              <a className={styles.primaryCta} href="#garantia">Quero uma Oficina de Alta Performance <Arrow /></a>
               <div className={styles.offerAssurances}>
                 <span><Check /> Acesso imediato</span>
                 <span><Check /> 7 dias de garantia</span>

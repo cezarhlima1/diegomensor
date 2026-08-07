@@ -393,3 +393,24 @@
   .pricingStage .priceCard{width:100%;min-height:0;padding:42px 8px 24px}
   .pricingStage .installment>strong{font-size:clamp(68px,22vw,88px)}
 }
+
+/* A condição comercial permanece ampla, agora em uma superfície branca. */
+.pricingStage{border-color:#d8e5ed;background:radial-gradient(circle at 50% 35%,rgba(4,149,240,.1),transparent 35%),#fff;box-shadow:0 30px 80px rgba(7,17,26,.16)}
+.pricingStage .priceCard{color:#07111a}
+.pricingStage .priceCard .offerProduct{color:#07111a}
+.pricingStage .priceCard .paymentLabel{color:#087fc7}
+.pricingStage .installmentPrefix small{color:#3f5666}
+.pricingStage .priceCard .totalPrice{color:#405767}
+.investmentLead{max-width:610px;margin:28px auto 5px;color:#253e4f;font:650 18px/1.55 var(--font-archivo);text-align:center}
+.dailyCost{display:grid;justify-items:center;gap:5px;width:min(100%,560px);margin:8px 0 20px;padding:17px 20px;border:1px solid #cfe3ef;border-radius:14px;background:#edf8fe}
+.dailyCost span{color:#506675;font-size:11px}
+.dailyCost strong{color:#087fc7;font:750 24px var(--font-archivo)}
+.impactText{max-width:650px;margin:0 0 28px;color:#405767;font-size:14px;line-height:1.7;text-align:center}
+.pricingStage .offerAssurances>span{color:#405767}
+.pricingStage .priceCard .accessNote{color:#607582}
+@media(max-width:700px){
+  .investmentLead{margin-top:23px;font-size:16px;line-height:1.5}
+  .dailyCost{padding:15px 12px;text-align:center}
+  .dailyCost strong{font-size:22px}
+  .impactText{font-size:13px;line-height:1.65}
+}
