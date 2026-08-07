@@ -489,3 +489,7 @@
   .materials>div:not(.materialsIntro){min-height:125px;padding:15px}
 }
 @media(max-width:430px){.materials{grid-template-columns:1fr}.materials>div:not(.materialsIntro){min-height:110px}}
+
+/* Sinais de perda usam vermelho bordô para comunicar o aspecto negativo. */
+.costSignals span{display:inline-flex;align-items:center;gap:7px;border-color:rgba(218,75,102,.5);background:rgba(119,22,43,.34);color:#ffd9e0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.costSignals span:before{content:"×";display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(228,67,97,.2);color:#ff8da2;font:800 12px/1 var(--font-jetbrains)}
