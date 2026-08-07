@@ -240,6 +240,23 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
+      <section className={styles.bonusSection}>
+        <div className={styles.shell}>
+          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
+            <div className={styles.bonusBadge}>Bônus exclusivos de primeira turma</div>
+            <h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
+            <p className={styles.bonusLead}>Três entregas extras para acelerar a implementação e ajudar o método a chegar à rotina da sua oficina.</p>
+          </div>
+          <div className={styles.bonusGrid}>
+            {[
+              ["01", "Treinamento completo da equipe", "Leve o método para quem executa a operação todos os dias."],
+              ["02", "Encontros quinzenais ao vivo", "Tire dúvidas e mantenha o ritmo da implementação."],
+              ["03", "Aulas exclusivas com especialistas", "Marketing, comercial, recrutamento, gestão de tráfego e área tributária."],
+            ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><div className={styles.bonusTop}><span>BÔNUS {n}</span></div><h3>{title}</h3><p>{text}</p><small>Você recebe junto com o treinamento</small></article>)}
+          </div>
+        </div>
+      </section>
+
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
@@ -283,23 +300,6 @@ export default function OficinaAltaPerformance() {
             ))}
           </div>
           <p className={`${styles.problemConclusion} ${styles.reveal}`}>Foi justamente para resolver esses gargalos que nasceu o Oficina de Alta Performance.</p>
-        </div>
-      </section>
-
-      <section className={styles.bonusSection}>
-        <div className={styles.shell}>
-          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <div className={styles.bonusBadge}>Bônus exclusivos de primeira turma</div>
-            <h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
-            <p className={styles.bonusLead}>Três entregas extras para acelerar a implementação e ajudar o método a chegar à rotina da sua oficina.</p>
-          </div>
-          <div className={styles.bonusGrid}>
-            {[
-              ["01", "Treinamento completo da equipe", "Leve o método para quem executa a operação todos os dias."],
-              ["02", "Encontros quinzenais ao vivo", "Tire dúvidas e mantenha o ritmo da implementação."],
-              ["03", "Aulas exclusivas com especialistas", "Marketing, comercial, recrutamento, gestão de tráfego e área tributária."],
-            ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><div className={styles.bonusTop}><span>BÔNUS {n}</span></div><h3>{title}</h3><p>{text}</p><small>Você recebe junto com o treinamento</small></article>)}
-          </div>
         </div>
       </section>
 
