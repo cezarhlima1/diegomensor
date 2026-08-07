@@ -375,10 +375,21 @@
 .offerCopy ul{max-width:720px}
 .pricingStage{position:relative;display:grid;place-items:center;margin-top:28px;padding:75px 40px;border:1px solid rgba(4,149,240,.22);border-radius:24px;background:radial-gradient(circle at 50% 42%,rgba(4,149,240,.13),transparent 38%),linear-gradient(145deg,#0b1a24,#07111a);box-shadow:0 38px 100px rgba(0,0,0,.22);overflow:hidden}
 .pricingStage:before{content:"INVESTIMENTO";position:absolute;left:50%;top:28px;transform:translateX(-50%);color:#75c9fb;font:700 9px var(--font-jetbrains);letter-spacing:.18em}
-.pricingStage .priceCard{width:min(100%,500px);margin:0}
+.pricingStage .priceCard{width:100%;max-width:none;min-height:540px;margin:0;padding:72px 40px 38px;border:0;background:transparent;color:#fff;box-shadow:none}
+.pricingStage .priceCard .offerProduct{color:#fff;font-size:13px}
+.pricingStage .priceCard .paymentLabel{color:#8dcff7}
+.pricingStage .installmentPrefix span{color:#8bd4ff}
+.pricingStage .installmentPrefix small{color:#c4d1d9}
+.pricingStage .installment>strong{font-size:clamp(88px,11vw,132px);text-shadow:0 14px 42px rgba(4,149,240,.3)}
+.pricingStage .priceCard .totalPrice{color:#bdcbd4;font-size:14px}
+.pricingStage .priceCard .primaryCta{width:min(100%,560px);min-height:66px;font-size:14px}
+.pricingStage .offerAssurances{width:min(100%,560px)}
+.pricingStage .offerAssurances>span{color:#c2d0d8}
+.pricingStage .priceCard .accessNote{color:#92a6b2}
 @media(max-width:700px){
   .offer{padding:30px 22px}
   .pricingStage{margin-top:18px;padding:64px 14px 14px;border-radius:20px}
   .pricingStage:before{top:25px}
-  .pricingStage .priceCard{width:100%}
+  .pricingStage .priceCard{width:100%;min-height:0;padding:42px 8px 24px}
+  .pricingStage .installment>strong{font-size:clamp(68px,22vw,88px)}
 }
