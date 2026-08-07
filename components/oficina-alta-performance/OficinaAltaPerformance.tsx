@@ -174,7 +174,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <span className={styles.indexDark}>Resultados</span>
-            <h2>Donos de oficina que aplicaram o método já colheram resultados.</h2>
+            <h2>Donos de oficina que aplicaram o método já <em>colheram resultados.</em></h2>
           </div>
           <div className={styles.resultsGrid}>
             <figure className={`${styles.resultMain} ${styles.reveal}`}>

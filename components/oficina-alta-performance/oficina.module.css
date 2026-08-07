@@ -861,3 +861,6 @@
   .processClosing{margin-top:20px;padding:25px 20px}
   .processClosing p{font-size:15px;line-height:1.65}
 }
+
+.results .sectionIntro{max-width:900px;margin-inline:auto;text-align:center}
+.results .sectionIntro h2 em{color:#0495f0;font-style:normal}
