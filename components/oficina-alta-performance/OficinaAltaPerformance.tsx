@@ -152,21 +152,18 @@ export default function OficinaAltaPerformance() {
       <section className={`${styles.lightSection} ${styles.audienceSection}`}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>Para quem é</span>
-            <h2>Para quem é este treinamento?</h2>
+            <h2>O Oficina de Alta Performance foi feito para quem deseja:</h2>
           </div>
           <div className={styles.audienceGrid}>
             {[
-              "Sentem que a empresa depende deles para tudo",
-              "Trabalham o dia inteiro, mas continuam apagando incêndio",
-              "Querem organizar processos e padronizar a operação",
-              "Precisam aumentar a produtividade da equipe",
-              "Desejam melhorar a experiência do cliente",
-              "Querem aumentar o lucro sem depender apenas de vender mais",
-              "Buscam construir uma oficina preparada para crescer",
+              "Parar de apagar incêndio o dia inteiro e assumir o controle da oficina.",
+              "Fazer a oficina funcionar sem precisar resolver tudo sozinho.",
+              "Ter uma equipe que saiba o que fazer, sem depender de você o tempo todo.",
+              "Organizar os processos da oficina para trabalhar com mais tranquilidade e menos retrabalho.",
+              "Parar de perder dinheiro por falta de organização e começar a aumentar o lucro.",
+              "Ter uma oficina organizada, lucrativa e preparada para crescer.",
             ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
             <div className={`${styles.audienceCta} ${styles.reveal}`}>
-              <p>Para quem busca construir uma oficina preparada para crescer.</p>
               <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
             </div>
           </div>

@@ -799,3 +799,20 @@
 .heroCopy>p{margin-inline:auto}
 .heroActions,.quickProof{margin-inline:auto}
 .heroCopy .eyebrow{justify-content:center}
+
+/* Público em leitura contínua e CTA como rodapé integral do painel. */
+.audienceSection .shell{overflow:hidden}
+.audienceSection .sectionIntro h2{max-width:850px;margin-inline:auto}
+.audienceSection .audienceGrid{gap:0;border:1px solid #d8e2e8;border-radius:17px;background:#fff;overflow:visible}
+.audienceSection .audienceItem,.audienceSection .audienceItem:nth-child(odd),.audienceSection .audienceItem:nth-last-child(-n+2){min-height:72px;padding:14px 18px;border:0;border-bottom:1px solid #e0e8ed;border-radius:0;background:#fff}
+.audienceSection .audienceItem:nth-child(odd){border-right:1px solid #e0e8ed}
+.audienceSection .audienceItem:nth-child(5),.audienceSection .audienceItem:nth-child(6){border-bottom:0}
+.audienceSection .audienceCta{grid-column:1/-1;width:calc(100% + 116px);min-height:112px;margin:18px 0 -58px -58px;padding:20px;border:0;border-radius:0;background:#07111a}
+.audienceSection .audienceCta a{width:100%;min-height:70px;font-size:15px}
+@media(max-width:700px){
+  .audienceSection .audienceItem,.audienceSection .audienceItem:nth-child(odd),.audienceSection .audienceItem:nth-last-child(-n+2){min-height:64px;padding:13px 14px;border-right:0;border-bottom:1px solid #e0e8ed}
+  .audienceSection .audienceItem:nth-child(5){border-bottom:1px solid #e0e8ed}
+  .audienceSection .audienceItem:nth-child(6){border-bottom:0}
+  .audienceSection .audienceCta{width:calc(100% + 36px);min-height:100px;margin:14px 0 -34px -18px;padding:15px}
+  .audienceSection .audienceCta a{min-height:66px;font-size:14px}
+}
