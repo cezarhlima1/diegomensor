@@ -152,7 +152,7 @@ export default function OficinaAltaPerformance() {
       <section className={`${styles.lightSection} ${styles.audienceSection}`}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <h2>O Oficina de Alta Performance foi feito para quem deseja:</h2>
+            <h2>O Oficina de Alta Performance foi feito para quem quer:</h2>
           </div>
           <div className={styles.audienceGrid}>
             {[

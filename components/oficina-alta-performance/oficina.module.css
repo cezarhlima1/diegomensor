@@ -816,3 +816,10 @@
   .audienceSection .audienceCta{width:calc(100% + 36px);min-height:100px;margin:14px 0 -34px -18px;padding:15px}
   .audienceSection .audienceCta a{min-height:66px;font-size:14px}
 }
+
+/* Fundo azul suave diferencia o painel de público da seção anterior. */
+.audienceSection{background:radial-gradient(circle at 50% 5%,rgba(4,149,240,.2),transparent 42%),linear-gradient(#fff 0 42px,#e9f6fd 42px)}
+.audienceSection .shell{border-color:#c7e4f4;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(235,247,253,.98));box-shadow:0 34px 90px rgba(4,117,187,.16)}
+@media(max-width:700px){
+  .audienceSection{background:radial-gradient(circle at 50% 4%,rgba(4,149,240,.2),transparent 36%),linear-gradient(#fff 0 24px,#e9f6fd 24px)}
+}
