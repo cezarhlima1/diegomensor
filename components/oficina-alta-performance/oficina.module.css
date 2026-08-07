@@ -120,3 +120,39 @@
 @keyframes cohortShine{0%,25%{left:-35%}70%,100%{left:125%}}
 @media(max-width:430px){.installment strong{font-size:58px}}
 @media(prefers-reduced-motion:reduce){.cohortBadge,.cohortBadge:after{animation:none}}
+
+/* Camada de interação: luz segue o cursor e superfícies respondem com
+   profundidade. Usa apenas transform/opacity para preservar fluidez. */
+.pointerGlow{position:fixed;z-index:95;left:var(--pointer-x,-500px);top:var(--pointer-y,-500px);width:320px;height:320px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(4,149,240,.16),rgba(4,149,240,.055) 34%,transparent 70%);mix-blend-mode:screen;pointer-events:none;transition:width .25s ease,height .25s ease;filter:blur(3px)}
+@media(hover:hover) and (pointer:fine){
+  .nav a,.primaryCta,.stickyCta>strong,.audienceFooter a{position:relative;overflow:hidden}
+  .nav a:after,.primaryCta:after,.stickyCta>strong:after,.audienceFooter a:after{content:"";position:absolute;inset:0;transform:translateX(-115%);background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.34) 50%,transparent 75%);transition:transform .55s ease}
+  .nav a:hover:after,.primaryCta:hover:after,.stickyCta:hover>strong:after,.audienceFooter a:hover:after{transform:translateX(115%)}
+  .platform{animation:platformFloat 5s ease-in-out infinite}
+  .floatCardA{animation:floatA 3.8s ease-in-out infinite}
+  .floatCardB{animation:floatB 4.4s ease-in-out infinite}
+  .principle,.audienceItem,.bonus,.materials>div,.before,.after,.guaranteeCard,.quote,.priceCard,.resultMain,.resultSmall,.aboutImage,.faqList details{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease,border-color .3s ease,background .3s ease}
+  .principle:hover,.bonus:hover,.materials>div:hover{transform:translateY(-7px) scale(1.015);border-color:rgba(4,149,240,.38);box-shadow:0 22px 48px rgba(7,17,26,.11)}
+  .audienceItem:hover{transform:translateX(7px);background:#f2f9fd;box-shadow:inset 3px 0 0 var(--blue)}
+  .problem:hover h3,.moduleList button:hover b{color:#8bd4ff}
+  .problem:hover i,.moduleList button:hover i{transform:translateX(5px)}
+  .problem i,.moduleList button i{transition:transform .25s ease,color .25s ease}
+  .moduleList button:hover{padding-left:20px;background:rgba(4,149,240,.08)}
+  .moduleDetail:hover{transform:translateY(-4px);box-shadow:0 34px 75px rgba(7,17,26,.26)}
+  .resultMain:hover,.resultSmall:hover,.quote:hover{transform:translateY(-5px);border-color:rgba(4,149,240,.42);box-shadow:0 24px 55px rgba(0,0,0,.24)}
+  .before:hover{transform:translateX(-5px) rotate(-.4deg)}
+  .after:hover{transform:translateX(5px) rotate(.4deg);box-shadow:0 25px 65px rgba(4,149,240,.15)}
+  .priceCard:hover{transform:translateY(-8px) scale(1.015);box-shadow:0 35px 80px rgba(4,149,240,.2)}
+  .guaranteeCard:hover{transform:scale(1.012)}
+  .guaranteeCard:hover .seal{transform:rotate(-5deg) scale(1.06);box-shadow:0 0 45px rgba(4,149,240,.16)}
+  .seal{transition:transform .35s ease,box-shadow .35s ease}
+  .aboutImage:hover{transform:rotate(-1deg) scale(1.018);filter:saturate(1.08)}
+  .faqList details:hover{padding-inline:10px;background:rgba(4,149,240,.035)}
+  .check{transition:transform .25s ease,background .25s ease,box-shadow .25s ease}
+  *:hover>.check,.audienceItem:hover .check,.after p:hover .check{transform:scale(1.14) rotate(-7deg);background:rgba(4,149,240,.2);box-shadow:0 0 18px rgba(4,149,240,.24)}
+}
+@keyframes platformFloat{0%,100%{transform:perspective(1200px) rotateY(-3deg) rotateX(1deg) translateY(0)}50%{transform:perspective(1200px) rotateY(-2deg) rotateX(.5deg) translateY(-8px)}}
+@keyframes floatA{0%,100%{transform:translateY(0) rotate(-.4deg)}50%{transform:translateY(-9px) rotate(.5deg)}}
+@keyframes floatB{0%,100%{transform:translateY(0) rotate(.5deg)}50%{transform:translateY(8px) rotate(-.5deg)}}
+@media(hover:none),(pointer:coarse){.pointerGlow{display:none}}
+@media(prefers-reduced-motion:reduce){.pointerGlow{display:none}.platform,.floatCardA,.floatCardB{animation:none!important}.page *{transition:none!important}}

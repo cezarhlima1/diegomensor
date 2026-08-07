@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./oficina.module.css";
 
 const modules = [
@@ -47,6 +47,7 @@ function Check() {
 export default function OficinaAltaPerformance() {
   const [activeModule, setActiveModule] = useState(0);
   const [progress, setProgress] = useState(0);
+  const pageRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const update = () => {
@@ -71,7 +72,15 @@ export default function OficinaAltaPerformance() {
   }, []);
 
   return (
-    <main className={styles.page}>
+    <main
+      className={styles.page}
+      ref={pageRef}
+      onPointerMove={(event) => {
+        pageRef.current?.style.setProperty("--pointer-x", `${event.clientX}px`);
+        pageRef.current?.style.setProperty("--pointer-y", `${event.clientY}px`);
+      }}
+    >
+      <div className={styles.pointerGlow} aria-hidden="true" />
       <div className={styles.progress} style={{ width: `${progress}%` }} />
       <header className={styles.nav}>
         <a href="#inicio" className={styles.brand} aria-label="Oficina de Alta Performance — início">
