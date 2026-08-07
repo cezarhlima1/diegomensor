@@ -778,3 +778,18 @@
 /* CTA do Hero alinhado à largura total dos três indicadores. */
 .heroActions{width:min(100%,540px)}
 .heroActions .primaryCta{width:100%}
+
+/* Faixa fixa em esteira contínua, seguindo o modelo visual da /destrave1. */
+.cohortBanner{display:block;padding:0}
+.cohortBanner:after{display:none}
+.cohortTrack{display:flex;width:max-content;will-change:transform;backface-visibility:hidden;animation:cohortTicker 11s linear infinite}
+.cohortGroup{display:flex;align-items:center;flex:none;height:34px;color:#fff;font:750 9px var(--font-jetbrains);letter-spacing:.11em;white-space:pre;text-transform:uppercase}
+@keyframes cohortTicker{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-50%,0,0)}
+}
+@media(max-width:700px){
+  .cohortGroup{height:38px;font-size:8px;letter-spacing:.09em}
+  .cohortTrack{animation-duration:9.5s}
+}
+@media(prefers-reduced-motion:reduce){.cohortTrack{animation:none}}

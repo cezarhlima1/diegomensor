@@ -37,6 +37,9 @@ const problems = [
   ["05", "Dependência excessiva do dono", "Toda decisão, problema e aprovação termina na sua mesa."],
 ];
 
+const cohortMessage = "ESSA CONDIÇÃO É ÚNICA PARA A PRIMEIRA TURMA E VAI DEIXAR DE EXISTIR.";
+const cohortTickerLine = `${cohortMessage}  |  ${cohortMessage}  |  ${cohortMessage}  |  `;
+
 function Arrow() {
   return <span aria-hidden="true">↗</span>;
 }
@@ -82,10 +85,11 @@ export default function OficinaAltaPerformance() {
       }}
     >
       <div className={styles.pointerGlow} aria-hidden="true" />
-      <div className={styles.cohortBanner}>
-        <span>Condição exclusiva da primeira turma</span>
-        <i aria-hidden="true" />
-        <strong>Disponível somente nesta turma</strong>
+      <div className={styles.cohortBanner} aria-label={cohortMessage}>
+        <div className={styles.cohortTrack} aria-hidden="true">
+          <div className={styles.cohortGroup}>{cohortTickerLine}</div>
+          <div className={styles.cohortGroup}>{cohortTickerLine}</div>
+        </div>
       </div>
       <div className={styles.progress} style={{ width: `${progress}%` }} />
       <header className={styles.nav}>
