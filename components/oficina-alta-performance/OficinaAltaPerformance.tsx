@@ -296,7 +296,7 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
-      <section className={styles.darkSection}>
+      <section className={styles.darkSection} id="problema">
         <div className={styles.shell}>
           <div className={`${styles.splitIntro} ${styles.reveal}`}>
             <div><span className={styles.indexDark}>O problema</span><h2>Por que a maioria das oficinas não cresce?</h2></div>
