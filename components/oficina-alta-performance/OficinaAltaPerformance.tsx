@@ -261,7 +261,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <span className={styles.index}>05 — O que você vai receber</span>
-            <h2>Um método completo para organizar toda a operação da sua oficina.</h2>
+            <h2>Um passo a passo completo e no detalhe para organizar toda a operação da sua oficina.</h2>
             <p>Você terá acesso ao passo a passo de cada etapa da operação. Clique em cada processo para conhecer os detalhes.</p>
           </div>
           <div className={styles.timeline}>
