@@ -191,6 +191,9 @@ export default function OficinaAltaPerformance() {
               </blockquote>
             </div>
           </div>
+          <div className={`${styles.resultsCta} ${styles.reveal}`}>
+            <a className={styles.primaryCta} href="#investimento">Quero colher meus resultados <Arrow /></a>
+          </div>
         </div>
       </section>
 
