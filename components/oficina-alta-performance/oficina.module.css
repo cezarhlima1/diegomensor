@@ -686,3 +686,16 @@
   .quickProof strong{font-size:15px}
   .quickProof span{font-size:7px}
 }
+
+/* Imagem real compartilhada com a /destrave1, sem alterar aquela página. */
+.heroImage{position:relative;aspect-ratio:1380/981;overflow:hidden;border:1px solid rgba(255,255,255,.13);border-radius:22px;background:#0b1115;box-shadow:0 40px 90px rgba(0,0,0,.42)}
+.heroImage:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);background:linear-gradient(135deg,transparent 60%,rgba(4,149,240,.08))}
+.heroImage img{width:100%;height:100%;object-fit:cover}
+@media(hover:hover) and (pointer:fine){
+  .heroImage{transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s ease}
+  .heroImage img{transition:transform .7s ease}
+  .heroImage:hover{transform:translateY(-7px) rotate(.25deg);box-shadow:0 48px 105px rgba(0,0,0,.5)}
+  .heroImage:hover img{transform:scale(1.025)}
+}
+@media(max-width:1120px){.heroImage{width:min(100%,760px);margin-inline:auto}}
+@media(max-width:700px){.heroImage{width:100%;border-radius:17px}}

@@ -126,38 +126,15 @@ export default function OficinaAltaPerformance() {
               </div>
             </div>
 
-            <div className={`${styles.platform} ${styles.reveal}`} aria-label="Prévia da plataforma">
-              <div className={styles.platformTop}>
-                <span><i /> Oficina de Alta Performance</span>
-                <span className={styles.dots}>•••</span>
-              </div>
-              <div className={styles.platformBody}>
-                <aside>
-                  <span className={styles.avatar}>DM</span>
-                  {["Visão geral", "Processos", "Ferramentas", "Encontros"].map((item, i) => (
-                    <span key={item} className={i === 1 ? styles.activeNav : ""}>
-                      <b>0{i + 1}</b>{item}
-                    </span>
-                  ))}
-                </aside>
-                <div className={styles.dashboard}>
-                  <div className={styles.dashHeader}>
-                    <div><small>MÓDULO 06</small><strong>Orçamento</strong></div>
-                    <span>72% concluído</span>
-                  </div>
-                  <div className={styles.dashProgress}><i /></div>
-                  <div className={styles.lesson}>
-                    <span className={styles.play}>▶</span>
-                    <div><b>Como apresentar valor</b><small>18 min · Aula prática</small></div>
-                  </div>
-                  <div className={styles.dashCards}>
-                    <div><small>PROCESSOS</small><strong>14</strong><span>mapeados</span></div>
-                    <div><small>IMPLEMENTAÇÃO</small><strong>5/7</strong><span>etapas</span></div>
-                  </div>
-                </div>
-              </div>
-              <div className={styles.floatCardA}><Check /><span><b>Processo aplicado</b><small>Check-in padronizado</small></span></div>
-              <div className={styles.floatCardB}><small>PRODUTIVIDADE</small><strong>+ organização</strong><span>na rotina da equipe</span></div>
+            <div className={`${styles.heroImage} ${styles.reveal}`}>
+              <Image
+                src="/CAPA VENDA DOBRA1.png"
+                alt="Diego Mensor apresentando os processos de uma oficina de alta performance"
+                width={1380}
+                height={981}
+                priority
+                sizes="(max-width: 1120px) 100vw, 52vw"
+              />
             </div>
           </div>
         </div>
