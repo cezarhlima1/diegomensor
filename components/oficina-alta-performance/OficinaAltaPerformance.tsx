@@ -345,11 +345,11 @@ export default function OficinaAltaPerformance() {
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
               <div className={styles.installment}>
-                <span>12x</span>
-                <div>
+                <div className={styles.installmentPrefix}>
+                  <span>12x</span>
                   <small>de R$</small>
-                  <strong>83,08</strong>
                 </div>
+                <strong>83,08</strong>
               </div>
               <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
               <a className={styles.primaryCta} href="#garantia">Quero fazer parte do Oficina de Alta Performance <Arrow /></a>

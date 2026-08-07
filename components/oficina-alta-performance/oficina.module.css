@@ -330,3 +330,16 @@
   .materials{grid-template-columns:1fr 1fr}
 }
 @media(max-width:430px){.materials{grid-template-columns:1fr}}
+
+/* Preço em leitura vertical: condição acima e parcela como protagonista. */
+.installment{position:relative;display:grid;justify-items:center;gap:3px;margin:18px 0 10px;padding:5px 20px 9px}
+.installment:before{content:"";position:absolute;inset:25% -12% -12%;border-radius:50%;background:radial-gradient(ellipse,rgba(4,149,240,.16),transparent 68%);filter:blur(5px);pointer-events:none}
+.installment .installmentPrefix{position:relative;z-index:1;display:flex;grid-template-columns:none;align-items:baseline;justify-content:center;gap:6px}
+.installmentPrefix span{color:#087fc7;font:800 25px/1 var(--font-archivo)}
+.installmentPrefix small{padding:0;color:#3f5666;font:750 11px/1 var(--font-jetbrains)}
+.installment>strong{position:relative;z-index:1;color:#0495f0;font:780 82px/.9 var(--font-archivo);letter-spacing:-.07em;text-shadow:0 9px 30px rgba(4,149,240,.2)}
+@media(max-width:700px){
+  .installment{margin-top:17px;padding-inline:10px}
+  .installmentPrefix span{font-size:23px}
+  .installment>strong{font-size:clamp(64px,20vw,78px)}
+}
