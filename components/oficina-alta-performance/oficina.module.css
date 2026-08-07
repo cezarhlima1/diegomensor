@@ -969,3 +969,11 @@
   .bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{font-size:15px}
 }
 @media(prefers-reduced-motion:reduce){.bonusSection .bonus:before{animation:none}}
+
+/* A faixa de bônus permanece em movimento em desktop e celular. */
+.bonusRibbonTrack{animation:bonusRibbonMove 12s linear infinite!important;animation-play-state:running!important}
+@keyframes bonusRibbonMove{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-50%,0,0)}
+}
+@media(max-width:700px){.bonusRibbonTrack{animation-duration:9.5s!important}}
