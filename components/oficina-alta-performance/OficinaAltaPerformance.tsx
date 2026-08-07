@@ -368,7 +368,7 @@ export default function OficinaAltaPerformance() {
                   <span>12x</span>
                   <small>de R$</small>
                 </div>
-                <strong className={styles.goldPrice}>83,83</strong>
+                <strong>83,83</strong>
               </div>
               <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
               <div className={styles.dailyCost}>

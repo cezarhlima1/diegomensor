@@ -1188,9 +1188,8 @@
 }
 
 /* Valor principal com acabamento dourado e borda em movimento. */
-.pricingStage .installmentPrefix span,.pricingStage .installmentPrefix small,.pricingStage .installment>.goldPrice,.pricingStage .priceCard .totalPrice{color:#0874ad}
-.pricingStage .installment>.goldPrice{display:block;padding:0;border:0;border-radius:0;background:transparent;text-shadow:none;box-shadow:none;-webkit-text-stroke:1.1px #d5a638;paint-order:stroke fill;animation:goldNumberOutline 2s ease-in-out infinite}
-@keyframes goldNumberOutline{0%,100%{-webkit-text-stroke-color:#ad7914}50%{-webkit-text-stroke-color:#f0cf72}}
+.pricingStage .installmentPrefix span,.pricingStage .installmentPrefix small,.pricingStage .installment>strong,.pricingStage .priceCard .totalPrice{color:#0874ad}
+.pricingStage .installment>strong{text-shadow:none}
 
 /* Informações abaixo do botão alinhadas como um único conjunto. */
 .pricingStage .offerAssurances{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:10px;width:min(100%,560px);margin:22px auto 0}
@@ -1200,10 +1199,6 @@
   .pricingStage .offerAssurances{grid-template-columns:1fr;gap:8px}
   .pricingStage .offerAssurances>span{min-height:42px}
 }
-@media(prefers-reduced-motion:reduce){
-  .pricingStage .installment>.goldPrice{animation:none}
-}
-
 /* Aplicação prática refeita como painel compacto e alinhado. */
 .processSection .materials{display:grid;grid-template-columns:minmax(0,.9fr) minmax(390px,1.1fr);grid-template-rows:repeat(5,auto);align-items:stretch;gap:8px 28px;margin-top:30px;padding:26px;border-radius:20px;background:linear-gradient(145deg,#07111a,#0c2637)}
 .processSection .materials .materialsIntro{grid-column:1;grid-row:1/6;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:12px 30px 12px 10px;border:0;border-right:1px solid rgba(127,205,252,.18);border-radius:0;background:transparent;box-shadow:none;text-align:left}
