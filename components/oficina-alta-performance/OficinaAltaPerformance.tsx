@@ -315,9 +315,15 @@ export default function OficinaAltaPerformance() {
             </div>
             <div className={styles.priceCard}>
               <span>OFICINA DE ALTA PERFORMANCE®</span>
-              <small>INVESTIMENTO ÚNICO</small>
-              <div className={styles.price}><sup>R$</sup><strong>997</strong><sup>,00</sup></div>
-              <p>ou 12x no cartão</p>
+              <small>CONDIÇÃO DE PAGAMENTO</small>
+              <div className={styles.installment}>
+                <span>12x</span>
+                <div>
+                  <small>de R$</small>
+                  <strong>83,08</strong>
+                </div>
+              </div>
+              <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
               <a className={styles.primaryCta} href="#garantia">Quero fazer parte <Arrow /></a>
               <small>Acesso imediato após a confirmação</small>
             </div>
