@@ -648,3 +648,20 @@
 @media(prefers-reduced-motion:reduce){
   .navCta,.primaryCta,.audienceCta a,.stickyCta>strong{animation:none;box-shadow:0 10px 28px rgba(4,149,240,.34)}
 }
+
+/* Bônus com proporção uniforme e leitura simétrica. */
+.bonusGrid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;align-items:stretch}
+.bonus,.bonus:first-child,.bonus:nth-child(2),.bonus:nth-child(3){grid-row:auto;min-height:330px;padding:28px;border-color:rgba(255,255,255,.65);background:#fff}
+.bonus:first-child .bonusTop span,.bonusTop span{color:#087fc7}
+.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{max-width:100%;margin:48px 0 10px;color:#07111a;font-size:21px;line-height:1.15}
+.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{max-width:100%;color:#405767;font-size:14px}
+.bonus:first-child small,.bonus:nth-child(2) small,.bonus:nth-child(3) small{padding-top:22px;color:#087fc7}
+.bonusBadge{padding:10px 15px;border-color:#ffe29a;background:#ffe29a;color:#5a4100}
+@media(hover:hover) and (pointer:fine){
+  .bonus:first-child:hover,.bonus:nth-child(2):hover,.bonus:nth-child(3):hover{background:#fff;border-color:#fff}
+}
+@media(max-width:900px){
+  .bonusGrid{grid-template-columns:1fr}
+  .bonus,.bonus:first-child,.bonus:nth-child(2),.bonus:nth-child(3){min-height:245px}
+  .bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{margin-top:34px}
+}
