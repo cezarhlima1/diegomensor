@@ -69,3 +69,31 @@
   .bonusGrid,.compare{margin-top:38px}
   .offer{padding:18px}
 }
+
+/* Contraste perceptivo: leitura nítida sem cinzas lavados. */
+.page{--muted:#3f5363}
+.nav nav{color:#c4ced5}
+.heroCopy>p{color:#d0d8de}
+.heroActions>span,.quickProof span{color:#acbbc5}
+.platformTop{color:#d0d8de}
+.platform aside span:not(.avatar){color:#aab9c3}
+.platform aside .activeNav{color:#bfe5fc}
+.dashHeader small,.dashCards small{color:#a4b4bf}
+.dashHeader>span{color:#a8ddfb}
+.lesson small,.dashCards span{color:#a8b7c1}
+.floatCardA small,.floatCardB small,.floatCardB span{color:#a9b8c2}
+.sectionIntro>p,.principle p,.bonus p,.aboutCopy>p,
+.faqList details p{color:#3f5363}
+.splitIntro>p,.problem p,.quote cite,.before p,.after p,
+.offerCopy>p{color:#bac6ce}
+.problem>span,.problem i{color:#9babb6}
+.statement>span{color:#a9b7c1}
+.audienceFooter p{color:#465b6a}
+.moduleList button{color:#405767}
+.moduleList button span,.materials span{color:#526978}
+.materials small{color:#465d6d}
+.resultMain figcaption span{color:#c4cdd4}
+.priceCard>small,.priceCard>p{color:#465b69}
+.footer p{color:#c2ccd3}
+.footer small{color:#9cacb7}
+.stickyCta small{color:#bac5cc}
