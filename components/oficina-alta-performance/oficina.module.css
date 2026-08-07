@@ -426,3 +426,20 @@
   .principle{min-height:135px;padding:20px;grid-template-columns:32px 1fr;column-gap:10px}
   .principle h3{margin:0 0 6px;font-size:18px}
 }
+
+/* Público e chamada formam uma única grade; nenhum item fica órfão. */
+.audienceGrid{grid-template-columns:1fr 1fr;gap:12px;border:0;border-radius:0;overflow:visible}
+.audienceItem,.audienceItem:nth-child(odd),.audienceItem:nth-last-child(-n+2){min-height:88px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.audienceCta{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:88px;padding:15px 16px 15px 22px;border:1px solid rgba(4,149,240,.35);border-radius:14px;background:#07111a;color:#fff}
+.audienceCta p{max-width:260px;margin:0;color:#b9c6ce;font-size:12px;line-height:1.45}
+.audienceCta a{display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:0 16px;border-radius:10px;background:var(--blue);color:#fff;font-size:11px;font-weight:750;text-align:center;box-shadow:0 10px 25px rgba(4,149,240,.25);transition:transform .25s ease,box-shadow .25s ease}
+@media(hover:hover) and (pointer:fine){
+  .audienceCta a:hover{transform:translateY(-3px);box-shadow:0 15px 32px rgba(4,149,240,.36)}
+}
+@media(max-width:700px){
+  .audienceGrid{grid-template-columns:1fr;gap:10px}
+  .audienceItem,.audienceItem:nth-child(odd),.audienceItem:nth-last-child(-n+2){min-height:68px;padding:16px;border:1px solid var(--line)}
+  .audienceCta{align-items:stretch;flex-direction:column;padding:20px}
+  .audienceCta p{max-width:none;font-size:13px}
+  .audienceCta a{width:100%}
+}

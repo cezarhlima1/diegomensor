@@ -225,10 +225,10 @@ export default function OficinaAltaPerformance() {
               "Querem aumentar o lucro sem depender apenas de vender mais",
               "Buscam construir uma oficina preparada para crescer",
             ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
-          </div>
-          <div className={`${styles.audienceFooter} ${styles.reveal}`}>
-            <p>Para quem busca construir uma oficina preparada para crescer.</p>
-            <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
+            <div className={`${styles.audienceCta} ${styles.reveal}`}>
+              <p>Para quem busca construir uma oficina preparada para crescer.</p>
+              <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
+            </div>
           </div>
         </div>
       </section>
