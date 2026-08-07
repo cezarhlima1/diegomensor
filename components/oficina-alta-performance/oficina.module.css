@@ -1188,8 +1188,7 @@
 }
 
 /* Valor principal com acabamento dourado e borda em movimento. */
-.pricingStage .installment>.goldPrice{--bonus-angle:0deg;display:block;padding:14px 28px 17px;border:2px solid transparent;border-radius:20px;background:linear-gradient(#fff,#f7f9fa) padding-box,conic-gradient(from var(--bonus-angle),#765006,#d8a82f,#fff2b1,#b87d0d,#765006,#e5bd55,#fff7cf,#956408) border-box;color:#b57b10;text-shadow:none;box-shadow:0 14px 35px rgba(177,124,18,.16),0 0 20px rgba(232,188,78,.18);animation:bonusGoldBorder 3.2s linear infinite,priceGoldAura 2.4s ease-in-out infinite}
-@keyframes priceGoldAura{0%,100%{box-shadow:0 14px 35px rgba(177,124,18,.16),0 0 14px rgba(232,188,78,.13)}50%{box-shadow:0 17px 42px rgba(177,124,18,.22),0 0 30px rgba(232,188,78,.3)}}
+.pricingStage .installment>.goldPrice{--bonus-angle:0deg;display:block;padding:14px 28px 17px;border:1.5px solid transparent;border-radius:20px;background:linear-gradient(#fff,#f7f9fa) padding-box,conic-gradient(from var(--bonus-angle),#765006,#d8a82f,#fff2b1,#b87d0d,#765006,#e5bd55,#fff7cf,#956408) border-box;color:#0495f0;text-shadow:none;box-shadow:none;animation:bonusGoldBorder 3.2s linear infinite}
 
 /* Informações abaixo do botão alinhadas como um único conjunto. */
 .pricingStage .offerAssurances{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:10px;width:min(100%,560px);margin:22px auto 0}
