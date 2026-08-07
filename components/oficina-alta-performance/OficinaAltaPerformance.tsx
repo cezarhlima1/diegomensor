@@ -107,7 +107,7 @@ export default function OficinaAltaPerformance() {
           <div className={styles.heroGrid}>
             <div className={`${styles.heroCopy} ${styles.reveal}`}>
               <span className={styles.eyebrow}>Método de gestão para oficinas</span>
-              <h1>Organize a gestão da sua oficina, <em>aumente a lucratividade</em> e construa uma empresa menos dependente de você.</h1>
+              <h1>Chegou a hora de ter uma oficina <em>organizada, lucrativa</em> e menos dependente de você.</h1>
               <p>
                 Aprenda um método de gestão construído ao longo de 24 anos dentro de oficina
                 para organizar processos, padronizar a equipe, melhorar a produtividade e
