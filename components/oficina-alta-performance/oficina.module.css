@@ -699,3 +699,16 @@
 }
 @media(max-width:1120px){.heroImage{width:min(100%,760px);margin-inline:auto}}
 @media(max-width:700px){.heroImage{width:100%;border-radius:17px}}
+
+/* CTA principal maior, com um feixe de luz atravessando continuamente. */
+.heroActions .primaryCta{position:relative;min-width:330px;min-height:66px;padding-inline:30px;overflow:hidden;border:1px solid rgba(255,255,255,.2);border-radius:13px;background:linear-gradient(110deg,#048ee4,#0495f0,#087fc7);font-size:15px}
+.heroActions .primaryCta:after{content:"";position:absolute;inset:-25% auto -25% -42%;width:28%;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:ctaSweep 2.5s ease-in-out infinite;pointer-events:none}
+@keyframes ctaSweep{
+  0%,25%{left:-42%;opacity:0}
+  35%{opacity:1}
+  72%,100%{left:118%;opacity:0}
+}
+@media(max-width:700px){
+  .heroActions .primaryCta{min-width:0;width:100%;min-height:62px;padding-inline:20px;font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){.heroActions .primaryCta:after{animation:none;display:none}}
