@@ -303,6 +303,7 @@ export default function OficinaAltaPerformance() {
       <section className={styles.bonusSection}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
+            <div className={styles.bonusBadge}><span>+</span> Incluído na sua inscrição</div>
             <span className={styles.index}>06 — Bônus</span><h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
           </div>
           <div className={styles.bonusGrid}>
@@ -310,7 +311,7 @@ export default function OficinaAltaPerformance() {
               ["01", "Treinamento completo da equipe", "Leve o método para quem executa a operação todos os dias."],
               ["02", "Encontros quinzenais ao vivo", "Tire dúvidas e mantenha o ritmo da implementação."],
               ["03", "Aulas exclusivas com especialistas", "Marketing, comercial, recrutamento, gestão de tráfego e área tributária."],
-            ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><span>{n}</span><h3>{title}</h3><p>{text}</p></article>)}
+            ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><div className={styles.bonusTop}><span>BÔNUS {n}</span><i aria-hidden="true">+</i></div><h3>{title}</h3><p>{text}</p><small>Você recebe junto com o treinamento</small></article>)}
           </div>
         </div>
       </section>

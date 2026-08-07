@@ -506,3 +506,25 @@
 @media(hover:hover) and (pointer:fine){
   .bonus:hover{border-color:rgba(255,255,255,.55);background:rgba(7,38,60,.27);box-shadow:0 25px 55px rgba(0,57,94,.25)}
 }
+
+/* Tratamento de presente: selo e cards claros aumentam o valor percebido. */
+.bonusBadge{display:inline-flex;align-items:center;gap:9px;margin-bottom:24px;padding:8px 12px 8px 8px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:750 9px var(--font-jetbrains);letter-spacing:.08em;text-transform:uppercase;box-shadow:0 10px 30px rgba(0,73,118,.2)}
+.bonusBadge span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#fff;color:#0487da;font-size:16px}
+.bonus{position:relative;display:flex;flex-direction:column;min-height:285px;padding:28px;border-color:rgba(255,255,255,.6);background:#fff;box-shadow:0 24px 55px rgba(0,61,100,.2);overflow:hidden}
+.bonus:after{content:"";position:absolute;right:-48px;bottom:-52px;width:135px;height:135px;border-radius:50%;background:radial-gradient(circle,rgba(4,149,240,.13),transparent 68%)}
+.bonusTop{display:flex;align-items:center;justify-content:space-between}
+.bonusTop span{color:#087fc7;font:750 9px var(--font-jetbrains);letter-spacing:.11em}
+.bonusTop i{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#eaf7fe;color:#0495f0;font:800 20px/1 var(--font-archivo)}
+.bonusSection .bonus h3{margin:48px 0 10px;color:#07111a;font-size:21px}
+.bonusSection .bonus p{margin:0;color:#405767;line-height:1.65}
+.bonus small{position:relative;z-index:1;margin-top:auto;padding-top:22px;color:#087fc7;font:700 9px var(--font-jetbrains)}
+@media(hover:hover) and (pointer:fine){
+  .bonus:hover{border-color:#fff;background:#fff;box-shadow:0 32px 70px rgba(0,55,91,.3)}
+  .bonus:hover .bonusTop i{transform:rotate(90deg) scale(1.08)}
+  .bonusTop i{transition:transform .3s ease}
+}
+@media(max-width:700px){
+  .bonusBadge{margin-bottom:20px}
+  .bonus{min-height:245px;padding:23px}
+  .bonusSection .bonus h3{margin-top:34px;font-size:19px}
+}
