@@ -305,6 +305,7 @@ export default function OficinaAltaPerformance() {
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <div className={styles.bonusBadge}><span>+</span> Incluído na sua inscrição</div>
             <span className={styles.index}>06 — Bônus</span><h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
+            <p className={styles.bonusLead}>Três entregas extras para acelerar a implementação e ajudar o método a chegar à rotina da sua oficina.</p>
           </div>
           <div className={styles.bonusGrid}>
             {[

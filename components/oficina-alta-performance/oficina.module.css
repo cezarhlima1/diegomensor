@@ -530,3 +530,33 @@
 }
 
 .offerCopy h2 em{color:#ff7189;font-style:normal;text-shadow:0 7px 26px rgba(255,70,103,.16)}
+
+/* Composição editorial dos bônus: um presente principal e dois complementares. */
+.bonusLead{max-width:650px;margin:20px 0 0;color:#e3f4fe;font-size:15px;line-height:1.7}
+.bonusGrid{grid-template-columns:1.08fr .92fr;grid-template-rows:1fr 1fr;gap:14px}
+.bonus:first-child{grid-row:1/3;min-height:500px;padding:36px;background:linear-gradient(145deg,#07111a,#102d3f);border-color:rgba(255,226,145,.5)}
+.bonus:nth-child(2),.bonus:nth-child(3){min-height:243px;padding:25px}
+.bonus:before{content:"PRESENTE";position:absolute;z-index:2;right:-35px;top:24px;width:140px;padding:7px 0;transform:rotate(42deg);background:#ffdc78;color:#503a00;text-align:center;font:800 8px var(--font-jetbrains);letter-spacing:.12em;box-shadow:0 7px 18px rgba(96,63,0,.18)}
+.bonus:first-child .bonusTop span{color:#ffdd80}
+.bonus:first-child .bonusTop i{background:rgba(255,221,128,.13);color:#ffdd80}
+.bonusSection .bonus:first-child h3{max-width:440px;margin-top:170px;color:#fff;font-size:30px;line-height:1.08}
+.bonusSection .bonus:first-child p{max-width:480px;color:#c5d5de;font-size:15px}
+.bonus:first-child small{color:#ffdd80}
+.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{max-width:420px;margin-top:22px;font-size:20px}
+.bonus:nth-child(2) small,.bonus:nth-child(3) small{padding-top:15px}
+.bonusBadge{border-color:#ffe29a;background:#ffe29a;color:#5a4100}
+.bonusBadge span{background:#5a4100;color:#ffe29a}
+@media(hover:hover) and (pointer:fine){
+  .bonus:first-child:hover{background:linear-gradient(145deg,#091721,#12364a);border-color:#ffe29a}
+}
+@media(max-width:800px){
+  .bonusGrid{grid-template-columns:1fr;grid-template-rows:auto}
+  .bonus:first-child{grid-row:auto;min-height:330px;padding:27px}
+  .bonus:nth-child(2),.bonus:nth-child(3){min-height:245px}
+  .bonusSection .bonus:first-child h3{margin-top:85px;font-size:25px}
+}
+@media(max-width:430px){
+  .bonus:first-child{min-height:300px;padding:23px}
+  .bonusSection .bonus:first-child h3{margin-top:60px;font-size:23px}
+  .bonus:before{right:-40px;top:20px}
+}
