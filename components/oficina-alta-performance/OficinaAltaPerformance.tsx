@@ -145,6 +145,30 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
+      <section className={`${styles.lightSection} ${styles.audienceSection}`}>
+        <div className={styles.shell}>
+          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
+            <span className={styles.index}>Para quem é</span>
+            <h2>Para quem é este treinamento?</h2>
+          </div>
+          <div className={styles.audienceGrid}>
+            {[
+              "Sentem que a empresa depende deles para tudo",
+              "Trabalham o dia inteiro, mas continuam apagando incêndio",
+              "Querem organizar processos e padronizar a operação",
+              "Precisam aumentar a produtividade da equipe",
+              "Desejam melhorar a experiência do cliente",
+              "Querem aumentar o lucro sem depender apenas de vender mais",
+              "Buscam construir uma oficina preparada para crescer",
+            ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
+            <div className={`${styles.audienceCta} ${styles.reveal}`}>
+              <p>Para quem busca construir uma oficina preparada para crescer.</p>
+              <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
@@ -188,30 +212,6 @@ export default function OficinaAltaPerformance() {
             ))}
           </div>
           <p className={`${styles.problemConclusion} ${styles.reveal}`}>Foi justamente para resolver esses gargalos que nasceu o Oficina de Alta Performance.</p>
-        </div>
-      </section>
-
-      <section className={styles.lightSection}>
-        <div className={styles.shell}>
-          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>Para quem é</span>
-            <h2>Para quem é este treinamento?</h2>
-          </div>
-          <div className={styles.audienceGrid}>
-            {[
-              "Sentem que a empresa depende deles para tudo",
-              "Trabalham o dia inteiro, mas continuam apagando incêndio",
-              "Querem organizar processos e padronizar a operação",
-              "Precisam aumentar a produtividade da equipe",
-              "Desejam melhorar a experiência do cliente",
-              "Querem aumentar o lucro sem depender apenas de vender mais",
-              "Buscam construir uma oficina preparada para crescer",
-            ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
-            <div className={`${styles.audienceCta} ${styles.reveal}`}>
-              <p>Para quem busca construir uma oficina preparada para crescer.</p>
-              <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
-            </div>
-          </div>
         </div>
       </section>
 
