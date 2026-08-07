@@ -23,18 +23,18 @@ const modules = [
 
 const faqs = [
   ["O curso serve para qualquer tipo de oficina?", "Sim. O método pode ser aplicado em oficinas de diferentes portes e especialidades."],
-  ["Por quanto tempo terei acesso?", "Você terá 12 meses de acesso ao treinamento e aos materiais."],
-  ["As aulas são gravadas?", "Sim. Todo o conteúdo fica disponível para você assistir no seu ritmo."],
-  ["Terei suporte?", "Sim. Você participa de encontros quinzenais ao vivo para tirar dúvidas e acompanhar a implementação."],
-  ["Preciso ter equipe?", "Não. O método funciona tanto para quem trabalha sozinho quanto para quem já possui uma equipe."],
+  ["Por quanto tempo terei acesso?", "12 meses."],
+  ["As aulas são gravadas?", "Sim. Todo o conteúdo fica disponível para você assistir quando quiser."],
+  ["Terei suporte?", "Sim. Você terá acesso aos encontros quinzenais ao vivo para tirar dúvidas e acompanhar a implementação."],
+  ["Preciso ter equipe?", "Não. O método pode ser aplicado tanto por quem trabalha sozinho quanto por quem já possui uma equipe."],
 ];
 
 const problems = [
-  ["01", "Processos inexistentes", "Cada serviço depende da experiência e da memória de quem está executando."],
+  ["01", "Falta de processos", "Cada serviço depende da experiência e da memória de quem está executando."],
   ["02", "Equipe sem padrão", "Cada funcionário trabalha de um jeito e o resultado muda de pessoa para pessoa."],
   ["03", "Atendimento desorganizado", "Informações se perdem e o cliente não percebe o profissionalismo da operação."],
-  ["04", "Financeiro sem controle", "O faturamento pode crescer enquanto a margem e o caixa continuam pressionados."],
-  ["05", "Dependência do dono", "Toda decisão, problema e aprovação termina na sua mesa."],
+  ["04", "Gestão financeira sem controle", "O faturamento pode crescer enquanto a margem e o caixa continuam pressionados."],
+  ["05", "Dependência excessiva do dono", "Toda decisão, problema e aprovação termina na sua mesa."],
 ];
 
 function Arrow() {
@@ -102,10 +102,11 @@ export default function OficinaAltaPerformance() {
           <div className={styles.heroGrid}>
             <div className={`${styles.heroCopy} ${styles.reveal}`}>
               <span className={styles.eyebrow}>Método de gestão para oficinas</span>
-              <h1>Organize a gestão. <em>Aumente a lucratividade.</em> Dependa menos de você.</h1>
+              <h1>Organize a gestão da sua oficina, <em>aumente a lucratividade</em> e construa uma empresa menos dependente de você.</h1>
               <p>
-                Um método construído ao longo de 24 anos dentro de oficina para
-                organizar processos, padronizar a equipe e preparar sua empresa para crescer.
+                Aprenda um método de gestão construído ao longo de 24 anos dentro de oficina
+                para organizar processos, padronizar a equipe, melhorar a produtividade e
+                transformar a sua oficina em uma empresa preparada para crescer.
               </p>
               <div className={styles.heroActions}>
                 <a className={styles.primaryCta} href="#investimento">
@@ -160,12 +161,12 @@ export default function OficinaAltaPerformance() {
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>01 — O método</span>
-            <h2>Sua oficina não precisa de mais correria. Precisa de um sistema.</h2>
+            <span className={styles.index}>01 — O que é o Oficina de Alta Performance?</span>
+            <h2>O método completo de gestão para donos de oficina que querem construir uma empresa organizada e lucrativa.</h2>
             <p>
               Administrar uma oficina vai muito além de consertar carros. O Oficina de Alta
-              Performance reúne os processos, ferramentas e métodos necessários para organizar
-              a operação — do primeiro contato com o cliente até o pós-venda.
+              Performance reúne todos os processos, ferramentas e métodos necessários para
+              organizar a operação da sua oficina, do primeiro contato com o cliente até o pós-venda.
             </p>
           </div>
           <div className={styles.principles}>
@@ -190,7 +191,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.splitIntro} ${styles.reveal}`}>
             <div><span className={styles.indexDark}>02 — O problema</span><h2>Por que a maioria das oficinas não cresce?</h2></div>
-            <p>O problema raramente é apenas falta de clientes. Os gargalos que travam uma oficina estão dentro da operação.</p>
+            <p>A maioria dos donos acredita que o problema está na falta de clientes. Outros acham que precisam contratar mais pessoas. E alguns acreditam que o problema é apenas vender mais.</p>
           </div>
           <div className={styles.problemList}>
             {problems.map(([num, title, text]) => (
@@ -199,6 +200,7 @@ export default function OficinaAltaPerformance() {
               </article>
             ))}
           </div>
+          <p className={`${styles.problemConclusion} ${styles.reveal}`}>Foi justamente para resolver esses gargalos que nasceu o Oficina de Alta Performance.</p>
         </div>
       </section>
 
@@ -206,16 +208,17 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <span className={styles.index}>03 — Para quem é</span>
-            <h2>Feito para o dono que quer assumir o controle da empresa.</h2>
+            <h2>Para quem é este treinamento?</h2>
           </div>
           <div className={styles.audienceGrid}>
             {[
-              "A empresa depende de você para tudo",
-              "O dia inteiro é consumido por incêndios",
-              "Falta padrão na operação e na equipe",
-              "A produtividade precisa melhorar",
-              "O cliente ainda não percebe todo o valor",
-              "O lucro não acompanha o esforço",
+              "Sentem que a empresa depende deles para tudo",
+              "Trabalham o dia inteiro, mas continuam apagando incêndio",
+              "Querem organizar processos e padronizar a operação",
+              "Precisam aumentar a produtividade da equipe",
+              "Desejam melhorar a experiência do cliente",
+              "Querem aumentar o lucro sem depender apenas de vender mais",
+              "Buscam construir uma oficina preparada para crescer",
             ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
           </div>
           <div className={`${styles.audienceFooter} ${styles.reveal}`}>
@@ -228,8 +231,8 @@ export default function OficinaAltaPerformance() {
       <section className={styles.results} id="resultados">
         <div className={styles.shell}>
           <div className={`${styles.splitIntro} ${styles.reveal}`}>
-            <div><span className={styles.indexDark}>04 — Resultados reais</span><h2>Quando o improviso termina, os números respondem.</h2></div>
-            <p>Relatos reais de oficinas que começaram a enxergar a gestão com mais clareza.</p>
+            <div><span className={styles.indexDark}>04 — Resultados</span><h2>Veja o que acontece quando uma oficina deixa o improviso.</h2></div>
+            <p>E passa a trabalhar com processos.</p>
           </div>
           <div className={styles.resultsGrid}>
             <figure className={`${styles.resultMain} ${styles.reveal}`}>
@@ -252,9 +255,9 @@ export default function OficinaAltaPerformance() {
       <section className={styles.processSection} id="processos">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>05 — O que você recebe</span>
-            <h2>Um método completo para organizar toda a operação.</h2>
-            <p>Clique em cada etapa para entender como o processo se conecta à rotina da sua oficina.</p>
+            <span className={styles.index}>05 — O que você vai receber</span>
+            <h2>Um método completo para organizar toda a operação da sua oficina.</h2>
+            <p>Você terá acesso ao passo a passo de cada etapa da operação. Clique em cada processo para conhecer os detalhes.</p>
           </div>
           <div className={styles.timeline}>
             <div className={styles.moduleList}>
@@ -281,7 +284,7 @@ export default function OficinaAltaPerformance() {
             </article>
           </div>
           <div className={styles.materials}>
-            {["Planilhas", "Checklists", "Documentos", "Materiais de apoio"].map((item, i) => (
+            {["Ferramentas prontas", "Planilhas", "Checklists", "Modelos de documentos", "Materiais de apoio"].map((item, i) => (
               <div className={styles.reveal} key={item}><span>0{i + 1}</span><b>{item}</b><small>Pronto para usar</small></div>
             ))}
           </div>
@@ -291,13 +294,13 @@ export default function OficinaAltaPerformance() {
       <section className={styles.bonusSection}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <span className={styles.index}>06 — Além do método</span><h2>Suporte para transformar conteúdo em execução.</h2>
+            <span className={styles.index}>06 — Bônus</span><h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
           </div>
           <div className={styles.bonusGrid}>
             {[
-              ["01", "Treinamento da equipe", "Leve o método para quem executa a operação todos os dias."],
-              ["02", "Encontros quinzenais", "Tire dúvidas ao vivo e mantenha o ritmo da implementação."],
-              ["03", "Especialistas convidados", "Marketing, comercial, recrutamento, tráfego e área tributária."],
+              ["01", "Treinamento completo da equipe", "Leve o método para quem executa a operação todos os dias."],
+              ["02", "Encontros quinzenais ao vivo", "Tire dúvidas e mantenha o ritmo da implementação."],
+              ["03", "Aulas exclusivas com especialistas", "Marketing, comercial, recrutamento, gestão de tráfego e área tributária."],
             ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><span>{n}</span><h3>{title}</h3><p>{text}</p></article>)}
           </div>
         </div>
@@ -305,16 +308,16 @@ export default function OficinaAltaPerformance() {
 
       <section className={styles.transformation}>
         <div className={styles.shell}>
-          <div className={`${styles.centerIntro} ${styles.reveal}`}><span className={styles.indexDark}>07 — A transformação</span><h2>A mesma oficina. Uma operação completamente diferente.</h2></div>
+          <div className={`${styles.centerIntro} ${styles.reveal}`}><span className={styles.indexDark}>07 — A transformação</span><h2>Como será a sua oficina depois de aplicar o método.</h2></div>
           <div className={styles.compare}>
             <article className={`${styles.before} ${styles.reveal}`}>
               <span>HOJE</span><h3>Improviso e dependência</h3>
-              {["Tudo depende de você", "Cada funcionário trabalha de um jeito", "Retrabalho faz parte da rotina", "O cliente não percebe valor", "Muito esforço, pouco avanço"].map((x) => <p key={x}><i>×</i>{x}</p>)}
+              {["Tudo depende de você", "Cada funcionário trabalha de um jeito", "Retrabalho faz parte da rotina", "O cliente não percebe valor", "Falta organização", "Você trabalha muito e sente que nunca sai do lugar"].map((x) => <p key={x}><i>×</i>{x}</p>)}
             </article>
             <div className={styles.vs}>→</div>
             <article className={`${styles.after} ${styles.reveal}`}>
               <span>DEPOIS DO MÉTODO</span><h3>Controle e previsibilidade</h3>
-              {["Processos padronizados", "Equipe alinhada", "Atendimento profissional", "Mais produtividade e controle", "Mais lucro e menos dependência"].map((x) => <p key={x}><Check />{x}</p>)}
+              {["Processos padronizados", "Equipe alinhada", "Atendimento mais profissional", "Mais produtividade", "Mais controle financeiro", "Mais previsibilidade", "Mais lucro", "Uma oficina menos dependente do dono"].map((x) => <p key={x}><Check />{x}</p>)}
             </article>
           </div>
         </div>
@@ -325,14 +328,14 @@ export default function OficinaAltaPerformance() {
           <div className={`${styles.offer} ${styles.reveal}`}>
             <div className={styles.offerCopy}>
               <span className={styles.indexDark}>08 — Investimento</span>
-              <h2>Quanto custa continuar sem organização?</h2>
-              <p>Cobrar errado, refazer serviços e manter uma equipe sem padrão custam todos os meses. Um método bem aplicado continua gerando resultado por anos.</p>
+              <h2>Quanto custa continuar perdendo dinheiro por falta de organização?</h2>
+              <p>Quanto custa cobrar errado durante um mês? Quanto custa o retrabalho? Quanto custa uma equipe sem padrão?</p>
               <div className={styles.costSignals}>
                 <span>Cobrar errado</span>
                 <span>Refazer serviços</span>
                 <span>Equipe sem padrão</span>
               </div>
-              <strong className={styles.offerConclusion}>Organizar sua oficina é um investimento que permanece na operação.</strong>
+              <strong className={styles.offerConclusion}>Agora compare isso com o investimento necessário para estruturar uma oficina que pode gerar resultados durante muitos anos.</strong>
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
             </div>
             <div className={styles.priceCard}>
@@ -349,7 +352,7 @@ export default function OficinaAltaPerformance() {
                 </div>
               </div>
               <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
-              <a className={styles.primaryCta} href="#garantia">Quero fazer parte da primeira turma <Arrow /></a>
+              <a className={styles.primaryCta} href="#garantia">Quero fazer parte do Oficina de Alta Performance <Arrow /></a>
               <div className={styles.offerAssurances}>
                 <span><Check /> Acesso imediato</span>
                 <span><Check /> 7 dias de garantia</span>
@@ -364,7 +367,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.guaranteeCard} ${styles.reveal}`}>
             <div className={styles.seal}>7<span>DIAS</span></div>
-            <div><span className={styles.index}>Garantia incondicional</span><h2>Entre, conheça e decida com tranquilidade.</h2><p>Se durante os primeiros 7 dias você entender que o treinamento não faz sentido para sua oficina, basta solicitar o reembolso. Devolvemos 100% do valor investido. Sem burocracia.</p></div>
+            <div><span className={styles.index}>Garantia incondicional</span><h2>Você terá 7 dias para conhecer o treinamento.</h2><p>Entre na plataforma, conheça o treinamento e veja se ele faz sentido para a sua oficina. Se durante esse período entender que o treinamento não é para você, basta solicitar o reembolso.</p><p>Nós devolvemos 100% do valor investido. Sem burocracia. Sem risco.</p></div>
           </div>
         </div>
       </section>
@@ -373,7 +376,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={styles.aboutGrid}>
             <div className={`${styles.aboutImage} ${styles.reveal}`}><Image src="/diego.jpeg" alt="Diego Mensor, especialista em gestão de oficinas" width={800} height={800} sizes="(max-width: 800px) 100vw, 45vw" /><span><strong>24+</strong> anos dentro de oficina</span></div>
-            <div className={`${styles.aboutCopy} ${styles.reveal}`}><span className={styles.index}>09 — Quem criou o método</span><h2>Diego Mensor</h2><p>São mais de 24 anos vivendo a realidade das oficinas e 14 anos como proprietário.</p><p>Depois de enfrentar falta de processos, sobrecarga, dificuldades com equipe e crescimento desorganizado, Diego documentou aquilo que realmente funciona dentro de uma oficina.</p><p>Hoje, esse conhecimento forma um método prático para ajudar outros donos a organizarem suas operações e construírem empresas menos dependentes do proprietário.</p><div><span><strong>24</strong> anos de experiência</span><span><strong>14</strong> anos como proprietário</span></div></div>
+            <div className={`${styles.aboutCopy} ${styles.reveal}`}><span className={styles.index}>09 — Quem é Diego Mensor?</span><h2>Diego Mensor</h2><p>São mais de 24 anos vivendo a realidade das oficinas e 14 anos como proprietário.</p><p>Depois de enfrentar desafios como falta de processos, sobrecarga, dificuldades na gestão da equipe e crescimento desorganizado, Diego estruturou um método baseado na prática, documentando tudo aquilo que realmente funciona dentro de uma oficina.</p><p>Hoje esse conhecimento está reunido no Oficina de Alta Performance para ajudar outros donos de oficina a organizarem suas operações, aumentarem a lucratividade e construírem empresas menos dependentes do proprietário.</p><div><span><strong>24</strong> anos de experiência</span><span><strong>14</strong> anos como proprietário</span></div></div>
           </div>
         </div>
       </section>
