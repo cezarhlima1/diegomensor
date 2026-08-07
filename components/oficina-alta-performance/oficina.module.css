@@ -1016,3 +1016,20 @@
   .stickyCta{bottom:calc(48px + env(safe-area-inset-bottom))}
   .footer{padding-bottom:165px}
 }
+
+/* Harmonização final dos bônus: azuis da mesma família e conteúdo compacto. */
+.bonusSection{background:linear-gradient(145deg,#082a40 0%,#0a4263 52%,#07527b 100%)}
+.bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){min-height:350px;padding:32px;background:linear-gradient(150deg,#0b4668,#082d45) padding-box,conic-gradient(from var(--bonus-angle),#86600d,#d7aa3e,#fff1ae,#bd8618,#795308,#e2ba54,#fff5c8,#9a6a11) border-box}
+.bonusSection .bonusTop span{padding:9px 13px;border-color:rgba(239,205,113,.48);background:rgba(240,203,103,.1);color:#f3d985}
+.bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{min-height:58px;margin:34px 0 13px;color:#fff;font-size:25px;line-height:1.14}
+.bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{min-height:90px;margin:0 auto;max-width:340px;color:#d8e7ee;font-size:15px;line-height:1.62;text-align:center}
+.bonusSection .bonus small,.bonusSection .bonus:first-child small,.bonusSection .bonus:nth-child(2) small,.bonusSection .bonus:nth-child(3) small{display:inline-flex;align-self:center;width:auto;margin-top:auto;padding:9px 12px;border:1px solid rgba(239,205,113,.32);border-radius:999px;background:rgba(239,205,113,.08);color:#efd27d;font-size:9px;line-height:1.2}
+@media(hover:hover) and (pointer:fine){
+  .bonusSection .bonus:hover,.bonusSection .bonus:first-child:hover,.bonusSection .bonus:nth-child(2):hover,.bonusSection .bonus:nth-child(3):hover{background:linear-gradient(150deg,#0d5077,#09344e) padding-box,conic-gradient(from var(--bonus-angle),#8a620c,#e1b84e,#fff6cf,#c28a17,#8a620c) border-box}
+}
+@media(max-width:700px){
+  .bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){min-height:300px;padding:25px}
+  .bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{min-height:0;margin-top:28px;font-size:23px}
+  .bonusSection .bonus p,.bonusSection .bonus:first-child p,.bonusSection .bonus:nth-child(2) p,.bonusSection .bonus:nth-child(3) p{min-height:0;font-size:14px}
+  .bonusSection .bonus small,.bonusSection .bonus:first-child small,.bonusSection .bonus:nth-child(2) small,.bonusSection .bonus:nth-child(3) small{margin-top:24px}
+}
