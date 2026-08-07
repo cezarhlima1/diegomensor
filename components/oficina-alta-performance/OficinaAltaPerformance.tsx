@@ -343,6 +343,8 @@ export default function OficinaAltaPerformance() {
               <strong className={styles.offerConclusion}>Agora compare isso com o investimento necessário para estruturar uma oficina que pode gerar resultados durante muitos anos.</strong>
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
             </div>
+          </div>
+          <div className={`${styles.pricingStage} ${styles.reveal}`}>
             <div className={styles.priceCard}>
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>

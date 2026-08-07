@@ -365,3 +365,20 @@
   .cohortBanner span,.cohortBanner strong{font-size:6.5px}
 }
 @media(prefers-reduced-motion:reduce){.cohortBanner,.cohortBanner:after{animation:none}}
+
+/* Investimento em dois momentos: contexto primeiro, condição depois. */
+.offer{display:block;min-height:0}
+.offerCopy{max-width:900px}
+.offerCopy h2{max-width:820px}
+.offerCopy>p{max-width:760px}
+.offerConclusion{max-width:720px}
+.offerCopy ul{max-width:720px}
+.pricingStage{position:relative;display:grid;place-items:center;margin-top:28px;padding:75px 40px;border:1px solid rgba(4,149,240,.22);border-radius:24px;background:radial-gradient(circle at 50% 42%,rgba(4,149,240,.13),transparent 38%),linear-gradient(145deg,#0b1a24,#07111a);box-shadow:0 38px 100px rgba(0,0,0,.22);overflow:hidden}
+.pricingStage:before{content:"INVESTIMENTO";position:absolute;left:50%;top:28px;transform:translateX(-50%);color:#75c9fb;font:700 9px var(--font-jetbrains);letter-spacing:.18em}
+.pricingStage .priceCard{width:min(100%,500px);margin:0}
+@media(max-width:700px){
+  .offer{padding:30px 22px}
+  .pricingStage{margin-top:18px;padding:64px 14px 14px;border-radius:20px}
+  .pricingStage:before{top:25px}
+  .pricingStage .priceCard{width:100%}
+}
