@@ -97,3 +97,13 @@
 .footer p{color:#c2ccd3}
 .footer small{color:#9cacb7}
 .stickyCta small{color:#bac5cc}
+
+/* A folha global do projeto define headings como brancos. Nas superfícies
+   claras desta landing, a cor precisa ser explícita para não desaparecer. */
+.lightSection h2,.lightSection h3,
+.processSection .sectionIntro h2,
+.bonusSection h2,.bonusSection h3,
+.guarantee h2,
+.about h2,
+.faq h2{color:#07111a}
+.moduleDetail h3{color:#fff}
