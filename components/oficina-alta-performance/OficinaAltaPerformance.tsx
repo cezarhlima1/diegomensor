@@ -271,7 +271,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <span className={styles.index}>O que é o Oficina de Alta Performance?</span>
-            <h2>O método completo e objetivo de gestão para donos de oficina que querem construir uma empresa organizada e lucrativa.</h2>
+            <h2>Um método completo e objetivo para donos de oficina que querem construir uma oficina organizada e lucrativa.</h2>
             <p>
               Administrar uma oficina vai muito além de consertar carros. O Oficina de Alta
               Performance reúne todos os processos, ferramentas e métodos necessários para
