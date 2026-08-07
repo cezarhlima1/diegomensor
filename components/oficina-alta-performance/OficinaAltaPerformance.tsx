@@ -170,6 +170,30 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
+      <section className={styles.results} id="resultados">
+        <div className={styles.shell}>
+          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
+            <span className={styles.indexDark}>Resultados</span>
+            <h2>Donos de oficina que aplicaram o método já colheram resultados.</h2>
+          </div>
+          <div className={styles.resultsGrid}>
+            <figure className={`${styles.resultMain} ${styles.reveal}`}>
+              <Image src="/depoimentocaptura1.png" alt="Resultado real de aluna mostrando evolução no faturamento" width={1066} height={872} sizes="(max-width: 800px) 100vw, 58vw" />
+              <figcaption><span>Resultado compartilhado por aluna</span><b>Gestão aplicada na prática</b></figcaption>
+            </figure>
+            <div className={styles.resultSide}>
+              <figure className={`${styles.resultSmall} ${styles.reveal}`}>
+                <Image src="/depoimentocaptura2.png" alt="Depoimento real de aluno do método" width={1306} height={1004} sizes="(max-width: 800px) 100vw, 38vw" />
+              </figure>
+              <blockquote className={`${styles.quote} ${styles.reveal}`}>
+                <span>“</span><p>Processo não engessa uma oficina. Processo devolve clareza, padrão e tempo para o dono pensar na empresa.</p>
+                <cite>Princípio do método</cite>
+              </blockquote>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
@@ -213,30 +237,6 @@ export default function OficinaAltaPerformance() {
             ))}
           </div>
           <p className={`${styles.problemConclusion} ${styles.reveal}`}>Foi justamente para resolver esses gargalos que nasceu o Oficina de Alta Performance.</p>
-        </div>
-      </section>
-
-      <section className={styles.results} id="resultados">
-        <div className={styles.shell}>
-          <div className={`${styles.splitIntro} ${styles.reveal}`}>
-            <div><span className={styles.indexDark}>Resultados</span><h2>Veja o que acontece quando uma oficina deixa o improviso.</h2></div>
-            <p>E passa a trabalhar com processos.</p>
-          </div>
-          <div className={styles.resultsGrid}>
-            <figure className={`${styles.resultMain} ${styles.reveal}`}>
-              <Image src="/depoimentocaptura1.png" alt="Resultado real de aluna mostrando evolução no faturamento" width={1066} height={872} sizes="(max-width: 800px) 100vw, 58vw" />
-              <figcaption><span>Resultado compartilhado por aluna</span><b>Gestão aplicada na prática</b></figcaption>
-            </figure>
-            <div className={styles.resultSide}>
-              <figure className={`${styles.resultSmall} ${styles.reveal}`}>
-                <Image src="/depoimentocaptura2.png" alt="Depoimento real de aluno do método" width={1306} height={1004} sizes="(max-width: 800px) 100vw, 38vw" />
-              </figure>
-              <blockquote className={`${styles.quote} ${styles.reveal}`}>
-                <span>“</span><p>Processo não engessa uma oficina. Processo devolve clareza, padrão e tempo para o dono pensar na empresa.</p>
-                <cite>Princípio do método</cite>
-              </blockquote>
-            </div>
-          </div>
         </div>
       </section>
 
