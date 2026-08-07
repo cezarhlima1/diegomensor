@@ -528,3 +528,5 @@
   .bonus{min-height:245px;padding:23px}
   .bonusSection .bonus h3{margin-top:34px;font-size:19px}
 }
+
+.offerCopy h2 em{color:#ff7189;font-style:normal;text-shadow:0 7px 26px rgba(255,70,103,.16)}

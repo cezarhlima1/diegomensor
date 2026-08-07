@@ -338,7 +338,7 @@ export default function OficinaAltaPerformance() {
           <div className={`${styles.offer} ${styles.reveal}`}>
             <div className={styles.offerCopy}>
               <span className={styles.indexDark}>08 — Investimento</span>
-              <h2>Quanto custa continuar perdendo dinheiro por falta de organização?</h2>
+              <h2>Quanto custa continuar <em>perdendo dinheiro</em> por <em>falta de organização?</em></h2>
               <p>Quanto custa cobrar errado durante um mês? Quanto custa o retrabalho? Quanto custa uma equipe sem padrão?</p>
               <div className={styles.costSignals}>
                 <span>Cobrar errado</span>
