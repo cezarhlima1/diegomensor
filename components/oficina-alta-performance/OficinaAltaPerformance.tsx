@@ -126,16 +126,6 @@ export default function OficinaAltaPerformance() {
               </div>
             </div>
 
-            <div className={`${styles.heroImage} ${styles.reveal}`}>
-              <Image
-                src="/CAPA VENDA DOBRA1.png"
-                alt="Diego Mensor apresentando os processos de uma oficina de alta performance"
-                width={1380}
-                height={981}
-                priority
-                sizes="(max-width: 1120px) 100vw, 52vw"
-              />
-            </div>
           </div>
         </div>
       </section>

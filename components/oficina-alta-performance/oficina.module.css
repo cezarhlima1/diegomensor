@@ -728,3 +728,16 @@
   .growthReveal h2{font-size:clamp(34px,10vw,44px);line-height:1.06;letter-spacing:-.04em;text-wrap:pretty}
 }
 @media(prefers-reduced-motion:reduce){.growthReveal{opacity:1;transform:none;transition:none}}
+
+/* A foto deixa de ser um card e passa a preencher toda a primeira seção. */
+.hero{min-height:900px;background-color:#07111a;background-image:linear-gradient(90deg,rgba(4,8,11,.92) 0%,rgba(4,8,11,.78) 38%,rgba(4,8,11,.28) 68%,rgba(4,8,11,.38) 100%),linear-gradient(0deg,rgba(4,8,11,.72) 0%,transparent 48%),url("/CAPA%20VENDA%20DOBRA1.png");background-position:center;background-size:cover;background-repeat:no-repeat}
+.heroGrid{display:block}
+.heroCopy{position:relative;z-index:2;max-width:690px}
+.heroGlow{z-index:1}
+@media(max-width:1120px){
+  .hero{min-height:850px;background-position:62% center}
+  .heroCopy{max-width:680px}
+}
+@media(max-width:700px){
+  .hero{min-height:auto;background-image:linear-gradient(180deg,rgba(4,8,11,.62) 0%,rgba(4,8,11,.86) 48%,#07111a 100%),linear-gradient(90deg,rgba(4,8,11,.72),rgba(4,8,11,.18)),url("/CAPA%20VENDA%20DOBRA1.png");background-position:66% center;background-size:auto 100%}
+}
