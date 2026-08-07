@@ -321,9 +321,16 @@ export default function OficinaAltaPerformance() {
               <h2>Quanto custa continuar <em>perdendo dinheiro</em> por <em>falta de organização?</em></h2>
               <p>Quanto custa cobrar errado durante um mês? Quanto custa o retrabalho? Quanto custa uma equipe sem padrão?</p>
               <div className={styles.costSignals}>
-                <span>Cobrar errado</span>
-                <span>Refazer serviços</span>
-                <span>Equipe sem padrão</span>
+                {[
+                  "Cobrar errado.",
+                  "Refazer serviços.",
+                  "Perder clientes.",
+                  "Trabalhar mais de 10 horas por dia.",
+                  "Resolver tudo sozinho.",
+                  "Não conseguir tirar férias.",
+                  "Chegar no fim do mês sem enxergar o lucro.",
+                  "Viver apagando incêndio.",
+                ].map((item) => <span key={item}>{item}</span>)}
               </div>
               <div className={styles.valueStack}>
                 <div className={styles.valueStackIntro}>
