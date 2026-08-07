@@ -665,3 +665,8 @@
   .bonus,.bonus:first-child,.bonus:nth-child(2),.bonus:nth-child(3){min-height:245px}
   .bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{margin-top:34px}
 }
+
+/* Garantia e acesso ficam imediatamente associados ao CTA do Hero. */
+.heroActions{width:fit-content;align-items:stretch;flex-direction:column;gap:9px}
+.heroActions>span{width:100%;max-width:none;text-align:center}
+@media(max-width:700px){.heroActions{width:100%}}

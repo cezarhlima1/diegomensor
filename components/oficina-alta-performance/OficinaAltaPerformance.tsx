@@ -115,7 +115,7 @@ export default function OficinaAltaPerformance() {
               </p>
               <div className={styles.heroActions}>
                 <a className={styles.primaryCta} href="#investimento">
-                  Quero transformar minha oficina <Arrow />
+                  Garantir a minha vaga <Arrow />
                 </a>
                 <span>Acesso por 12 meses · 7 dias de garantia</span>
               </div>
