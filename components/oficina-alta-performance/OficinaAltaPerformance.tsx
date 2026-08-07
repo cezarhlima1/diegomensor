@@ -344,6 +344,31 @@ export default function OficinaAltaPerformance() {
               </div>
               <strong className={styles.offerConclusion}>Agora compare isso com o investimento necessário para estruturar uma oficina que pode gerar resultados durante muitos anos.</strong>
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
+              <div className={styles.valueStack}>
+                <div className={styles.valueStackIntro}>
+                  <p>Se você fosse contratar uma consultoria para organizar a gestão da sua oficina, dificilmente investiria menos de <strong>R$ 5.000.</strong> E aqui eu estou jogando baixo.</p>
+                  <p>Só que aqui você não recebe só uma consultoria.</p>
+                  <p>Você recebe um método construído em <strong>24 anos de oficina</strong>, além de:</p>
+                </div>
+                <div className={styles.valueItems}>
+                  {[
+                    ["Treinamento completo de todos os processos", "R$ 2.500"],
+                    ["Treinamento para toda a equipe", "R$ 2.000"],
+                    ["Encontros quinzenais ao vivo", "R$ 3.000"],
+                    ["Aulas com especialistas", "R$ 5.000"],
+                    ["Planilhas, checklists e ferramentas prontas", "R$ 300"],
+                  ].map(([item, value]) => (
+                    <div key={item}><span>{item}</span><strong>{value}</strong></div>
+                  ))}
+                </div>
+                <strong className={styles.valueTotal}>Só até aqui, já são mais de R$ 17.800 em conteúdo, ferramentas e acompanhamento.</strong>
+                <p className={styles.experienceNote}>E eu nem coloquei um valor nos meus 24 anos de experiência, nem em tudo que você vai economizar deixando de aprender na tentativa e erro.</p>
+                <div className={styles.valueTurn}>
+                  <span>CONTUDO...</span>
+                  <strong>Você não vai precisar investir R$ 17.800.</strong>
+                  <del>R$ 17.800,00</del>
+                </div>
+              </div>
             </div>
           </div>
           <div className={`${styles.pricingStage} ${styles.reveal}`}>
