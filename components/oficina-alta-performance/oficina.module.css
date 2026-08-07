@@ -1085,3 +1085,9 @@
   .bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){grid-template-rows:auto auto auto auto}
   .bonusSection .bonus h3,.bonusSection .bonus:first-child h3,.bonusSection .bonus:nth-child(2) h3,.bonusSection .bonus:nth-child(3) h3{min-height:0;margin-top:25px}
 }
+
+/* Introdução do método centralizada sem afetar as demais seções. */
+#metodo .sectionIntro{max-width:920px;margin-inline:auto;text-align:center}
+#metodo .sectionIntro .index{justify-content:center}
+#metodo .sectionIntro h2{max-width:900px;margin-inline:auto}
+#metodo .sectionIntro>p{max-width:760px;margin:24px auto 0}
