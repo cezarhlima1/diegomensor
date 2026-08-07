@@ -314,6 +314,9 @@ export default function OficinaAltaPerformance() {
               <ul><li><Check /> Método completo</li><li><Check /> Ferramentas e materiais</li><li><Check /> Encontros ao vivo</li><li><Check /> 12 meses de acesso</li></ul>
             </div>
             <div className={styles.priceCard}>
+              <div className={styles.cohortBadge}>
+                <span>Condição exclusiva de primeira turma</span>
+              </div>
               <span>OFICINA DE ALTA PERFORMANCE®</span>
               <small>CONDIÇÃO DE PAGAMENTO</small>
               <div className={styles.installment}>

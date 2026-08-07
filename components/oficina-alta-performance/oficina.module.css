@@ -113,4 +113,10 @@
 .installment small{padding-bottom:9px;color:#465b69;font:700 10px var(--font-jetbrains)}
 .installment strong{font:760 66px/.88 var(--font-archivo);letter-spacing:-.065em}
 .priceCard .totalPrice{margin:8px 0 25px;color:#637481;font:600 11px var(--font-jetbrains)}
+.cohortBadge{position:relative;width:calc(100% + 28px);margin:-24px 0 25px;padding:11px 14px;overflow:hidden;border:1px solid #9e4055;border-radius:9px;background:linear-gradient(100deg,#611629,#861f39,#611629);background-size:220% 100%;color:#fff;text-align:center;box-shadow:0 10px 24px rgba(97,22,41,.25);animation:cohortShift 3.2s ease-in-out infinite}
+.cohortBadge:after{content:"";position:absolute;inset:-50% auto -50% -35%;width:24%;transform:rotate(18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);animation:cohortShine 2.8s ease-in-out infinite}
+.cohortBadge span{position:relative;z-index:1;font:800 9px var(--font-jetbrains);letter-spacing:.09em;text-transform:uppercase}
+@keyframes cohortShift{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
+@keyframes cohortShine{0%,25%{left:-35%}70%,100%{left:125%}}
 @media(max-width:430px){.installment strong{font-size:58px}}
+@media(prefers-reduced-motion:reduce){.cohortBadge,.cohortBadge:after{animation:none}}
