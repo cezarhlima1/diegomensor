@@ -39,6 +39,7 @@ const problems = [
 
 const cohortMessage = "ESSA CONDIÇÃO É ÚNICA PARA A PRIMEIRA TURMA E VAI DEIXAR DE EXISTIR.";
 const cohortTickerLine = `${cohortMessage}  |  ${cohortMessage}  |  ${cohortMessage}  |  `;
+const bonusTickerLine = "BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  ";
 
 function Arrow() {
   return <span aria-hidden="true">↗</span>;
@@ -243,9 +244,14 @@ export default function OficinaAltaPerformance() {
       <section className={styles.bonusSection}>
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <div className={styles.bonusBadge}>Bônus exclusivos de primeira turma</div>
-            <h2>Além do método completo, você recebe suporte para colocar tudo em prática.</h2>
-            <p className={styles.bonusLead}>Três entregas extras para acelerar a implementação e ajudar o método a chegar à rotina da sua oficina.</p>
+            <div className={styles.bonusRibbon} aria-label="Bônus exclusivos de primeira turma">
+              <div className={styles.bonusRibbonTrack} aria-hidden="true">
+                <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
+                <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
+              </div>
+            </div>
+            <h2>Eu quero garantir que tu não precise buscar conhecimento em outro lugar e que encontre tudo o que precisa <em>AQUI.</em></h2>
+            <p className={styles.bonusLead}>Por isso, preparei alguns bônus que vão acelerar teus resultados.</p>
           </div>
           <div className={styles.bonusGrid}>
             {[

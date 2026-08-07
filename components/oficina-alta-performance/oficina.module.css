@@ -931,3 +931,20 @@
   .bonusSection .sectionIntro h2{font-size:34px}
   .bonusSection .bonus,.bonusSection .bonus:first-child,.bonusSection .bonus:nth-child(2),.bonusSection .bonus:nth-child(3){min-height:250px;padding:24px}
 }
+
+/* Faixa dourada translúcida e contínua no início dos bônus. */
+.bonusRibbon{position:relative;left:50%;width:100vw;margin:0 0 54px;transform:translateX(-50%);overflow:hidden;border-block:1px solid rgba(237,199,101,.65);background:rgba(223,178,70,.14);box-shadow:0 12px 38px rgba(0,0,0,.12);backdrop-filter:blur(8px);transition:background .3s ease,box-shadow .3s ease}
+.bonusRibbonTrack{display:flex;width:max-content;will-change:transform;animation:bonusRibbonMove 14s linear infinite}
+.bonusRibbonGroup{flex:none;padding:18px 0;color:#f5d987;font:800 12px var(--font-jetbrains);letter-spacing:.13em;white-space:pre;text-transform:uppercase;text-shadow:0 0 20px rgba(255,219,121,.22)}
+.bonusSection .sectionIntro h2 em{color:#f2d681;font-style:normal}
+@keyframes bonusRibbonMove{to{transform:translate3d(-50%,0,0)}}
+@media(hover:hover) and (pointer:fine){
+  .bonusRibbon:hover{background:rgba(223,178,70,.23);box-shadow:0 14px 44px rgba(208,157,44,.18)}
+  .bonusRibbon:hover .bonusRibbonTrack{animation-duration:23s}
+}
+@media(max-width:700px){
+  .bonusRibbon{margin-bottom:40px}
+  .bonusRibbonTrack{animation-duration:11s}
+  .bonusRibbonGroup{padding:14px 0;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.bonusRibbonTrack{animation:none}}
