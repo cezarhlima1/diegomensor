@@ -670,3 +670,19 @@
 .heroActions{width:fit-content;align-items:stretch;flex-direction:column;gap:9px}
 .heroActions>span{width:100%;max-width:none;text-align:center}
 @media(max-width:700px){.heroActions{width:100%}}
+
+/* Indicadores do Hero em cards compactos e ordenados. */
+.quickProof{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:540px;margin-top:38px;padding:0;border:0}
+.quickProof div{min-height:86px;align-content:center;gap:5px;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.045);box-shadow:0 10px 25px rgba(0,0,0,.12)}
+.quickProof strong{color:#fff;font-size:19px}
+.quickProof span{color:#aebdc7;font-size:8px;line-height:1.4}
+@media(hover:hover) and (pointer:fine){
+  .quickProof div{transition:transform .25s ease,border-color .25s ease,background .25s ease}
+  .quickProof div:hover{transform:translateY(-4px);border-color:rgba(4,149,240,.45);background:rgba(4,149,240,.1)}
+}
+@media(max-width:430px){
+  .quickProof{gap:7px}
+  .quickProof div{min-height:78px;padding:11px 9px}
+  .quickProof strong{font-size:15px}
+  .quickProof span{font-size:7px}
+}
