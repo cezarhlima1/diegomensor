@@ -95,7 +95,7 @@ export default function OficinaAltaPerformance() {
       <div className={styles.progress} style={{ width: `${progress}%` }} />
       <header className={styles.nav}>
         <a href="#inicio" className={styles.brand} aria-label="Oficina de Alta Performance — início">
-          <span className={styles.brandMark}>DM</span>
+          <span className={styles.brandMark}>OAP</span>
           <span>Oficina de Alta Performance<sup>®</sup></span>
         </a>
         <nav aria-label="Navegação principal">
