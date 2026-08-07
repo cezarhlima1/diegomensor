@@ -197,6 +197,50 @@ export default function OficinaAltaPerformance() {
         </div>
       </section>
 
+      <section className={styles.processSection} id="processos">
+        <div className={styles.shell}>
+          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
+            <h2>Eu não vou poupar conteúdo. Eu vou te entregar <em>TUDO</em> sobre gestão de oficina.</h2>
+            <p>Tudo que eu validei durante 14 anos sendo dono e 24 anos estando no chão da oficina.</p>
+          </div>
+          <div className={styles.moduleAccordion}>
+            {modules.map(([num, title, description], i) => {
+              const isOpen = activeModule === i;
+              return (
+                <article className={`${styles.moduleAccordionItem} ${isOpen ? styles.moduleAccordionOpen : ""}`} key={num}>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={`module-detail-${num}`}
+                  onClick={() => setActiveModule(isOpen ? null : i)}
+                >
+                  <span>MÓDULO {Number(num)}</span><b>{title}</b><i>{isOpen ? "−" : "+"}</i>
+                </button>
+                {isOpen && (
+                  <div className={styles.moduleInlineDetail} id={`module-detail-${num}`}>
+                    <p>{description}</p>
+                    <div><span><Check /> Fluxo passo a passo</span><span><Check /> Ferramenta pronta para aplicar</span><span><Check /> Orientação prática de implementação</span></div>
+                  </div>
+                )}
+                </article>
+              );
+            })}
+          </div>
+          <div className={styles.materials}>
+            <div className={styles.materialsIntro}>
+              <span>Além do passo a passo</span>
+              <strong>Recursos prontos para aplicar na sua oficina</strong>
+            </div>
+            {["Ferramentas prontas", "Planilhas", "Checklists", "Modelos de documentos", "Materiais de apoio"].map((item, i) => (
+              <div className={styles.reveal} key={item}><span>0{i + 1}</span><b>{item}</b><small>Pronto para usar</small></div>
+            ))}
+          </div>
+          <div className={`${styles.processClosing} ${styles.reveal}`}>
+            <p>Eu não vou te dizer o que tu deveria fazer. Eu vou te mostrar, de forma simples e objetiva, o caminho para aplicar isso na vida real da tua oficina e construir uma Oficina de Alta Performance.</p>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.lightSection} id="metodo">
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
@@ -240,50 +284,6 @@ export default function OficinaAltaPerformance() {
             ))}
           </div>
           <p className={`${styles.problemConclusion} ${styles.reveal}`}>Foi justamente para resolver esses gargalos que nasceu o Oficina de Alta Performance.</p>
-        </div>
-      </section>
-
-      <section className={styles.processSection} id="processos">
-        <div className={styles.shell}>
-          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <h2>Eu não vou poupar conteúdo. Eu vou te entregar <em>TUDO</em> sobre gestão de oficina.</h2>
-            <p>Tudo que eu validei durante 14 anos sendo dono e 24 anos estando no chão da oficina.</p>
-          </div>
-          <div className={styles.moduleAccordion}>
-            {modules.map(([num, title, description], i) => {
-              const isOpen = activeModule === i;
-              return (
-                <article className={`${styles.moduleAccordionItem} ${isOpen ? styles.moduleAccordionOpen : ""}`} key={num}>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-controls={`module-detail-${num}`}
-                  onClick={() => setActiveModule(isOpen ? null : i)}
-                >
-                  <span>MÓDULO {Number(num)}</span><b>{title}</b><i>{isOpen ? "−" : "+"}</i>
-                </button>
-                {isOpen && (
-                  <div className={styles.moduleInlineDetail} id={`module-detail-${num}`}>
-                    <p>{description}</p>
-                    <div><span><Check /> Fluxo passo a passo</span><span><Check /> Ferramenta pronta para aplicar</span><span><Check /> Orientação prática de implementação</span></div>
-                  </div>
-                )}
-                </article>
-              );
-            })}
-          </div>
-          <div className={styles.materials}>
-            <div className={styles.materialsIntro}>
-              <span>Além do passo a passo</span>
-              <strong>Recursos prontos para aplicar na sua oficina</strong>
-            </div>
-            {["Ferramentas prontas", "Planilhas", "Checklists", "Modelos de documentos", "Materiais de apoio"].map((item, i) => (
-              <div className={styles.reveal} key={item}><span>0{i + 1}</span><b>{item}</b><small>Pronto para usar</small></div>
-            ))}
-          </div>
-          <div className={`${styles.processClosing} ${styles.reveal}`}>
-            <p>Eu não vou te dizer o que tu deveria fazer. Eu vou te mostrar, de forma simples e objetiva, o caminho para aplicar isso na vida real da tua oficina e construir uma Oficina de Alta Performance.</p>
-          </div>
         </div>
       </section>
 
