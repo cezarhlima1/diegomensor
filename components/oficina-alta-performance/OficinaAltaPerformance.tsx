@@ -229,7 +229,7 @@ export default function OficinaAltaPerformance() {
           </div>
           <div className={styles.materials}>
             <div className={styles.materialsIntro}>
-              <div>
+              <div className={styles.materialsIntroCopy}>
                 <strong>Assistir às aulas e ficar perdido em como aplicar dentro da tua realidade?</strong>
                 <p>Aqui não. Você vai ter um complemento que te ajude a <em>EXECUTAR</em> de verdade.</p>
               </div>
@@ -258,7 +258,7 @@ export default function OficinaAltaPerformance() {
           </div>
           <div className={styles.bonusGrid}>
             {[
-              ["01", "Treinamento completo para sua equipe", "A tua equipe também terá acesso ao método para entender a importância de cada processo e o quanto o papel dele dentro da área é importante para o crescimento da oficina."],
+              ["01", "Treinamento completo para sua equipe", "Eu preparei AULAS exclusivas para falar com o resposável de cada função dentro da tua operação. Com uma linguagem que vá comunicar aquilo que cada um precisa entender e deixar todo mundo na mesma página sem esforço."],
               ["02", "Encontros quinzenais ao vivo comigo", "A cada 15 dias, vamos ter um bate papo ao vivo pra tirar dúvidas sobre o curso e sobre qual dificuldade tu enfretou ou está enfrentando no momento com foco em acelerar o crescimento."],
               ["03", "Aulas exclusivas com especialistas", "Dentro do curso, será liberado aulas exclusivas com cnteúdos de marketing, comercial, recrutamento, tráfego e área tributária para apoiar o crescimento da oficina."],
             ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><div className={styles.bonusTop}><span>BÔNUS {n}</span></div><h3>{title}</h3><p>{text}</p><small>Incluído no Oficina de Alta Performance</small></article>)}
