@@ -197,7 +197,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}>
           <div className={`${styles.sectionIntro} ${styles.reveal}`}>
             <span className={styles.indexDark}>Resultados</span>
-            <h2>Donos de oficina que aplicaram o método já <em>colheram resultados.</em></h2>
+            <h2>Mais de 150 donos de oficina aplicaram o método já <em>colheram resultados.</em></h2>
           </div>
           <div className={styles.testimonialGallery}>
             {testimonials.map(({ src, width, height }, index) => (
