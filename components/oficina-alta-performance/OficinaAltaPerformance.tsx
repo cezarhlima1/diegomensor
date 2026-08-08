@@ -22,11 +22,21 @@ const modules: Array<[string, string, string, string[]]> = [
 ];
 
 const faqs = [
-  ["O curso serve para qualquer tipo de oficina?", "Sim. O método pode ser aplicado em oficinas de diferentes portes e especialidades."],
-  ["Por quanto tempo terei acesso?", "12 meses."],
-  ["As aulas são gravadas?", "Sim. Todo o conteúdo fica disponível para você assistir quando quiser."],
-  ["Terei suporte?", "Sim. Você terá acesso aos encontros quinzenais ao vivo para tirar dúvidas e acompanhar a implementação."],
-  ["Preciso ter equipe?", "Não. O método pode ser aplicado tanto por quem trabalha sozinho quanto por quem já possui uma equipe."],
+  ["O curso serve para qualquer tipo de oficina?", "Sim. O método foi desenvolvido para ser adaptado à realidade de oficinas de diferentes portes e especialidades. Você aprende o processo e implementa de acordo com a estrutura que tem hoje."],
+  ["Minha oficina é pequena. Vale a pena para mim?", "Sim. Você não precisa esperar a oficina crescer para começar a organizar a gestão. Na verdade, criar processos agora evita que a desorganização cresça junto com o faturamento."],
+  ["Preciso ter uma equipe grande?", "Não. Você pode aplicar o método trabalhando sozinho, com uma equipe pequena ou com uma operação já estruturada. Conforme a oficina cresce, os processos também ajudam a definir melhor quem faz o quê."],
+  ["Eu trabalho o dia inteiro na oficina. Vou conseguir acompanhar?", "Sim. As aulas são gravadas e você pode assistir no seu ritmo durante os 12 meses de acesso. A ideia não é parar sua oficina para implementar tudo de uma vez, mas evoluir processo por processo."],
+  ["E se minha equipe não quiser seguir os novos processos?", "Por isso o treinamento não foi pensado apenas para o dono. Você terá processos claros que podem ser apresentados e ensinados à equipe, facilitando a criação de um padrão dentro da oficina."],
+  ["Eu já tentei organizar minha oficina antes e não consegui. O que muda?", "Aqui você não recebe apenas informações soltas sobre gestão. Você recebe um caminho organizado, acompanhando a operação da oficina desde a entrada do veículo até o pós-venda, com ferramentas para colocar cada etapa em prática."],
+  ["É só teoria sobre gestão?", "Não. O Oficina de Alta Performance foi construído a partir da experiência prática de 24 anos dentro de oficina e 14 anos como proprietário. O foco é mostrar processos que façam sentido na vida real da oficina."],
+  ["Preciso usar algum sistema específico?", "Não. O objetivo é ensinar os processos da operação. Você pode adaptar a implementação às ferramentas e ao sistema que já utiliza na sua oficina."],
+  ["Vou receber materiais prontos para aplicar?", "Sim. Além das aulas, você terá acesso a planilhas, checklists, modelos e ferramentas para facilitar a implementação na oficina."],
+  ["E se eu tiver dúvidas na hora de aplicar?", "Você terá encontros quinzenais ao vivo para tirar dúvidas e receber orientação durante a implementação."],
+  ["Por quanto tempo terei acesso?", "Você terá 12 meses de acesso ao Oficina de Alta Performance, podendo rever as aulas e materiais durante esse período."],
+  ["As aulas são gravadas?", "Sim. O conteúdo fica disponível na área de membros para você assistir de acordo com a sua rotina."],
+  ["O curso é só para o dono ou minha equipe também pode aprender?", "Existem processos direcionados às diferentes funções da oficina, como recepção, mecânicos, chefe de oficina e orçamento. A proposta é justamente ajudar você a criar um padrão que possa ser levado para a operação."],
+  ["Preciso implementar tudo de uma vez?", "Não. Você pode avançar por etapas, começando pelos maiores gargalos da sua oficina e implementando os processos gradualmente."],
+  ["E se minha oficina já fatura bem?", "Faturar bem não significa necessariamente ter uma operação organizada ou lucrativa. O método também é para oficinas que cresceram, mas perceberam que os processos, a equipe e a gestão não acompanharam esse crescimento."],
 ];
 
 const problems = [
