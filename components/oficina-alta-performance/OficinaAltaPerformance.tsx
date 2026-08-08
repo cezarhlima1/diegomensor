@@ -258,9 +258,9 @@ export default function OficinaAltaPerformance() {
           </div>
           <div className={styles.bonusGrid}>
             {[
-              ["01", "Treinamento completo da equipe", "A tua equipe também terá acesso ao método para entender os processos e executar a operação com mais padrão."],
-              ["02", "Encontros quinzenais ao vivo", "A cada 15 dias, vamos revisar a implementação, esclarecer dúvidas e orientar os próximos passos."],
-              ["03", "Aulas exclusivas com especialistas", "Conteúdos de marketing, comercial, recrutamento, tráfego e área tributária para apoiar o crescimento da oficina."],
+              ["01", "Treinamento completo para sua equipe", "A tua equipe também terá acesso ao método para entender a importância de cada processo e o quanto o papel dele dentro da área é importante para o crescimento da oficina."],
+              ["02", "Encontros quinzenais ao vivo comigo", "A cada 15 dias, vamos ter um bate papo ao vivo pra tirar dúvidas sobre o curso e sobre qual dificuldade tu enfretou ou está enfrentando no momento com foco em acelerar o crescimento."],
+              ["03", "Aulas exclusivas com especialistas", "Dentro do curso, será liberado aulas exclusivas com cnteúdos de marketing, comercial, recrutamento, tráfego e área tributária para apoiar o crescimento da oficina."],
             ].map(([n, title, text]) => <article className={`${styles.bonus} ${styles.reveal}`} key={n}><div className={styles.bonusTop}><span>BÔNUS {n}</span></div><h3>{title}</h3><p>{text}</p><small>Incluído no Oficina de Alta Performance</small></article>)}
           </div>
         </div>
