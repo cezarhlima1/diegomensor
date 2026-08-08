@@ -4,21 +4,21 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "./oficina.module.css";
 
-const modules = [
-  ["01", "Recepção", "Crie uma primeira impressão profissional e organize a chegada de cada cliente."],
-  ["02", "Check-in e Ordem de Serviço", "Registre veículo, demanda e autorizações com clareza desde o início."],
-  ["03", "Distribuição dos Serviços", "Defina prioridades, responsáveis e prazos sem depender da memória do dono."],
-  ["04", "Diagnóstico", "Padronize a análise técnica e reduza erros antes de apresentar o orçamento."],
-  ["05", "Check-list com Imagens", "Documente o estado do veículo e aumente a percepção de transparência."],
-  ["06", "Orçamento", "Apresente serviços e valores de forma profissional, clara e rastreável."],
-  ["07", "Contato Comercial", "Conduza aprovações e retornos com um processo comercial consistente."],
-  ["08", "Compra de Peças", "Organize cotações, fornecedores, prazos e margens de cada componente."],
-  ["09", "Reparo", "Transforme o serviço técnico em uma operação previsível e acompanhável."],
-  ["10", "Teste Final", "Crie uma barreira de qualidade antes que o veículo volte ao cliente."],
-  ["11", "Check-out", "Confira o serviço, os registros e o veículo antes de concluir o atendimento."],
-  ["12", "Entrega do Veículo", "Finalize cada atendimento com orientação, clareza e profissionalismo."],
-  ["13", "Caixa", "Organize o fechamento financeiro e acompanhe os números da operação."],
-  ["14", "Pós-venda", "Mantenha o relacionamento ativo e acompanhe a experiência do cliente."],
+const modules: Array<[string, string, string, string[]]> = [
+  ["01", "START | Começando com o pé direito", "Entenda como o método funciona e prepare sua oficina para começar a implementação.", ["Como aplicar o método", "Por onde começar", "Plano para sair do papel"]],
+  ["02", "PRECIFICAÇÃO | Pare de perder dinheiro na precificação", "Aprenda a formar seus preços com base nos números da sua oficina e proteger sua margem.", ["Cálculo da hora técnica", "Formação do preço correto", "Margem e lucratividade"]],
+  ["03", "RECEPÇÃO | Encante o cliente desde a chegada", "Padronize a entrada do cliente e do veículo para começar o atendimento do jeito certo.", ["Padrão de atendimento", "Cadastro e abertura da O.S.", "Check-in do veículo"]],
+  ["04", "QUADRO DE SERVIÇO | Organize a rotina da oficina", "Tenha clareza sobre o que precisa ser feito, por quem e em qual ordem.", ["Distribuição dos serviços", "Organização da equipe", "Controle da operação"]],
+  ["05", "DIAGNÓSTICO E CHECKLIST | Vendendo mais com o checklist", "Identifique tudo o que o veículo precisa e mostre isso ao cliente de forma clara e profissional.", ["Diagnóstico com imagens", "Checklist completo do veículo", "Identificação de novos serviços"]],
+  ["06", "ORÇAMENTO | Orçamentos que o cliente aprova", "Transforme o diagnóstico em um orçamento claro, profissional e mais fácil de aprovar.", ["Montagem do orçamento", "Peças + horas de serviço", "Apresentação clara ao cliente"]],
+  ["07", "COMERCIAL | Venda mais sem pressionar o cliente", "Aprenda a conduzir a conversa para aumentar as aprovações sem precisar empurrar serviço.", ["Apresentação do orçamento", "Contorno de objeções", "Follow-up de orçamentos"]],
+  ["08", "REPARO | Execute o serviço com excelência", "Crie um padrão de execução para entregar qualidade, produtividade e cumprir o que foi vendido.", ["Execução conforme a O.S.", "Controle do tempo vendido", "Padrão de qualidade"]],
+  ["09", "TESTE FINAL | Garanta qualidade antes da entrega", "Confira o serviço antes que o veículo chegue ao cliente e reduza problemas e retrabalho.", ["Teste de rodagem", "Conferência dos serviços", "Validação do veículo"]],
+  ["10", "CHECK-OUT | Prepare o veículo para impressionar o cliente", "Organize os últimos detalhes para que o carro esteja realmente pronto para ser entregue.", ["Checklist de saída", "Limpeza e organização", "Preparação para entrega"]],
+  ["11", "FINALIZAÇÃO DA O.S. | Conclua o processo corretamente", "Feche a ordem de serviço sem deixar informações, valores ou etapas para trás.", ["Conferência de serviços e valores", "Finalização da O.S.", "Comunicação com o cliente"]],
+  ["12", "ENTREGA DO VEÍCULO | Encante o cliente na entrega", "Mostre o valor do serviço realizado e transforme a entrega em parte da experiência da oficina.", ["Explicação do serviço realizado", "Apresentação das peças trocadas", "Orientação ao cliente"]],
+  ["13", "CAIXA | Um caixa seguro e organizado", "Finalize o atendimento corretamente e garanta que tudo fique registrado.", ["Conferência da O.S.", "Recebimento do pagamento", "Nota fiscal e baixa no sistema"]],
+  ["14", "PÓS-VENDA | Faça o cliente voltar e indicar sua oficina", "Não deixe o relacionamento terminar na entrega: acompanhe o cliente e aumente as chances de fidelização.", ["Contato pós-serviço", "Coleta de feedbacks", "Fidelização do cliente"]],
 ];
 
 const faqs = [
@@ -205,7 +205,7 @@ export default function OficinaAltaPerformance() {
             <p>Tudo que eu validei durante 14 anos sendo dono e 24 anos estando no chão da oficina.</p>
           </div>
           <div className={styles.moduleAccordion}>
-            {modules.map(([num, title, description], i) => {
+            {modules.map(([num, title, description, topics], i) => {
               const isOpen = activeModule === i;
               return (
                 <article className={`${styles.moduleAccordionItem} ${isOpen ? styles.moduleAccordionOpen : ""}`} key={num}>
@@ -215,12 +215,12 @@ export default function OficinaAltaPerformance() {
                   aria-controls={`module-detail-${num}`}
                   onClick={() => setActiveModule(isOpen ? null : i)}
                 >
-                  <span>MÓDULO {Number(num)}</span><b>{title}</b><i>{isOpen ? "−" : "+"}</i>
+                  <span>MÓDULO {num}</span><b>{title}</b><i>{isOpen ? "−" : "+"}</i>
                 </button>
                 {isOpen && (
                   <div className={styles.moduleInlineDetail} id={`module-detail-${num}`}>
                     <p>{description}</p>
-                    <div><span><Check /> Fluxo passo a passo</span><span><Check /> Ferramenta pronta para aplicar</span><span><Check /> Orientação prática de implementação</span></div>
+                    <div>{topics.map((topic) => <span key={topic}><Check /> {topic}</span>)}</div>
                   </div>
                 )}
                 </article>
