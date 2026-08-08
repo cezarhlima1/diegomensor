@@ -50,6 +50,7 @@ const problems = [
 const cohortMessage = "ESSA CONDIÇÃO É ÚNICA PARA A PRIMEIRA TURMA E VAI DEIXAR DE EXISTIR.";
 const cohortTickerLine = `${cohortMessage}  |  ${cohortMessage}  |  ${cohortMessage}  |  `;
 const bonusTickerLine = "BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  BÔNUS EXCLUSIVOS DE PRIMEIRA TURMA  ✦  ";
+const checkoutUrl = "https://payfast.greenn.com.br/3mptwhj/offer/sXgqDR";
 
 function Arrow() {
   return <span aria-hidden="true">↗</span>;
@@ -113,7 +114,7 @@ export default function OficinaAltaPerformance() {
           <a href="#processos">Processos</a>
           <a href="#resultados">Resultados</a>
         </nav>
-        <a className={styles.navCta} href="#investimento">Quero participar <Arrow /></a>
+        <a className={styles.navCta} href={checkoutUrl}>Quero participar <Arrow /></a>
       </header>
 
       <section className={styles.hero} id="inicio">
@@ -129,7 +130,7 @@ export default function OficinaAltaPerformance() {
                 transformar a sua oficina em uma empresa preparada para crescer.
               </p>
               <div className={styles.heroActions}>
-                <a className={styles.primaryCta} href="#investimento">
+                <a className={styles.primaryCta} href={checkoutUrl}>
                   Garantir a minha vaga <Arrow />
                 </a>
                 <span>Acesso por 12 meses · 7 dias de garantia</span>
@@ -175,7 +176,7 @@ export default function OficinaAltaPerformance() {
               "Ter uma oficina organizada, lucrativa e preparada para crescer.",
             ].map((item) => <div className={`${styles.audienceItem} ${styles.reveal}`} key={item}><Check /><span>{item}</span></div>)}
             <div className={`${styles.audienceCta} ${styles.reveal}`}>
-              <a href="#investimento">Quero estruturar minha oficina <Arrow /></a>
+              <a href={checkoutUrl}>Quero estruturar minha oficina <Arrow /></a>
             </div>
           </div>
         </div>
@@ -203,7 +204,7 @@ export default function OficinaAltaPerformance() {
             </div>
           </div>
           <div className={`${styles.resultsCta} ${styles.reveal}`}>
-            <a className={styles.primaryCta} href="#investimento">Quero colher meus resultados <Arrow /></a>
+            <a className={styles.primaryCta} href={checkoutUrl}>Quero colher meus resultados <Arrow /></a>
           </div>
         </div>
       </section>
@@ -375,15 +376,16 @@ export default function OficinaAltaPerformance() {
                   <span>12x</span>
                   <small>de R$</small>
                 </div>
-                <strong>83,83</strong>
+                <strong>99,75</strong>
               </div>
-              <p className={styles.totalPrice}>ou R$ 997,00 à vista</p>
+              <small className={styles.noInterest}>(Sem juros)</small>
+              <p className={styles.totalPrice}>à vista R$ 1.197,00</p>
               <div className={styles.dailyCost}>
                 <span>Fazendo as contas, isso representa cerca de</span>
-                <strong>R$ 2,73 por dia</strong>
+                <strong>R$ 3,28 por dia</strong>
               </div>
               <p className={styles.impactText}>Um investimento simbólico quando comparado ao retorno financeiro e, muito além disso, ao impacto na sua vida profissional e pessoal.</p>
-              <a className={styles.primaryCta} href="#garantia">Quero uma Oficina de Alta Performance <Arrow /></a>
+              <a className={styles.primaryCta} href={checkoutUrl}>Quero uma Oficina de Alta Performance <Arrow /></a>
               <div className={styles.offerAssurances}>
                 <span><Check /> Acesso imediato</span>
                 <span><Check /> 7 dias de garantia</span>
@@ -425,7 +427,7 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}><div><span className={styles.brandMark}>DM</span><b>Oficina de Alta Performance<sup>®</sup></b></div><p>Gestão séria para oficinas preparadas para crescer.</p><small>© {new Date().getFullYear()} Diego Mensor. Todos os direitos reservados.</small></div>
       </footer>
 
-      <a className={styles.stickyCta} href="#investimento"><span><b>Oficina de Alta Performance®</b><small>Acesso por 12 meses</small></span><strong>Quero participar <Arrow /></strong></a>
+      <a className={styles.stickyCta} href={checkoutUrl}><span><b>Oficina de Alta Performance®</b><small>Acesso por 12 meses</small></span><strong>Quero participar <Arrow /></strong></a>
     </main>
   );
 }

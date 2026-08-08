@@ -1190,6 +1190,7 @@
 /* Valor principal com acabamento dourado e borda em movimento. */
 .pricingStage .installmentPrefix span,.pricingStage .installmentPrefix small,.pricingStage .installment>strong,.pricingStage .priceCard .totalPrice{color:#0874ad}
 .pricingStage .installment>strong{text-shadow:none}
+.pricingStage .priceCard .noInterest{margin:0 0 5px;color:#405767;font:650 11px/1.4 var(--font-jetbrains);text-transform:none}
 
 /* Informações abaixo do botão alinhadas como um único conjunto. */
 .pricingStage .offerAssurances{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:10px;width:min(100%,560px);margin:22px auto 0}
