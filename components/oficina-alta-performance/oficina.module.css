@@ -1391,3 +1391,20 @@
   .valueItems strong{min-width:68px;font-size:11px}
   .pricingStage .installment>strong{font-size:60px}
 }
+
+/* Galeria de depoimentos sem cortes, respeitando as proporções originais. */
+.testimonialGallery{columns:2;column-gap:18px;margin-top:54px}
+.testimonialCard{display:inline-block;width:100%;margin:0 0 18px;overflow:hidden;break-inside:avoid;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:#101d27;box-shadow:0 22px 48px rgba(0,0,0,.2)}
+.testimonialCard img{display:block;width:100%;height:auto;object-fit:contain;background:#fff}
+.testimonialCard figcaption{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 16px;color:#8799a5}
+.testimonialCard figcaption span{font:650 9px/1 var(--font-jetbrains);letter-spacing:.1em;text-transform:uppercase}
+.testimonialCard figcaption b{color:#75c9fb;font:750 10px/1 var(--font-jetbrains)}
+@media(hover:hover) and (pointer:fine){
+  .testimonialCard{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}
+  .testimonialCard:hover{transform:translateY(-4px);border-color:rgba(117,201,251,.38);box-shadow:0 28px 58px rgba(0,0,0,.28)}
+}
+@media(max-width:700px){
+  .testimonialGallery{columns:1;margin-top:32px}
+  .testimonialCard{margin-bottom:14px;border-radius:14px}
+  .testimonialCard figcaption{padding:11px 13px}
+}

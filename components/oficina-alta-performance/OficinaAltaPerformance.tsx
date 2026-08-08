@@ -21,6 +21,14 @@ const modules: Array<[string, string, string, string[]]> = [
   ["14", "PÓS-VENDA | Faça o cliente voltar e indicar sua oficina", "Não deixe o relacionamento terminar na entrega: acompanhe o cliente e aumente as chances de fidelização.", ["Contato pós-serviço", "Coleta de feedbacks", "Fidelização do cliente"]],
 ];
 
+const testimonials = [
+  { src: "/Depoimento 001.png", width: 560, height: 442 },
+  { src: "/Depoimento 002.png", width: 516, height: 544 },
+  { src: "/Depoimento 003.PNG", width: 1290, height: 792 },
+  { src: "/Depoimento 004.PNG", width: 1290, height: 898 },
+  { src: "/Depoimento 005.png", width: 696, height: 612 },
+];
+
 const faqs = [
   ["O curso serve para qualquer tipo de oficina?", "Sim. O método foi desenvolvido para ser adaptado à realidade de oficinas de diferentes portes e especialidades. Você aprende o processo e implementa de acordo com a estrutura que tem hoje."],
   ["Minha oficina é pequena. Vale a pena para mim?", "Sim. Você não precisa esperar a oficina crescer para começar a organizar a gestão. Na verdade, criar processos agora evita que a desorganização cresça junto com o faturamento."],
@@ -191,20 +199,19 @@ export default function OficinaAltaPerformance() {
             <span className={styles.indexDark}>Resultados</span>
             <h2>Donos de oficina que aplicaram o método já <em>colheram resultados.</em></h2>
           </div>
-          <div className={styles.resultsGrid}>
-            <figure className={`${styles.resultMain} ${styles.reveal}`}>
-              <Image src="/depoimentocaptura1.png" alt="Resultado real de aluna mostrando evolução no faturamento" width={1066} height={872} sizes="(max-width: 800px) 100vw, 58vw" />
-              <figcaption><span>Resultado compartilhado por aluna</span><b>Gestão aplicada na prática</b></figcaption>
-            </figure>
-            <div className={styles.resultSide}>
-              <figure className={`${styles.resultSmall} ${styles.reveal}`}>
-                <Image src="/depoimentocaptura2.png" alt="Depoimento real de aluno do método" width={1306} height={1004} sizes="(max-width: 800px) 100vw, 38vw" />
+          <div className={styles.testimonialGallery}>
+            {testimonials.map(({ src, width, height }, index) => (
+              <figure className={`${styles.testimonialCard} ${styles.reveal}`} key={src}>
+                <Image
+                  src={src}
+                  alt={`Depoimento real de cliente com resultado na oficina ${index + 1}`}
+                  width={width}
+                  height={height}
+                  sizes="(max-width: 700px) calc(100vw - 32px), 560px"
+                />
+                <figcaption><span>Resultado real</span><b>{String(index + 1).padStart(2, "0")}</b></figcaption>
               </figure>
-              <blockquote className={`${styles.quote} ${styles.reveal}`}>
-                <span>“</span><p>Processo não engessa uma oficina. Processo devolve clareza, padrão e tempo para o dono pensar na empresa.</p>
-                <cite>Princípio do método</cite>
-              </blockquote>
-            </div>
+            ))}
           </div>
           <div className={`${styles.resultsCta} ${styles.reveal}`}>
             <a className={styles.primaryCta} href={checkoutUrl}>Quero colher meus resultados <Arrow /></a>
