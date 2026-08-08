@@ -1229,17 +1229,29 @@
 }
 
 /* Os três gargalos recebem uma leitura negativa mais forte. */
-.lightSection .principles{max-width:1040px;margin:54px auto 0}
-.lightSection .principle{position:relative;min-height:205px;padding:25px;overflow:hidden;border-color:rgba(138,32,60,.42);background:linear-gradient(145deg,#35101b,#170b10);color:#fff;box-shadow:0 18px 42px rgba(55,13,26,.13)}
-.lightSection .principle:after{content:"×";position:absolute;right:22px;top:20px;display:grid;place-items:center;width:28px;height:28px;border:1px solid rgba(255,126,150,.3);border-radius:50%;background:rgba(138,32,60,.3);color:#ed8297;font:700 16px/1 var(--font-jetbrains)}
+.lightSection .principles{max-width:960px;gap:14px;margin:48px auto 0}
+.lightSection .principle{position:relative;min-height:168px;padding:24px;overflow:hidden;border-color:rgba(138,32,60,.42);background:linear-gradient(145deg,#35101b,#170b10);color:#fff;box-shadow:0 18px 42px rgba(55,13,26,.13)}
+.lightSection .principle:after{content:"×";position:absolute;right:18px;top:17px;display:grid;place-items:center;width:26px;height:26px;border:1px solid rgba(255,126,150,.3);border-radius:50%;background:rgba(138,32,60,.3);color:#ed8297;font:700 15px/1 var(--font-jetbrains)}
 .lightSection .principle>span{color:#d9768a}
-.lightSection .principle h3{margin:47px 0 9px;color:#fff;font-size:22px}
+.lightSection .principle h3{margin:0 38px 8px 0;color:#fff;font-size:20px;line-height:1.2}
 .lightSection .principle p{color:#d3b9c0;font-size:14px;line-height:1.55}
 @media(hover:hover) and (pointer:fine){
   .lightSection .principle:hover{border-color:rgba(201,87,104,.72);background:linear-gradient(145deg,#421321,#1c0c12);box-shadow:0 24px 52px rgba(70,15,31,.2)}
 }
-.lightSection .statement{width:100%;margin-inline:auto;text-align:center}
-.lightSection .statement span,.lightSection .statement strong{justify-self:center;text-align:center}
+.lightSection .statement{display:grid;width:100%;max-width:960px;justify-items:center;gap:7px;margin:14px auto 0;padding:25px 28px;text-align:center}
+.lightSection .statement span,.lightSection .statement strong{display:block;width:100%;margin:0;justify-self:center;text-align:center}
+.lightSection .statement span{color:#9cabb6;font-size:15px;line-height:1.5}
+.lightSection .statement strong{font:680 20px/1.4 var(--font-archivo);letter-spacing:-.015em}
+@media(max-width:700px){
+  .lightSection .principles{gap:10px;margin-top:36px}
+  .lightSection .principle{min-height:128px;padding:20px}
+  .lightSection .principle:after{right:16px;top:16px;width:24px;height:24px;font-size:14px}
+  .lightSection .principle h3{margin-right:34px;font-size:18px}
+  .lightSection .principle p{font-size:13px;line-height:1.5}
+  .lightSection .statement{gap:5px;margin-top:10px;padding:22px 18px}
+  .lightSection .statement span{font-size:14px}
+  .lightSection .statement strong{font-size:18px}
+}
 
 /* Aplicação prática sem painel ou cards: apenas hierarquia e divisórias. */
 .processSection .materials{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:auto;gap:0;margin-top:38px;padding:0;border-radius:0;background:transparent;box-shadow:none}
