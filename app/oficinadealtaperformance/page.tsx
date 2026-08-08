@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ClarityScript from "@/components/ClarityScript";
 import FacebookPixel from "@/components/FacebookPixel";
 import OficinaAltaPerformance from "@/components/oficina-alta-performance/OficinaAltaPerformance";
 
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
 export default function OficinaAltaPerformancePage() {
   return (
     <>
+      <ClarityScript projectId="xz9b5owhei" />
       <FacebookPixel />
       <OficinaAltaPerformance />
     </>
