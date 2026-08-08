@@ -63,12 +63,15 @@ function Check() {
 export default function OficinaAltaPerformance() {
   const [activeModule, setActiveModule] = useState<number | null>(0);
   const [progress, setProgress] = useState(0);
+  const [showStickyCta, setShowStickyCta] = useState(false);
   const pageRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const update = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0);
+      const hero = document.getElementById("inicio");
+      setShowStickyCta(Boolean(hero && hero.getBoundingClientRect().bottom <= 80));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -114,7 +117,7 @@ export default function OficinaAltaPerformance() {
           <a href="#processos">Processos</a>
           <a href="#resultados">Resultados</a>
         </nav>
-        <a className={styles.navCta} href={checkoutUrl}>Quero participar <Arrow /></a>
+        <a className={styles.navCta} href={checkoutUrl}>Quero o treinamento <Arrow /></a>
       </header>
 
       <section className={styles.hero} id="inicio">
@@ -427,7 +430,9 @@ export default function OficinaAltaPerformance() {
         <div className={styles.shell}><div><span className={styles.brandMark}>DM</span><b>Oficina de Alta Performance<sup>®</sup></b></div><p>Gestão séria para oficinas preparadas para crescer.</p><small>© {new Date().getFullYear()} Diego Mensor. Todos os direitos reservados.</small></div>
       </footer>
 
-      <a className={styles.stickyCta} href={checkoutUrl}><span><b>Oficina de Alta Performance®</b><small>Acesso por 12 meses</small></span><strong>Quero participar <Arrow /></strong></a>
+      {showStickyCta && (
+        <a className={styles.stickyCta} href={checkoutUrl}><span><b>Oficina de Alta Performance®</b><small>Acesso por 12 meses</small></span><strong>Quero o treinamento <Arrow /></strong></a>
+      )}
     </main>
   );
 }
