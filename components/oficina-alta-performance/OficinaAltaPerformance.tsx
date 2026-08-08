@@ -229,7 +229,6 @@ export default function OficinaAltaPerformance() {
           </div>
           <div className={styles.materials}>
             <div className={styles.materialsIntro}>
-              <span>Aplicação prática</span>
               <div>
                 <strong>Assistir às aulas e ficar perdido em como aplicar dentro da tua realidade?</strong>
                 <p>Aqui não. Você vai ter um complemento que te ajude a <em>EXECUTAR</em> de verdade.</p>

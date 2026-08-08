@@ -1243,11 +1243,10 @@
 
 /* Aplicação prática sem painel ou cards: apenas hierarquia e divisórias. */
 .processSection .materials{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:auto;gap:0;margin-top:38px;padding:0;border-radius:0;background:transparent;box-shadow:none}
-.processSection .materials .materialsIntro{grid-column:1/-1;grid-row:auto;display:grid;justify-items:center;gap:0;padding:0 0 32px;border:0;border-bottom:1px solid #cbd8e0;background:transparent;text-align:center}
-.processSection .materialsIntro>span{justify-content:center;padding:0;border:0;border-radius:0;background:transparent;color:#087abf;font-size:10px;text-align:center}
-.processSection .materialsIntro>div{justify-items:center;gap:10px;margin-top:16px}
-.processSection .materialsIntro>div strong{max-width:760px;color:#152734;font-size:25px;line-height:1.25;text-align:center}
-.processSection .materialsIntro>div p{max-width:680px;color:#536979;font-size:15px;line-height:1.65;text-align:center}
+.processSection .materials .materialsIntro{grid-column:1/-1;grid-row:auto;display:grid;justify-items:center;gap:0;padding:8px 0 38px;border:0;border-bottom:1px solid #cbd8e0;background:transparent;text-align:center}
+.processSection .materialsIntro>div{justify-items:center;gap:12px;margin-top:0}
+.processSection .materialsIntro>div strong{max-width:820px;color:#152734;font-size:27px;line-height:1.22;text-align:center;text-wrap:balance}
+.processSection .materialsIntro>div p{max-width:720px;color:#536979;font-size:16px;line-height:1.65;text-align:center;text-wrap:balance}
 .processSection .materialsIntro>div p em{color:#087abf}
 .processSection .materials>div:not(.materialsIntro){grid-column:auto;display:grid;grid-template-columns:1fr;justify-items:center;align-content:start;gap:8px;min-height:132px;padding:24px 15px;border:0;border-left:1px solid #d1dce3;border-radius:0;background:transparent;text-align:center}
 .processSection .materials .materialsIntro+div{border-left:0}
