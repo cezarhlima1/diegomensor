@@ -18,6 +18,7 @@ type Lead = {
   phone: string;
   email: string;
   source: string;
+  product?: string;
   stage: Stage;
   value: number;
   temperature: "Quente" | "Morno" | "Frio";
@@ -171,7 +172,8 @@ export default function CRM() {
           (JSON.parse(saved) as Lead[]).map((lead) => {
             const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
             const createdAt = lead.createdAt || new Date().toISOString();
-            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt } : { ...lead, stage, createdAt, value: 0 };
+            const product = lead.product || "Não informado";
+            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt, product } : { ...lead, stage, createdAt, product, value: 0 };
           }),
         );
     } catch {}
@@ -391,6 +393,7 @@ function Dashboard({
         <Kpi label="Meta do mês" value={currency.format(monthlyGoals[selectedMonth] || 0)} detail={monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Defina a meta no gráfico"} />
       </div>
       <FinancialSummary stats={stats} leads={leads} />
+      <ProductValueChart leads={leads} />
       <section className={`${styles.panel} ${styles.sourcePanel}`}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
@@ -562,6 +565,7 @@ function LeadModal({
     phone: "",
     email: "",
     source: "Formulário mentoria",
+    product: "Mentoria",
     temperature: "Morno" as Lead["temperature"],
     nextAction: "Fazer primeiro contato",
   });
@@ -620,6 +624,7 @@ function LeadModal({
             value={draft.source}
             set={(source) => setDraft({ ...draft, source })}
           />
+          <Input label="Produto" value={draft.product} set={(product) => setDraft({ ...draft, product })} />
           <label>
             <span>Temperatura</span>
             <select
@@ -788,6 +793,12 @@ function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (mo
   const lastDay = new Date(year, monthNumber, 0).getDate();
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
   return <section className={styles.periodFilter}><div><span>Período atual</span><h2>01/{String(monthNumber).padStart(2, "0")} — {lastDay}/{String(monthNumber).padStart(2, "0")}</h2><p>{total} leads no período</p></div><label><span>Alterar mês</span><input type="month" value={month} aria-label={`Período: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
+}
+function ProductValueChart({ leads }: { leads: Lead[] }) {
+  const products = Array.from(new Set(leads.map((lead) => lead.product || "Não informado"))).map((product) => { const items = leads.filter((lead) => (lead.product || "Não informado") === product); const closed = items.filter((lead) => lead.stage === "Fechado"); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length }; }).sort((a,b) => b.value - a.value);
+  const total = products.reduce((sum, product) => sum + product.value, 0);
+  const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
+  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Quanto cada produto representa do valor total recebido.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{products.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(products.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{products.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function FinancialSummary({
   stats,
