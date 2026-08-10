@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { allQuestions, steps, type Question } from "./questions";
 import styles from "./formulario.module.css";
 
@@ -17,6 +17,13 @@ export default function MentoriaForm() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const current = steps[step];
   const progress = Math.round(((step + 1) / steps.length) * 100);
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    if (!audioElement) return;
+    audioElement.volume = 0.07;
+    void audioElement.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, []);
 
   function update(id: string, value: string) {
     setAnswers((previous) => ({ ...previous, [id]: value }));
@@ -60,7 +67,7 @@ export default function MentoriaForm() {
   function startApplication() {
     const audioElement = audioRef.current;
     if (audioElement) {
-      audioElement.volume = 0.16;
+      audioElement.volume = 0.07;
       void audioElement.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
     }
     setStarted(true);
@@ -78,9 +85,9 @@ export default function MentoriaForm() {
   }
 
   const audioPlayer = <audio ref={audioRef} src="/Gangsters paradise.mp3" preload="metadata" loop />;
-  const musicControl = started ? <button type="button" className={styles.musicControl} onClick={toggleMusic} aria-label={playing ? "Pausar música" : "Continuar música"} aria-pressed={playing}><i>{playing ? "Ⅱ" : "▶"}</i><span>{playing ? "Pausar música" : "Continuar música"}</span></button> : null;
+  const musicControl = <button type="button" className={styles.musicControl} onClick={toggleMusic} aria-label={playing ? "Pausar música" : "Ativar música"} aria-pressed={playing}><i>{playing ? "Ⅱ" : "▶"}</i><span>{playing ? "Pausar música" : "Ativar música"}</span></button>;
 
-  if (!started) return <>{audioPlayer}<Intro start={startApplication} /></>;
+  if (!started) return <>{audioPlayer}<Intro start={startApplication} />{musicControl}</>;
   if (done) return <>{audioPlayer}<Success name={answers.nome} />{musicControl}</>;
 
   return <>{audioPlayer}<main className={styles.page}>
