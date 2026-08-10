@@ -291,6 +291,7 @@ export default function CRM() {
             <small>Mensor Treinamentos / Comercial</small>
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
           </div>
+          {view === "inicio" && <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={reportingLeads.length} />}
           <div className={styles.topActions}>
             {(view === "pipeline" || view === "contatos") && (
               <label>
@@ -306,7 +307,7 @@ export default function CRM() {
           </div>
         </header>
         {view === "inicio" && (
-          <Dashboard leads={reportingLeads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} />
+          <Dashboard leads={reportingLeads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} />
         )}
         {view === "pipeline" && (
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
@@ -336,7 +337,6 @@ function Dashboard({
   allLeads,
   stats,
   selectedMonth,
-  setSelectedMonth,
 }: {
   leads: Lead[];
   allLeads: Lead[];
@@ -354,7 +354,6 @@ function Dashboard({
     hot: number;
   };
   selectedMonth: string;
-  setSelectedMonth: (month: string) => void;
 }) {
   const funnelSteps = [
     { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
@@ -365,7 +364,6 @@ function Dashboard({
   ];
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
-      <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={leads.length} />
       <div className={styles.kpis}>
         <Kpi
           label="Leads gerados no mês"
