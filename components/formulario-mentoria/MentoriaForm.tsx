@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { allQuestions, steps, type Question } from "./questions";
 import styles from "./formulario.module.css";
 
@@ -13,6 +13,8 @@ export default function MentoriaForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const current = steps[step];
   const progress = Math.round(((step + 1) / steps.length) * 100);
 
@@ -55,10 +57,33 @@ export default function MentoriaForm() {
     }
   }
 
-  if (!started) return <Intro start={() => setStarted(true)} />;
-  if (done) return <Success name={answers.nome} />;
+  function startApplication() {
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.volume = 0.16;
+      void audioElement.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+    setStarted(true);
+  }
 
-  return <main className={styles.page}>
+  function toggleMusic() {
+    const audioElement = audioRef.current;
+    if (!audioElement) return;
+    if (audioElement.paused) {
+      void audioElement.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    } else {
+      audioElement.pause();
+      setPlaying(false);
+    }
+  }
+
+  const audioPlayer = <audio ref={audioRef} src="/Gangsters paradise.mp3" preload="metadata" loop />;
+  const musicControl = started ? <button type="button" className={styles.musicControl} onClick={toggleMusic} aria-label={playing ? "Pausar música" : "Continuar música"} aria-pressed={playing}><i>{playing ? "Ⅱ" : "▶"}</i><span>{playing ? "Pausar música" : "Continuar música"}</span></button> : null;
+
+  if (!started) return <>{audioPlayer}<Intro start={startApplication} /></>;
+  if (done) return <>{audioPlayer}<Success name={answers.nome} />{musicControl}</>;
+
+  return <>{audioPlayer}<main className={styles.page}>
     <header className={styles.header}><div className={styles.brand}><span>DM</span><b>Diego Mensor</b></div><small>Aplicação para mentoria</small></header>
     <div className={styles.progressWrap}><div><span>Etapa {step + 1} de {steps.length}</span><b>{progress}% concluído</b></div><div className={styles.progress}><i style={{ width: `${progress}%` }} /></div></div>
     <section className={styles.formShell}>
@@ -67,7 +92,7 @@ export default function MentoriaForm() {
       {errors.submit && <p className={styles.submitError} role="alert">{errors.submit}</p>}
       <footer className={styles.actions}>{step > 0 ? <button className={styles.back} onClick={() => setStep((value) => value - 1)}>← Voltar</button> : <span />}<button className={styles.next} onClick={next} disabled={submitting}>{submitting ? "Enviando aplicação…" : step === steps.length - 1 ? "Enviar minha aplicação" : "Continuar"}<span>→</span></button></footer>
     </section>
-  </main>;
+  </main>{musicControl}</>;
 }
 
 function Field({ question, value, error, update }: { question: Question; value: string; error?: string; update: (id: string, value: string) => void }) {
