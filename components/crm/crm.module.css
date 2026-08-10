@@ -2093,6 +2093,13 @@
 .unifiedOrganicLayout{display:grid;grid-template-columns:1fr 1fr;gap:18px}.unifiedOrganicLayout>.analysisColumn,.unifiedOrganicLayout>.unifiedOriginColumn{min-width:0}.unifiedOrganicLayout>.analysisColumn>.productChart{height:100%;min-height:0}.unifiedOrganicLayout>.unifiedOriginColumn>.originAnalysis{height:100%;min-height:0;margin:0;padding:21px;border-radius:16px;background:#0a1b27}.unifiedOrganicLayout>.monthlyChart{grid-column:1/-1;margin:0}
 @media(max-width:900px){.unifiedOrganicLayout{grid-template-columns:1fr}.unifiedOrganicLayout>.monthlyChart{grid-column:1}.unifiedOrganicLayout>.analysisColumn>.productChart{height:auto}}
 
+/* Meta consolidada na Visão geral, com progresso visual. */
+.dashboardContent .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.overviewKpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+.overviewGoal{display:flex;align-items:center;justify-content:center;min-height:142px;flex-direction:column;padding:18px;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:#0a1b27;text-align:center}.overviewGoal>label{color:#99adb7;font-size:10px;font-weight:700;text-transform:uppercase}.overviewGoal>div{display:flex;align-items:baseline;justify-content:center;width:100%;gap:5px;margin:10px 0 7px}.overviewGoal>div small{color:#76909c;font-size:10px}.overviewGoal input{width:105px;padding:0;border:0;outline:0;background:transparent;color:#fff;font:750 25px var(--font-archivo);text-align:center;appearance:textfield}.overviewGoal input::-webkit-inner-spin-button,.overviewGoal input::-webkit-outer-spin-button{appearance:none}.overviewGoal>span{color:#68c4ea;font-size:9px}.overviewGoal>i{display:block;width:100%;height:7px;margin-top:12px;overflow:hidden;border-radius:999px;background:#122d3b}.overviewGoal>i>b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#168fc4,#35ca91);transition:width .25s ease}
+@media(max-width:1200px){.overviewKpis{grid-template-columns:repeat(3,minmax(0,1fr))}.overviewGoal{grid-column:auto}}
+@media(max-width:700px){.dashboardContent .kpis,.overviewKpis{grid-template-columns:1fr}.overviewGoal{grid-column:auto}}
+
 /* Filtro de leads distribuído pela largura integral do painel. */
 .contactFilters{display:grid;grid-template-columns:1fr;align-items:stretch;gap:18px;width:100%;padding:19px 20px}
 .contactFilters>div:first-child{max-width:none;padding-bottom:15px;border-bottom:1px solid var(--line)}

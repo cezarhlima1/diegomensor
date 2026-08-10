@@ -401,6 +401,10 @@ export default function CRM() {
 }
 
 function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; start: string; end: string; traffic: TrafficRecord[] }) {
+  const [goals, setGoals] = useState<Record<string, number>>({});
+  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
+  const goalMonth = start.slice(0, 7);
+  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
   const organicClosings = leads.filter((lead) => inRange(lead.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
@@ -412,6 +416,8 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const totalRevenue = organicRevenue + trafficRevenue;
   const totalNet = organicNet + trafficNet;
   const totalSales = organicSales + directSales;
+  const goal = goals[goalMonth] || 0;
+  const goalProgress = goal ? totalRevenue / goal * 100 : 0;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
     <section className={styles.overviewHero}><div><span>Resultado consolidado</span><h2>Orgânico e tráfego em uma única visão</h2><p>Os canais permanecem separados na operação e somados apenas na leitura executiva.</p></div><strong>{currency.format(totalRevenue)}<small>receita total do período</small></strong></section>
     <div className={styles.overviewKpis}>
@@ -419,20 +425,18 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
       <Kpi label="Receita líquida" value={currency.format(totalNet)} detail={`${currency.format(Math.max(0, totalRevenue - totalNet))} em taxas`} />
       <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`Líquido ${currency.format(organicNet)}`} />
       <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`Líquido ${currency.format(trafficNet)}`} />
+      <article className={styles.overviewGoal}><label htmlFor="overview-goal">Meta do mês</label><div><small>R$</small><input id="overview-goal" type="number" min="0" step="100" value={goal || ""} onChange={(event) => updateGoal(goalMonth, Number(event.target.value) || 0)} placeholder="0" /></div><span>{goal ? `${goalProgress.toFixed(1)}% atingido` : "Preencha a meta do mês"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
     </div>
     <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Orgânico</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
-    <UnifiedRevenueAnalysis leads={leads} traffic={traffic} products={products} start={start} end={end} />
+    <UnifiedRevenueAnalysis leads={leads} traffic={traffic} products={products} start={start} end={end} goals={goals} setGoal={updateGoal} />
   </div>;
 }
 
-function UnifiedRevenueAnalysis({ leads, traffic, products, start, end }: { leads: Lead[]; traffic: TrafficRecord[]; products: ProductDefinition[]; start: string; end: string }) {
-  const [goals, setGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
+function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, setGoal }: { leads: Lead[]; traffic: TrafficRecord[]; products: ProductDefinition[]; start: string; end: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const trafficLeads = traffic.flatMap((item) => { const units = Math.max(item.sales, item.revenue ? 1 : 0); const date = item.date || `${item.month}-01`; return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, temperature: "Quente", nextAction: "Venda direta", date, createdAt: date, conversationAt: date, meetingAt: date, proposalAt: date, closedAt: date })); });
   const consolidated = [...leads, ...trafficLeads];
   const sources = Array.from(new Set([...leadSources, "Tráfego"]));
-  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
-  return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={updateGoal} /></div>;
+  return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={setGoal} /></div>;
 }
 
 function TrafficDashboard({ records, month, products, save, remove }: { records: TrafficRecord[]; month: string; products: ProductDefinition[]; save: (record: TrafficRecord) => void; remove: (id: string) => void }) {
@@ -529,11 +533,6 @@ function Dashboard({
           value={String(stats.closed)}
           detail={`${currency.format(stats.wonValue)} recebidos`}
         />
-        <article className={styles.goalKpi}>
-          <label htmlFor="monthly-goal">Meta do mês <span>Editar</span></label>
-          <div><small>R$</small><input id="monthly-goal" type="number" min="0" step="100" value={monthlyGoals[selectedMonth] || ""} onChange={(event) => updateMonthlyGoal(selectedMonth, Number(event.target.value) || 0)} placeholder="0" /></div>
-          <small>{monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Preencha a meta deste mês"}</small>
-        </article>
       </div>
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart leads={leads} start={start} end={end} products={products} /></div>
