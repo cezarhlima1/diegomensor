@@ -291,7 +291,7 @@ export default function CRM() {
 
   const navigation: Array<[View, string, string]> = [
     ["geral", "Visão geral", "⌂"],
-    ["comercial", "Comercial", "◫"],
+    ["comercial", "Orgânico", "◫"],
     ["trafego", "Tráfego", "↗"],
     ["pipeline", "Pipeline", "▦"],
     ["contatos", "Contatos", "◎"],
@@ -330,7 +330,7 @@ export default function CRM() {
       <section className={styles.workspace}>
         <header className={styles.topbar}>
           <div>
-            <small>Mensor Treinamentos / Comercial</small>
+            <small>Mensor Treinamentos / {navigation.find(([id]) => id === view)?.[1]}</small>
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={reportingLeads.length} />}
@@ -389,12 +389,12 @@ function ExecutiveOverview({ leads, traffic }: { leads: Lead[]; traffic: Traffic
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
     <section className={styles.overviewHero}><div><span>Resultado consolidado</span><h2>Orgânico e tráfego em uma única visão</h2><p>Os canais permanecem separados na operação e somados apenas na leitura executiva.</p></div><strong>{currency.format(totalRevenue)}<small>receita total do período</small></strong></section>
     <div className={styles.overviewKpis}>
-      <Kpi label="Receita comercial" value={currency.format(organicRevenue)} detail={`${organicSales} fechamentos consultivos`} />
+      <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`${organicSales} fechamentos orgânicos`} />
       <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`${directSales} vendas diretas`} />
       <Kpi label="Investimento em tráfego" value={currency.format(investment)} detail={investment ? `ROAS ${roas.toFixed(2)}x` : "Sem investimento lançado"} />
       <Kpi label="Vendas totais" value={String(totalSales)} detail={totalSales ? `Ticket médio ${currency.format(totalRevenue / totalSales)}` : "Nenhuma venda no período"} />
     </div>
-    <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Comercial</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
+    <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Orgânico</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
   </div>;
 }
 
