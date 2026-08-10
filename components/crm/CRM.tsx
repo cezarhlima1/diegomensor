@@ -399,68 +399,6 @@ function Dashboard({
           })}
         </div>
       </section>
-      <div className={styles.dashboardGrid}>
-        <section className={styles.panel}>
-          <PanelTitle
-            eyebrow="Funil comercial"
-            title="Distribuição das oportunidades"
-          />
-          <div className={styles.stageSummary}>
-            {stages.map((stage) => {
-              const items = leads.filter((lead) => lead.stage === stage);
-              return (
-                <div key={stage}>
-                  <span>
-                    <i />
-                    {stage}
-                  </span>
-                  <b>{items.length}</b>
-                  <div>
-                    <em
-                      style={{
-                        width: `${Math.max(8, (items.length / Math.max(leads.length, 1)) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <small>
-                    {stage === "Proposta" || stage === "Fechado"
-                      ? currency.format(
-                          items.reduce((sum, lead) => sum + lead.value, 0),
-                        )
-                      : "Valor definido na proposta"}
-                  </small>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-        <section className={styles.panel}>
-          <PanelTitle eyebrow="Agenda" title="Próximas ações" />
-          <div className={styles.activity}>
-            {leads
-              .filter((lead) => lead.stage !== "Fechado")
-              .slice(0, 5)
-              .map((lead) => (
-                <article key={lead.id}>
-                  <span>
-                    {lead.name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </span>
-                  <div>
-                    <b>{lead.nextAction}</b>
-                    <small>
-                      {lead.name} · {lead.company}
-                    </small>
-                  </div>
-                  <time>{lead.date}</time>
-                </article>
-              ))}
-          </div>
-        </section>
-      </div>
     </div>
   );
 }
