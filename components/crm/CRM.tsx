@@ -592,44 +592,17 @@ function Pipeline({
                     }
                     onClick={() => select(lead)}
                   >
-                    <div className={styles.cardTop}>
-                      <span className={styles[lead.temperature.toLowerCase()]}>
-                        {lead.temperature}
-                      </span>
-                      <i>•••</i>
-                    </div>
-                    <h3>{lead.name}</h3>
-                    <p>{lead.company}</p>
-                    <div className={styles.leadMeta}>
-                      <span>
-                        <small>Origem do lead</small>
-                        <b>{lead.source}</b>
-                      </span>
-                      <span>
-                        <small>Funil atual</small>
-                        <b>{lead.stage}</b>
-                      </span>
-                    </div>
-                    <strong>
-                      {lead.value
-                        ? currency.format(lead.value)
-                        : "Valor ainda não definido"}
-                    </strong>
-                    <footer>
-                      <small>{lead.nextAction}</small>
+                    <div className={styles.cleanCard}>
+                      <div>
+                        <h3>{lead.name}</h3>
+                        <p><span>Origem</span>{lead.source}</p>
+                      </div>
                       {lead.phone && (
-                        <a
-                          href={whatsappLink(lead)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Chamar ${lead.name} no WhatsApp`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <i>☎</i>
-                          <span>WhatsApp</span>
+                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                          <WhatsAppIcon />
                         </a>
                       )}
-                    </footer>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -919,6 +892,9 @@ function Input({
       />
     </label>
   );
+}
+function WhatsAppIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
 }
 function FinancialSummary({
   stats,

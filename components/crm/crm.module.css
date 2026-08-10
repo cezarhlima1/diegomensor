@@ -1594,3 +1594,104 @@
   color: inherit;
   font-size: 9px;
 }
+
+/* Tipografia e alinhamento geral do CRM. */
+.topbar small,
+.welcome span,
+.panelTitle span,
+.financialSummary > header span {
+  font-size: 10px;
+}
+.topbar h1,
+.welcome h2,
+.panelTitle h3,
+.financialSummary > header h3 {
+  line-height: 1.2;
+}
+.welcome p,
+.sourceIntro {
+  font-size: 13px;
+  line-height: 1.55;
+}
+.kpis span,
+.financialSummary article > span,
+.stageSummary span,
+.sourceTable > header,
+.contactTable > header {
+  font-size: 11px;
+}
+.kpis small,
+.financialSummary article > small,
+.stageSummary small,
+.sourceTable > div,
+.contactTable > button,
+.contactTable button small {
+  font-size: 10px;
+  line-height: 1.45;
+}
+.pipeline > section > header b {
+  font-size: 13px;
+}
+.pipeline > section > header span,
+.pipeline > section > header small {
+  font-size: 10px;
+}
+.cleanCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+}
+.cleanCard h3 {
+  margin: 0 0 9px;
+  color: #f5fafc;
+  font: 700 15px/1.25 var(--font-archivo);
+}
+.cleanCard p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #b3c4cc;
+  font-size: 11px;
+}
+.cleanCard p span {
+  color: #6fcdf4;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cleanCard > a {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #20c66a;
+  color: #052412;
+  box-shadow: 0 8px 22px rgba(32, 198, 106, 0.2);
+}
+.cleanCard > a:hover {
+  transform: translateY(-1px);
+  background: #31d87a;
+}
+.cleanCard svg {
+  width: 23px;
+  height: 23px;
+}
+@media (max-width: 700px) {
+  .topbar small,
+  .welcome span,
+  .panelTitle span {
+    font-size: 10px;
+  }
+  .welcome p,
+  .sourceIntro {
+    font-size: 12px;
+  }
+  .cleanCard h3 {
+    font-size: 15px;
+  }
+}
