@@ -34,6 +34,15 @@ const products = [
   { name: "Treinamento OAP", price: 1197 },
   { name: "Mentoria OAG", price: 10000 },
 ] as const;
+const leadSources = ["Formulário", "Quiz", "Cadastro", "Direct", "Tráfego"] as const;
+const legacySources: Record<string, string> = {
+  "Formulário mentoria": "Formulário",
+  Instagram: "Direct",
+  Indicação: "Cadastro",
+  Evento: "Tráfego",
+  YouTube: "Quiz",
+};
+const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 
 const stages: Stage[] = [
@@ -51,7 +60,7 @@ const initialLeads: Lead[] = [
     company: "RM Auto Center",
     phone: "(54) 99921-4301",
     email: "rafael@rmauto.com",
-    source: "Formulário mentoria",
+    source: "Formulário",
     stage: "Novo lead",
     value: 0,
     temperature: "Quente",
@@ -64,7 +73,7 @@ const initialLeads: Lead[] = [
     company: "Vieira Motors",
     phone: "(51) 99810-3210",
     email: "marcelo@vieiramotors.com",
-    source: "Instagram",
+    source: "Direct",
     stage: "Novo lead",
     value: 0,
     temperature: "Morno",
@@ -77,7 +86,7 @@ const initialLeads: Lead[] = [
     company: "Costa Centro Automotivo",
     phone: "(11) 99744-8200",
     email: "ana@costacentro.com",
-    source: "Indicação",
+    source: "Cadastro",
     stage: "Contato feito",
     value: 0,
     temperature: "Quente",
@@ -90,7 +99,7 @@ const initialLeads: Lead[] = [
     company: "Box 12 Garage",
     phone: "(47) 99102-5588",
     email: "lucas@box12.com",
-    source: "Evento",
+    source: "Tráfego",
     stage: "Contato feito",
     value: 0,
     temperature: "Morno",
@@ -103,7 +112,7 @@ const initialLeads: Lead[] = [
     company: "LimaCar",
     phone: "(48) 99913-2041",
     email: "fernando@limacar.com",
-    source: "Formulário mentoria",
+    source: "Formulário",
     stage: "Reunião agendada",
     value: 0,
     temperature: "Quente",
@@ -116,7 +125,7 @@ const initialLeads: Lead[] = [
     company: "BS Performance",
     phone: "(19) 99670-1182",
     email: "bruno@bsperformance.com",
-    source: "YouTube",
+    source: "Quiz",
     stage: "Proposta",
     value: 12000,
     temperature: "Quente",
@@ -129,7 +138,7 @@ const initialLeads: Lead[] = [
     company: "Mendes Auto Service",
     phone: "(21) 99781-3009",
     email: "carla@mendesauto.com",
-    source: "Instagram",
+    source: "Direct",
     stage: "Proposta",
     value: 8500,
     temperature: "Morno",
@@ -142,7 +151,7 @@ const initialLeads: Lead[] = [
     company: "Rocha Motors",
     phone: "(31) 99803-6615",
     email: "eduardo@rochamotors.com",
-    source: "Indicação",
+    source: "Cadastro",
     stage: "Fechado",
     value: 12000,
     temperature: "Quente",
@@ -182,7 +191,8 @@ export default function CRM() {
             const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
             const createdAt = lead.createdAt || new Date().toISOString();
             const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
-            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt, product } : { ...lead, stage, createdAt, product, value: 0 };
+            const source = normalizeSource(lead.source);
+            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt, product, source } : { ...lead, stage, createdAt, product, source, value: 0 };
           }),
         );
     } catch {}
@@ -502,7 +512,7 @@ function Contacts({
   select: (lead: Lead) => void;
 }) {
   const [sourceFilter, setSourceFilter] = useState("Todos");
-  const sourceTags = Array.from(new Set(leads.map((lead) => lead.source.trim()).filter(Boolean))).sort();
+  const sourceTags = [...leadSources];
   const visibleLeads = sourceFilter === "Todos" ? leads : leads.filter((lead) => lead.source.trim() === sourceFilter);
   return (
     <div className={styles.content}>
@@ -584,7 +594,7 @@ function LeadModal({
     company: "",
     phone: "",
     email: "",
-    source: "Formulário mentoria",
+    source: "Formulário",
     product: "Mentoria OAG",
     temperature: "Morno" as Lead["temperature"],
     nextAction: "Fazer primeiro contato",
@@ -639,11 +649,12 @@ function LeadModal({
             set={(email) => setDraft({ ...draft, email })}
             type="email"
           />
-          <Input
-            label="Origem"
-            value={draft.source}
-            set={(source) => setDraft({ ...draft, source })}
-          />
+          <label>
+            <span>Origem</span>
+            <select value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })}>
+              {leadSources.map((source) => <option key={source}>{source}</option>)}
+            </select>
+          </label>
           <label>
             <span>Produto</span>
             <select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>
@@ -721,6 +732,12 @@ function LeadDrawer({
             <span>Origem</span>
             <b>{lead.source}</b>
           </p>
+          <label>
+            <span>Alterar origem</span>
+            <select value={lead.source} onChange={(event) => update({ source: event.target.value })}>
+              {leadSources.map((source) => <option key={source}>{source}</option>)}
+            </select>
+          </label>
         </section>
         <section>
           <small>Oportunidade</small>
@@ -836,7 +853,7 @@ function ProductValueChart({ leads }: { leads: Lead[] }) {
 }
 function OriginValueChart({ leads }: { leads: Lead[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = Array.from(new Set(leads.map((lead) => lead.source))).map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => lead.stage === "Fechado"); return { source, leads: items.length, conversations: items.filter((lead) => lead.stage !== "Novo lead").length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const origins = leadSources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => lead.stage === "Fechado"); return { source, leads: items.length, conversations: items.filter((lead) => lead.stage !== "Novo lead").length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
