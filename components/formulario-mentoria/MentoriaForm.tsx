@@ -91,7 +91,7 @@ export default function MentoriaForm() {
   if (done) return <>{audioPlayer}<Success name={answers.nome} />{musicControl}</>;
 
   return <>{audioPlayer}<main className={styles.page}>
-    <header className={styles.header}><div className={styles.brand}><span>DM</span><b>Diego Mensor</b></div><small>Aplicação para mentoria</small></header>
+    <header className={styles.header}><div className={styles.mentorBrand}><b>@diegomensor</b><i>|</i><span>Mentor de donos de oficina</span></div><small>Aplicação para mentoria</small></header>
     <div className={styles.progressWrap}><div><span>Etapa {step + 1} de {steps.length}</span><b>{progress}% concluído</b></div><div className={styles.progress}><i style={{ width: `${progress}%` }} /></div></div>
     <section className={styles.formShell}>
       <div className={styles.stepIntro}><span>{current.eyebrow}</span><h1>{current.title}</h1><p>{current.description}</p></div>
@@ -111,7 +111,7 @@ function Field({ question, value, error, update }: { question: Question; value: 
 }
 
 function Intro({ start }: { start: () => void }) {
-  return <main className={styles.intro}><div className={styles.introPattern} /><section><div className={styles.brand}><span>DM</span><b>Diego Mensor</b></div><p className={styles.kicker}>Aplicação para mentoria</p><h1>Se você está aqui é porque chegou a hora de dar um passo ao <em>próximo nível da tua oficina.</em></h1><p className={styles.introLead}>E de verdade? Eu te parabenizo por estar aqui, esse é o primeiro indício de que tu vai conseguir alcançar o que deseja com a tua oficina! Esse formulário vai me ajudar a entender o teu momento, teus desafios e se a mentoria faz sentido pra ti hoje.</p><div className={styles.introMeta}><span><b>Poucas</b> perguntas</span><span><b>5</b> minutos</span><span><b>100%</b> confidencial</span></div><button onClick={start}>Iniciar minha aplicação <span>→</span></button><small>Responda com calma e sinceridade.</small></section></main>;
+  return <main className={styles.intro}><div className={styles.introPattern} /><section><div className={styles.mentorBrand}><b>@diegomensor</b><i>|</i><span>Mentor de donos de oficina</span></div><p className={styles.kicker}>Aplicação para mentoria</p><h1>Se você está aqui é porque chegou a hora de dar um passo ao <em>próximo nível da tua oficina.</em></h1><p className={styles.introLead}>E de verdade? Eu te parabenizo por estar aqui, esse é o primeiro indício de que tu vai conseguir alcançar o que deseja com a tua oficina! Esse formulário vai me ajudar a entender o teu momento, teus desafios e se a mentoria faz sentido pra ti hoje.</p><div className={styles.introMeta}><span><b>Poucas</b> perguntas</span><span><b>5</b> minutos</span><span><b>100%</b> confidencial</span></div><button onClick={start}>Iniciar minha aplicação <span>→</span></button><small>Responda com calma e sinceridade.</small></section></main>;
 }
 
 function Success({ name }: { name?: string }) {
