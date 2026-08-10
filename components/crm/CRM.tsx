@@ -392,12 +392,7 @@ function Dashboard({
         <p className={styles.sourceIntro}>
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
-        <div className={styles.conversionFunnel}>
-          {funnelSteps.map((step, index) => {
-            const percentage = leads.length ? (step.count / leads.length) * 100 : 0;
-            return <article key={step.label} style={{ width: `${100 - index * 10}%` }}><div><span>{String(index + 1).padStart(2, "0")}</span><b>{step.label}</b><small>{step.detail}</small></div><strong>{step.count}</strong><em>{percentage.toFixed(1)}%</em></article>;
-          })}
-        </div>
+        <FunnelVisualization steps={funnelSteps} total={leads.length} />
       </section>
       <MonthlyMetricsChart leads={allLeads} endMonth={selectedMonth} />
     </div>
@@ -757,6 +752,10 @@ function Input({
 }
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
+}
+function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; count: number; detail: string }>; total: number }) {
+  const colors = ["#1689b8", "#14799f", "#126985", "#10586e", "#0f485a"];
+  return <div className={styles.funnelVisual}><svg viewBox="0 0 600 470" role="img" aria-label="Funil de conversão de leads"><defs><filter id="funnel-shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="7" floodOpacity=".25" /></filter><filter id="floor-blur"><feGaussianBlur stdDeviation="8" /></filter></defs>{steps.map((step,index) => { const width = 510 - index * 72; const x = (600 - width) / 2; const y = 18 + index * 76; const bottomInset = 18; const percentage = total ? step.count / total * 100 : 0; return <g key={step.label} filter="url(#funnel-shadow)"><path d={`M ${x} ${y + 9} L ${x + width} ${y + 9} L ${x + width - bottomInset} ${y + 59} Q ${x + width / 2} ${y + 71} ${x + bottomInset} ${y + 59} Z`} fill={colors[index]} /><ellipse cx="300" cy={y + 9} rx={width / 2} ry="11" fill={colors[index]} stroke="rgba(189,235,250,.3)" strokeWidth="1.2" /><ellipse cx="300" cy={y + 8} rx={width / 2 - 5} ry="7" fill="rgba(166,226,247,.1)" /><text x={x + 39} y={y + 39} className={styles.funnelStep}>{String(index + 1).padStart(2,"0")}</text><text x={x + 72} y={y + 38} className={styles.funnelLabel}>{step.label}</text><text x={x + width - 76} y={y + 38} textAnchor="end" className={styles.funnelCount}>{step.count}</text><text x={x + width - 35} y={y + 38} textAnchor="end" className={styles.funnelPercent}>{percentage.toFixed(0)}%</text></g>; })}<path d="M 287 408 H 313 V 426 H 329 L 300 454 L 271 426 H 287 Z" fill="#14789e" /><ellipse cx="300" cy="462" rx="62" ry="8" fill="rgba(0,0,0,.42)" filter="url(#floor-blur)" /></svg></div>;
 }
 function MonthlyMetricsChart({ leads, endMonth }: { leads: Lead[]; endMonth: string }) {
   const [goals, setGoals] = useState<Record<string, number>>({});
