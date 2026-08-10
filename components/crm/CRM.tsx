@@ -10,7 +10,7 @@ type Stage =
   | "Reunião agendada"
   | "Proposta"
   | "Fechado";
-type View = "inicio" | "pipeline" | "contatos" | "mensagens";
+type View = "geral" | "comercial" | "trafego" | "pipeline" | "contatos" | "mensagens";
 type Lead = {
   id: string;
   name: string;
@@ -25,6 +25,18 @@ type Lead = {
   nextAction: string;
   date: string;
   createdAt?: string;
+};
+type TrafficRecord = {
+  id: string;
+  month: string;
+  campaign: string;
+  product: string;
+  investment: number;
+  clicks: number;
+  pageViews: number;
+  checkouts: number;
+  sales: number;
+  revenue: number;
 };
 
 const products = [
@@ -174,13 +186,14 @@ const whatsappLink = (lead: Lead) => {
 };
 
 export default function CRM() {
-  const [view, setView] = useState<View>("inicio");
+  const [view, setView] = useState<View>("geral");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => ({ ...lead, createdAt: new Date().toISOString() })));
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [traffic, setTraffic] = useState<TrafficRecord[]>([]);
 
   useEffect(() => {
     try {
@@ -201,6 +214,8 @@ export default function CRM() {
   useEffect(() => {
     if (loaded) localStorage.setItem("mensor-crm-v1", JSON.stringify(leads));
   }, [leads, loaded]);
+  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-traffic-v1"); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
+  const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem("mensor-crm-traffic-v1", JSON.stringify(next)); };
 
   const reportingLeads = useMemo(() => leads.filter((lead) => (lead.createdAt || new Date().toISOString()).slice(0, 7) === selectedMonth), [leads, selectedMonth]);
   const stats = useMemo(() => {
@@ -275,7 +290,9 @@ export default function CRM() {
   };
 
   const navigation: Array<[View, string, string]> = [
-    ["inicio", "Visão geral", "⌂"],
+    ["geral", "Visão geral", "⌂"],
+    ["comercial", "Comercial", "◫"],
+    ["trafego", "Tráfego", "↗"],
     ["pipeline", "Pipeline", "▦"],
     ["contatos", "Contatos", "◎"],
     ["mensagens", "Mensagens", "✉"],
@@ -316,7 +333,7 @@ export default function CRM() {
             <small>Mensor Treinamentos / Comercial</small>
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
           </div>
-          {view === "inicio" && <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={reportingLeads.length} />}
+          {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={reportingLeads.length} />}
           <div className={styles.topActions}>
             {(view === "pipeline" || view === "contatos") && (
               <label>
@@ -328,12 +345,14 @@ export default function CRM() {
                 />
               </label>
             )}
-            <button onClick={() => setAdding(true)}>+ Novo lead</button>
+            {["comercial", "pipeline", "contatos"].includes(view) && <button onClick={() => setAdding(true)}>+ Novo lead</button>}
           </div>
         </header>
-        {view === "inicio" && (
+        {view === "geral" && <ExecutiveOverview leads={reportingLeads} traffic={traffic.filter((item) => item.month === selectedMonth)} />}
+        {view === "comercial" && (
           <Dashboard leads={reportingLeads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} />
         )}
+        {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => item.month === selectedMonth)} month={selectedMonth} save={(record) => saveTraffic([record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
         )}
@@ -356,6 +375,43 @@ export default function CRM() {
       )}
     </main>
   );
+}
+
+function ExecutiveOverview({ leads, traffic }: { leads: Lead[]; traffic: TrafficRecord[] }) {
+  const organicRevenue = leads.filter((lead) => lead.stage === "Fechado").reduce((sum, lead) => sum + lead.value, 0);
+  const trafficRevenue = traffic.reduce((sum, item) => sum + item.revenue, 0);
+  const investment = traffic.reduce((sum, item) => sum + item.investment, 0);
+  const directSales = traffic.reduce((sum, item) => sum + item.sales, 0);
+  const organicSales = leads.filter((lead) => lead.stage === "Fechado").length;
+  const totalRevenue = organicRevenue + trafficRevenue;
+  const totalSales = organicSales + directSales;
+  const roas = investment ? trafficRevenue / investment : 0;
+  return <div className={`${styles.content} ${styles.executiveOverview}`}>
+    <section className={styles.overviewHero}><div><span>Resultado consolidado</span><h2>Orgânico e tráfego em uma única visão</h2><p>Os canais permanecem separados na operação e somados apenas na leitura executiva.</p></div><strong>{currency.format(totalRevenue)}<small>receita total do período</small></strong></section>
+    <div className={styles.overviewKpis}>
+      <Kpi label="Receita comercial" value={currency.format(organicRevenue)} detail={`${organicSales} fechamentos consultivos`} />
+      <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`${directSales} vendas diretas`} />
+      <Kpi label="Investimento em tráfego" value={currency.format(investment)} detail={investment ? `ROAS ${roas.toFixed(2)}x` : "Sem investimento lançado"} />
+      <Kpi label="Vendas totais" value={String(totalSales)} detail={totalSales ? `Ticket médio ${currency.format(totalRevenue / totalSales)}` : "Nenhuma venda no período"} />
+    </div>
+    <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Comercial</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
+  </div>;
+}
+
+function TrafficDashboard({ records, month, save, remove }: { records: TrafficRecord[]; month: string; save: (record: TrafficRecord) => void; remove: (id: string) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<{ campaign: string; product: string; investment: string; clicks: string; pageViews: string; checkouts: string; sales: string; revenue: string }>({ campaign: "", product: products[0].name, investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" });
+  const totals = records.reduce((sum, item) => ({ investment: sum.investment + item.investment, clicks: sum.clicks + item.clicks, pageViews: sum.pageViews + item.pageViews, checkouts: sum.checkouts + item.checkouts, sales: sum.sales + item.sales, revenue: sum.revenue + item.revenue }), { investment: 0, clicks: 0, pageViews: 0, checkouts: 0, sales: 0, revenue: 0 });
+  const cpa = totals.sales ? totals.investment / totals.sales : 0;
+  const roas = totals.investment ? totals.revenue / totals.investment : 0;
+  const conversion = totals.pageViews ? totals.sales / totals.pageViews * 100 : 0;
+  const submit = (event: React.FormEvent) => { event.preventDefault(); save({ id: String(Date.now()), month, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment) || 0, clicks: Number(draft.clicks) || 0, pageViews: Number(draft.pageViews) || 0, checkouts: Number(draft.checkouts) || 0, sales: Number(draft.sales) || 0, revenue: Number(draft.revenue) || 0 }); setAdding(false); setDraft({ campaign: "", product: products[0].name, investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" }); };
+  return <div className={`${styles.content} ${styles.trafficDashboard}`}>
+    <header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas e gateway</h2><p>Cadastre os resultados consolidados sem misturar essas vendas com a pipeline comercial.</p></div><button onClick={() => setAdding(true)}>+ Adicionar campanha</button></header>
+    <div className={styles.trafficKpis}><Kpi label="Investimento" value={currency.format(totals.investment)} detail={`${totals.clicks} cliques`} /><Kpi label="Faturamento" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas aprovadas`} /><Kpi label="CPA" value={currency.format(cpa)} detail="Custo por compra" /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`${conversion.toFixed(2)}% de conversão`} /></div>
+    <section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Resultados por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => <article key={item.id}><div><b>{item.campaign}</b><small>{item.product}</small></div><span><small>Investimento</small>{currency.format(item.investment)}</span><span><small>Vendas</small>{item.sales}</span><span><small>Receita</small>{currency.format(item.revenue)}</span><span><small>ROAS</small>{item.investment ? (item.revenue / item.investment).toFixed(2) : "0.00"}x</span><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></article>)}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>
+    {adding && <div className={styles.backdrop} onMouseDown={() => setAdding(false)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Tráfego pago</span><h2>Adicionar campanha</h2></div><button type="button" onClick={() => setAdding(false)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({ ...draft, campaign })} required /><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label>{([['investment','Investimento'],['clicks','Cliques'],['pageViews','Visualizações da página'],['checkouts','Checkouts iniciados'],['sales','Compras aprovadas'],['revenue','Faturamento']] as const).map(([key,label]) => <Input key={key} label={label} value={draft[key]} set={(value) => setDraft({ ...draft, [key]: value })} type="number" />)}</div><footer><button type="button" onClick={() => setAdding(false)}>Cancelar</button><button type="submit">Salvar campanha</button></footer></form></div>}
+  </div>;
 }
 
 function Dashboard({
