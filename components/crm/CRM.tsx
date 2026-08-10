@@ -762,15 +762,23 @@ function WhatsAppIcon() {
 }
 function MonthlyMetricsChart({ leads, endMonth }: { leads: Lead[]; endMonth: string }) {
   const [year, month] = endMonth.split("-").map(Number);
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(year, month - 1 - (5 - index), 1);
+  const start = new Date(2026, 6, 1);
+  const end = new Date(year, month - 1, 1);
+  const firstMonth = end < start ? end : start;
+  const monthCount = Math.max(1, (end.getFullYear() - firstMonth.getFullYear()) * 12 + end.getMonth() - firstMonth.getMonth() + 1);
+  const months = Array.from({ length: monthCount }, (_, index) => {
+    const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const items = leads.filter((lead) => (lead.createdAt || "").slice(0, 7) === key);
     return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, meetings: items.filter((lead) => ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage)).length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: items.filter((lead) => lead.stage === "Fechado").length };
   });
   const maximum = Math.max(1, ...months.flatMap((item) => [item.leads, item.meetings, item.proposals, item.closed]));
   const metrics = [{ key: "leads" as const, label: "Leads", color: "#159fe0" }, { key: "meetings" as const, label: "Reuniões", color: "#8b5cf6" }, { key: "proposals" as const, label: "Propostas", color: "#f5a524" }, { key: "closed" as const, label: "Fechamentos", color: "#22c58b" }];
-  return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Evolução mensal</span><h3>Métricas mês a mês</h3><p>Comparativo dos últimos seis meses até o período selecionado.</p></div><div>{metrics.map((metric) => <span key={metric.key}><i style={{ background: metric.color }} />{metric.label}</span>)}</div></header><div className={styles.chartArea}>{months.map((item) => <article key={item.key}><div>{metrics.map((metric) => <span key={metric.key} style={{ height: `${Math.max(item[metric.key] ? 10 : 2, item[metric.key] / maximum * 100)}%`, background: metric.color }}><b>{item[metric.key]}</b></span>)}</div><strong>{item.label}</strong><small>{item.key.slice(0, 4)}</small></article>)}</div></section>;
+  const current = months.at(-1)?.leads || 0;
+  const previous = months.at(-2)?.leads || 0;
+  const growth = previous ? ((current - previous) / previous) * 100 : null;
+  const linePoints = months.map((item, index) => `${index * 100 + 50},${210 - item.leads / maximum * 175}`).join(" ");
+  return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Evolução mensal</span><h3>Métricas mês a mês</h3><p>Histórico desde julho de 2026 até o período selecionado.</p></div><div>{metrics.map((metric) => <span key={metric.key}><i style={{ background: metric.color }} />{metric.label}</span>)}</div></header><div className={styles.growthSummary}><span>Crescimento de leads sobre o mês anterior</span><strong className={growth !== null && growth < 0 ? styles.negativeGrowth : ""}>{growth === null ? "Sem base anterior" : `${growth >= 0 ? "+" : ""}${growth.toFixed(1)}%`}</strong><small>{previous} leads → {current} leads</small></div><div className={styles.chartScroller}><div className={styles.chartArea} style={{ gridTemplateColumns: `repeat(${months.length}, minmax(105px, 1fr))`, minWidth: `${Math.max(520, months.length * 120)}px` }}><svg className={styles.growthLine} viewBox={`0 0 ${months.length * 100} 230`} preserveAspectRatio="none" aria-hidden="true"><polyline points={linePoints} /><g>{months.map((item, index) => <circle key={item.key} cx={index * 100 + 50} cy={210 - item.leads / maximum * 175} r="4" />)}</g></svg>{months.map((item) => <article key={item.key}><div>{metrics.map((metric) => <span key={metric.key} style={{ height: `${Math.max(item[metric.key] ? 10 : 2, item[metric.key] / maximum * 100)}%`, background: metric.color }}><b>{item[metric.key]}</b></span>)}</div><strong>{item.label}</strong><small>{item.key.slice(0, 4)}</small></article>)}</div></div></section>;
 }
 function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (month: string) => void; total: number }) {
   const [year, monthNumber] = month.split("-").map(Number);
