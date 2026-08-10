@@ -1959,3 +1959,22 @@
 .dashboardContent>.sourcePanel>.originAnalysis{width:100%;margin:0}
 @media(max-width:1100px){.dashboardContent>.analysisColumn>.productChart{height:auto}.dashboardContent>.sourcePanel{grid-template-rows:auto auto}.dashboardContent>.sourcePanel>.funnelVisual{min-height:400px}}
 @media(max-width:700px){.dashboardContent>.sourcePanel{gap:12px}.dashboardContent>.sourcePanel>.funnelVisual{min-height:320px}}
+
+/* Escala azul do funil com hierarquia e contraste entre as etapas. */
+.dashboardContent .funnelVisual g>path{stroke-width:1.15;filter:drop-shadow(0 7px 10px rgba(0,8,15,.22))}
+.dashboardContent .funnelVisual g:nth-of-type(1)>path{fill:#126d99;stroke:rgba(112,206,246,.42)}
+.dashboardContent .funnelVisual g:nth-of-type(2)>path{fill:#115d84;stroke:rgba(96,190,231,.36)}
+.dashboardContent .funnelVisual g:nth-of-type(3)>path{fill:#104e70;stroke:rgba(83,169,207,.31)}
+.dashboardContent .funnelVisual g:nth-of-type(4)>path{fill:#103f5b;stroke:rgba(72,147,181,.28)}
+.dashboardContent .funnelVisual g:nth-of-type(5)>path{fill:#103349;stroke:rgba(66,132,161,.25)}
+.dashboardContent .funnelVisual g:nth-of-type(1)>ellipse:first-of-type{fill:#1985b7;stroke:rgba(143,222,255,.44)}
+.dashboardContent .funnelVisual g:nth-of-type(2)>ellipse:first-of-type{fill:#176f9a;stroke:rgba(123,207,243,.38)}
+.dashboardContent .funnelVisual g:nth-of-type(3)>ellipse:first-of-type{fill:#155d82;stroke:rgba(104,187,223,.33)}
+.dashboardContent .funnelVisual g:nth-of-type(4)>ellipse:first-of-type{fill:#144b69;stroke:rgba(89,163,195,.29)}
+.dashboardContent .funnelVisual g:nth-of-type(5)>ellipse:first-of-type{fill:#133c54;stroke:rgba(78,143,171,.26)}
+.dashboardContent .funnelLeader{stroke:rgba(117,176,201,.44);stroke-width:1.15}
+.dashboardContent .funnelOutsideLabel{fill:#eef8fc;font-size:12px;font-weight:750}
+.dashboardContent .funnelOutsideDetail{fill:#829eab;font-size:8.5px}
+.dashboardContent .funnelInsideCount{fill:#fff;font-size:25px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+.dashboardContent .funnelOutsidePercent{fill:#63c9f2;font-size:13px;font-weight:800}
+@media(max-width:700px){.dashboardContent .funnelOutsideLabel{font-size:10.5px}.dashboardContent .funnelInsideCount{font-size:22px}.dashboardContent .funnelOutsidePercent{font-size:11.5px}}
