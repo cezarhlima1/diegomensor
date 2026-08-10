@@ -2046,3 +2046,10 @@
 .dashboardContent .kpis,.dashboardContent>.financialSummary,.dashboardContent>.analysisColumn,.dashboardContent>.funnelColumn,.dashboardContent>.monthlyChart{width:100%;max-width:100%}
 .dashboardContent .kpis article,.dashboardContent>.financialSummary article{min-width:0}
 @media(max-width:560px){.dashboardContent .kpis{grid-template-columns:1fr}.dashboardContent .kpis article:last-child{grid-column:auto}}
+
+/* Leitura da seção de conversão da esquerda para a direita. */
+.dashboardContent>.financialSummary>header{text-align:left}
+.dashboardContent>.financialSummary article{align-items:flex-start;text-align:left}
+.dashboardContent>.financialSummary article>span,
+.dashboardContent>.financialSummary article>small{justify-content:flex-start;text-align:left}
+.dashboardContent>.financialSummary article>strong{align-self:flex-start;text-align:left}
