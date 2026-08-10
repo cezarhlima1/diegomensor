@@ -288,14 +288,16 @@ export default function CRM() {
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className={styles.topActions}>
-            <label>
-              <span>⌕</span>
-              <input
-                placeholder="Buscar contato..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </label>
+            {(view === "pipeline" || view === "contatos") && (
+              <label>
+                <span>⌕</span>
+                <input
+                  placeholder="Buscar contato..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
+            )}
             <button onClick={() => setAdding(true)}>+ Nova oportunidade</button>
           </div>
         </header>
@@ -310,7 +312,7 @@ export default function CRM() {
         )}
         {view === "tarefas" && (
           <Tasks
-            leads={filtered.filter((lead) => lead.stage !== "Fechado")}
+            leads={leads.filter((lead) => lead.stage !== "Fechado")}
             select={setSelected}
           />
         )}
