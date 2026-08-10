@@ -776,8 +776,8 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
   const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
   const maxLeads = Math.max(1, ...months.map((item) => item.leads));
   const leadPoints = months.map((item, index) => ({ x: index * 100 + 50, y: 215 - item.leads / maxLeads * 180, value: item.leads }));
-  const leadPath = leadPoints.reduce((path, point, index) => { if (!index) return `M ${point.x} ${point.y}`; const previous = leadPoints[index - 1]; const middle = (previous.x + point.x) / 2; return `${path} C ${middle} ${previous.y}, ${middle} ${point.y}, ${point.x} ${point.y}`; }, "");
-  const areaPath = leadPoints.length ? `${leadPath} L ${leadPoints.at(-1)!.x} 230 L ${leadPoints[0].x} 230 Z` : "";
+  const leadPath = leadPoints.reduce((path, point, index) => { if (!index) return `M 0 ${point.y} L ${point.x} ${point.y}`; const previous = leadPoints[index - 1]; const middle = (previous.x + point.x) / 2; return `${path} C ${middle} ${previous.y}, ${middle} ${point.y}, ${point.x} ${point.y}`; }, "") + (leadPoints.length ? ` L ${months.length * 100} ${leadPoints.at(-1)!.y}` : "");
+  const areaPath = leadPoints.length ? `${leadPath} L ${months.length * 100} 230 L 0 230 Z` : "";
   const valueTicks = [maxValue, maxValue * .75, maxValue * .5, maxValue * .25, 0];
   const leadTicks = [maxLeads, Math.round(maxLeads * .75), Math.round(maxLeads * .5), Math.round(maxLeads * .25), 0];
   const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
