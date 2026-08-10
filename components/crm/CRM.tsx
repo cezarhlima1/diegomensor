@@ -10,7 +10,7 @@ type Stage =
   | "Reunião agendada"
   | "Proposta"
   | "Fechado";
-type View = "inicio" | "pipeline" | "contatos" | "tarefas";
+type View = "inicio" | "pipeline" | "contatos" | "mensagens";
 type Lead = {
   id: string;
   name: string;
@@ -249,7 +249,7 @@ export default function CRM() {
     ["inicio", "Visão geral", "⌂"],
     ["pipeline", "Pipeline", "▦"],
     ["contatos", "Contatos", "◎"],
-    ["tarefas", "Tarefas", "✓"],
+    ["mensagens", "Mensagens", "✉"],
   ];
   return (
     <main className={styles.crm}>
@@ -310,12 +310,7 @@ export default function CRM() {
         {view === "contatos" && (
           <Contacts leads={filtered} select={setSelected} />
         )}
-        {view === "tarefas" && (
-          <Tasks
-            leads={leads.filter((lead) => lead.stage !== "Fechado")}
-            select={setSelected}
-          />
-        )}
+        {view === "mensagens" && <Messages />}
       </section>
       {adding && <LeadModal close={() => setAdding(false)} save={addLead} />}
       {selected && (
@@ -587,31 +582,21 @@ function Contacts({
     </div>
   );
 }
-function Tasks({
-  leads,
-  select,
-}: {
-  leads: Lead[];
-  select: (lead: Lead) => void;
-}) {
+function Messages() {
+  const [templates, setTemplates] = useState<Array<{ id: string; title: string; text: string }>>([]);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-messages-v1"); if (saved) setTemplates(JSON.parse(saved)); } catch {} }, []);
+  const saveTemplates = (next: Array<{ id: string; title: string; text: string }>) => { setTemplates(next); localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(next)); };
+  const addTemplate = (event: React.FormEvent) => { event.preventDefault(); if (!title.trim() || !message.trim()) return; saveTemplates([{ id: String(Date.now()), title: title.trim(), text: message.trim() }, ...templates]); setTitle(""); setMessage(""); };
+  const copyTemplate = async (id: string, text: string) => { await navigator.clipboard.writeText(text); setCopied(id); window.setTimeout(() => setCopied(null), 1800); };
   return (
     <div className={styles.content}>
-      <div className={styles.taskList}>
-        {leads.map((lead, index) => (
-          <article key={lead.id}>
-            <button aria-label="Marcar como concluída" />
-            <div>
-              <span>{index < 2 ? "Hoje" : "Próximos dias"}</span>
-              <h3>{lead.nextAction}</h3>
-              <p>
-                {lead.name} · {lead.company}
-              </p>
-            </div>
-            <time>{lead.date}</time>
-            <button onClick={() => select(lead)}>Ver contato →</button>
-          </article>
-        ))}
-      </div>
+      <section className={styles.messageWorkspace}>
+        <form className={styles.messageForm} onSubmit={addTemplate}><header><span>Nova mensagem</span><h2>Cadastrar mensagem padrão</h2><p>Crie textos prontos para agilizar seus contatos comerciais.</p></header><label><span>Nome da mensagem</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex.: Primeiro contato" required /></label><label><span>Texto da mensagem</span><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Escreva a mensagem que deseja reutilizar..." rows={7} required /></label><button type="submit">Salvar mensagem</button></form>
+        <section className={styles.messageLibrary}><header><div><span>Biblioteca</span><h2>Mensagens salvas</h2></div><b>{templates.length}</b></header>{templates.length ? <div>{templates.map((template) => <article key={template.id}><header><h3>{template.title}</h3><button onClick={() => saveTemplates(templates.filter((item) => item.id !== template.id))} aria-label="Excluir mensagem">×</button></header><p>{template.text}</p><button onClick={() => copyTemplate(template.id, template.text)}>{copied === template.id ? "Copiada!" : "Copiar mensagem"}</button></article>)}</div> : <div className={styles.emptyMessages}><i>✉</i><b>Nenhuma mensagem cadastrada</b><span>Seus modelos aparecerão aqui.</span></div>}</section>
+      </section>
     </div>
   );
 }
