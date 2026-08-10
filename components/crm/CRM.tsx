@@ -35,7 +35,16 @@ export default function CRM() {
   const stats = useMemo(() => {
     const open = leads.filter((lead) => lead.stage !== "Fechado");
     const won = leads.filter((lead) => lead.stage === "Fechado");
-    return { total: leads.length, openValue: open.reduce((sum, lead) => sum + lead.value, 0), wonValue: won.reduce((sum, lead) => sum + lead.value, 0), conversion: leads.length ? won.length / leads.length * 100 : 0, hot: leads.filter((lead) => lead.temperature === "Quente" && lead.stage !== "Fechado").length };
+    return {
+      total: leads.length,
+      meetings: leads.filter((lead) => ["Diagnóstico", "Proposta", "Fechado"].includes(lead.stage)).length,
+      proposals: leads.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length,
+      closed: won.length,
+      openValue: open.reduce((sum, lead) => sum + lead.value, 0),
+      wonValue: won.reduce((sum, lead) => sum + lead.value, 0),
+      conversion: leads.length ? won.length / leads.length * 100 : 0,
+      hot: leads.filter((lead) => lead.temperature === "Quente" && lead.stage !== "Fechado").length,
+    };
   }, [leads]);
 
   const filtered = leads.filter((lead) => `${lead.name} ${lead.company} ${lead.email}`.toLowerCase().includes(search.toLowerCase()));
@@ -56,8 +65,8 @@ export default function CRM() {
   </main>;
 }
 
-function Dashboard({ leads, stats, openPipeline }: { leads: Lead[]; stats: { total: number; openValue: number; wonValue: number; conversion: number; hot: number }; openPipeline: () => void }) {
-  return <div className={styles.content}><section className={styles.welcome}><div><span>Resumo comercial</span><h2>Bom dia, Diego.</h2><p>Acompanhe as oportunidades que precisam da sua atenção hoje.</p></div><button onClick={openPipeline}>Abrir pipeline →</button></section><div className={styles.kpis}><Kpi label="Oportunidades" value={String(stats.total)} detail={`${stats.hot} leads quentes`} /><Kpi label="Pipeline aberto" value={currency.format(stats.openValue)} detail="Potencial em negociação" /><Kpi label="Receita fechada" value={currency.format(stats.wonValue)} detail="Neste ciclo" /><Kpi label="Conversão" value={`${stats.conversion.toFixed(1)}%`} detail="Lead para cliente" /></div><div className={styles.dashboardGrid}><section className={styles.panel}><PanelTitle eyebrow="Funil comercial" title="Distribuição das oportunidades" /><div className={styles.stageSummary}>{stages.map((stage) => { const items = leads.filter((lead) => lead.stage === stage); return <div key={stage}><span><i />{stage}</span><b>{items.length}</b><div><em style={{ width: `${Math.max(8, items.length / Math.max(leads.length, 1) * 100)}%` }} /></div><small>{currency.format(items.reduce((sum, lead) => sum + lead.value, 0))}</small></div>; })}</div></section><section className={styles.panel}><PanelTitle eyebrow="Agenda" title="Próximas ações" /><div className={styles.activity}>{leads.filter((lead) => lead.stage !== "Fechado").slice(0, 5).map((lead) => <article key={lead.id}><span>{lead.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div><b>{lead.nextAction}</b><small>{lead.name} · {lead.company}</small></div><time>{lead.date}</time></article>)}</div></section></div></div>;
+function Dashboard({ leads, stats, openPipeline }: { leads: Lead[]; stats: { total: number; meetings: number; proposals: number; closed: number; openValue: number; wonValue: number; conversion: number; hot: number }; openPipeline: () => void }) {
+  return <div className={styles.content}><section className={styles.welcome}><div><span>Resumo comercial</span><h2>Bom dia, Diego.</h2><p>Acompanhe as oportunidades que precisam da sua atenção hoje.</p></div><button onClick={openPipeline}>Abrir pipeline →</button></section><div className={styles.kpis}><Kpi label="Leads gerados no mês" value={String(stats.total)} detail={`${stats.hot} leads quentes`} /><Kpi label="Reuniões agendadas" value={String(stats.meetings)} detail="Diagnósticos marcados" /><Kpi label="Propostas enviadas" value={String(stats.proposals)} detail="Incluindo negociações fechadas" /><Kpi label="Fechamentos" value={String(stats.closed)} detail={`${stats.conversion.toFixed(1)}% de conversão`} /></div><div className={styles.dashboardGrid}><section className={styles.panel}><PanelTitle eyebrow="Funil comercial" title="Distribuição das oportunidades" /><div className={styles.stageSummary}>{stages.map((stage) => { const items = leads.filter((lead) => lead.stage === stage); return <div key={stage}><span><i />{stage}</span><b>{items.length}</b><div><em style={{ width: `${Math.max(8, items.length / Math.max(leads.length, 1) * 100)}%` }} /></div><small>{currency.format(items.reduce((sum, lead) => sum + lead.value, 0))}</small></div>; })}</div></section><section className={styles.panel}><PanelTitle eyebrow="Agenda" title="Próximas ações" /><div className={styles.activity}>{leads.filter((lead) => lead.stage !== "Fechado").slice(0, 5).map((lead) => <article key={lead.id}><span>{lead.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div><b>{lead.nextAction}</b><small>{lead.name} · {lead.company}</small></div><time>{lead.date}</time></article>)}</div></section></div></div>;
 }
 
 function Pipeline({ leads, moveLead, select }: { leads: Lead[]; moveLead: (id: string, stage: Stage) => void; select: (lead: Lead) => void }) {
@@ -75,4 +84,3 @@ function LeadDrawer({ lead, close, move }: { lead: Lead; close: () => void; move
 function Input({ label, value, set, type = "text", required = false }: { label: string; value: string; set: (value: string) => void; type?: string; required?: boolean }) { return <label><span>{label}</span><input type={type} value={value} onChange={(event) => set(event.target.value)} required={required} /></label>; }
 function Kpi({ label, value, detail }: { label: string; value: string; detail: string }) { return <article><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>; }
 function PanelTitle({ eyebrow, title }: { eyebrow: string; title: string }) { return <header className={styles.panelTitle}><span>{eyebrow}</span><h3>{title}</h3></header>; }
-
