@@ -20,6 +20,13 @@ const initialLeads: Lead[] = [
 ];
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const whatsappLink = (lead: Lead) => {
+  const digits = lead.phone.replace(/\D/g, "");
+  const phone = digits.startsWith("55") ? digits : `55${digits}`;
+  const firstName = lead.name.trim().split(" ")[0];
+  const message = `Olá, ${firstName}! Tudo bem? Aqui é da Mensor Treinamentos. Recebi seu contato e queria entender melhor o momento da sua oficina.`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+};
 
 export default function CRM() {
   const [view, setView] = useState<View>("inicio");
@@ -98,7 +105,7 @@ function Dashboard({ leads, stats, openPipeline }: { leads: Lead[]; stats: { tot
 }
 
 function Pipeline({ leads, moveLead, select }: { leads: Lead[]; moveLead: (id: string, stage: Stage) => void; select: (lead: Lead) => void }) {
-  return <div className={styles.pipelineWrap}><div className={styles.pipeline}>{stages.map((stage) => { const items = leads.filter((lead) => lead.stage === stage); return <section key={stage} onDragOver={(event) => event.preventDefault()} onDrop={(event) => moveLead(event.dataTransfer.getData("leadId"), stage)}><header><div><i /><b>{stage}</b><span>{items.length}</span></div><small>{stage === "Proposta" || stage === "Fechado" ? currency.format(items.reduce((sum, lead) => sum + lead.value, 0)) : "Sem valor"}</small></header><div className={styles.cards}>{items.map((lead) => <article key={lead.id} draggable onDragStart={(event) => event.dataTransfer.setData("leadId", lead.id)} onClick={() => select(lead)}><div className={styles.cardTop}><span className={styles[lead.temperature.toLowerCase()]}>{lead.temperature}</span><i>•••</i></div><h3>{lead.name}</h3><p>{lead.company}</p><strong>{lead.value ? currency.format(lead.value) : "Valor ainda não definido"}</strong><footer><span>{lead.source}</span><small>{lead.nextAction}</small></footer></article>)}</div></section>; })}</div></div>;
+  return <div className={styles.pipelineWrap}><div className={styles.pipeline}>{stages.map((stage) => { const items = leads.filter((lead) => lead.stage === stage); return <section key={stage} onDragOver={(event) => event.preventDefault()} onDrop={(event) => moveLead(event.dataTransfer.getData("leadId"), stage)}><header><div><i /><b>{stage}</b><span>{items.length}</span></div><small>{stage === "Proposta" || stage === "Fechado" ? currency.format(items.reduce((sum, lead) => sum + lead.value, 0)) : "Sem valor"}</small></header><div className={styles.cards}>{items.map((lead) => <article key={lead.id} draggable onDragStart={(event) => event.dataTransfer.setData("leadId", lead.id)} onClick={() => select(lead)}><div className={styles.cardTop}><span className={styles[lead.temperature.toLowerCase()]}>{lead.temperature}</span><i>•••</i></div><h3>{lead.name}</h3><p>{lead.company}</p><div className={styles.leadMeta}><span><small>Origem do lead</small><b>{lead.source}</b></span><span><small>Funil atual</small><b>{lead.stage}</b></span></div><strong>{lead.value ? currency.format(lead.value) : "Valor ainda não definido"}</strong><footer><small>{lead.nextAction}</small>{lead.phone && <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}><i>☎</i><span>WhatsApp</span></a>}</footer></article>)}</div></section>; })}</div></div>;
 }
 
 function Contacts({ leads, select }: { leads: Lead[]; select: (lead: Lead) => void }) { return <div className={styles.content}><section className={styles.panel}><PanelTitle eyebrow="Base comercial" title={`${leads.length} contatos`} /><div className={styles.contactTable}><header><b>Contato</b><b>Origem</b><b>Etapa</b><b>Valor</b><b>Próxima ação</b></header>{leads.map((lead) => <button key={lead.id} onClick={() => select(lead)}><span><i>{lead.name.slice(0, 2).toUpperCase()}</i><span><b>{lead.name}</b><small>{lead.company} · {lead.phone}</small></span></span><span>{lead.source}</span><span>{lead.stage}</span><strong>{lead.value ? currency.format(lead.value) : "A definir"}</strong><span>{lead.nextAction}</span></button>)}</div></section></div>; }
