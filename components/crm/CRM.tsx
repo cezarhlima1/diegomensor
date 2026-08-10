@@ -25,6 +25,10 @@ type Lead = {
   nextAction: string;
   date: string;
   createdAt?: string;
+  conversationAt?: string;
+  meetingAt?: string;
+  proposalAt?: string;
+  closedAt?: string;
 };
 type TrafficRecord = {
   id: string;
@@ -56,6 +60,9 @@ const legacySources: Record<string, string> = {
 };
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
+const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
+const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
+const hydrateLeadDates = (lead: Lead, createdAt: string): Lead => ({ ...lead, createdAt, conversationAt: lead.conversationAt || (lead.stage !== "Novo lead" ? createdAt : undefined), meetingAt: lead.meetingAt || (["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), proposalAt: lead.proposalAt || (["Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), closedAt: lead.closedAt || (lead.stage === "Fechado" ? createdAt : undefined) });
 
 const stages: Stage[] = [
   "Novo lead",
@@ -187,7 +194,7 @@ const whatsappLink = (lead: Lead) => {
 
 export default function CRM() {
   const [view, setView] = useState<View>("geral");
-  const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => ({ ...lead, createdAt: new Date().toISOString() })));
+  const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
@@ -205,7 +212,8 @@ export default function CRM() {
             const createdAt = lead.createdAt || new Date().toISOString();
             const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
             const source = normalizeSource(lead.source);
-            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt, product, source } : { ...lead, stage, createdAt, product, source, value: 0 };
+            const migrated = hydrateLeadDates({ ...lead, stage, product, source }, createdAt);
+            return ["Proposta", "Fechado"].includes(stage) ? migrated : { ...migrated, value: 0 };
           }),
         );
     } catch {}
@@ -217,18 +225,14 @@ export default function CRM() {
   useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-traffic-v1"); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
   const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem("mensor-crm-traffic-v1", JSON.stringify(next)); };
 
-  const reportingLeads = useMemo(() => leads.filter((lead) => (lead.createdAt || new Date().toISOString()).slice(0, 7) === selectedMonth), [leads, selectedMonth]);
+  const reportingLeads = useMemo(() => leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)), [leads, selectedMonth]);
   const stats = useMemo(() => {
-    const open = reportingLeads.filter((lead) => lead.stage === "Proposta");
-    const won = reportingLeads.filter((lead) => lead.stage === "Fechado");
-    const proposals = reportingLeads.filter((lead) =>
-      ["Proposta", "Fechado"].includes(lead.stage),
-    );
+    const open = leads.filter((lead) => lead.stage === "Proposta" && inMonth(lead.proposalAt, selectedMonth));
+    const won = leads.filter((lead) => inMonth(lead.closedAt, selectedMonth));
+    const proposals = leads.filter((lead) => inMonth(lead.proposalAt, selectedMonth));
     return {
       total: reportingLeads.length,
-      meetings: reportingLeads.filter((lead) =>
-        ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage),
-      ).length,
+      meetings: leads.filter((lead) => inMonth(lead.meetingAt, selectedMonth)).length,
       proposals: proposals.length,
       closed: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
@@ -247,7 +251,7 @@ export default function CRM() {
         (lead) => lead.temperature === "Quente" && lead.stage !== "Fechado",
       ).length,
     };
-  }, [reportingLeads]);
+  }, [reportingLeads, leads, selectedMonth]);
 
   const filtered = leads.filter((lead) =>
     `${lead.name} ${lead.company} ${lead.email}`
@@ -275,9 +279,11 @@ export default function CRM() {
               .replace(",", "."),
           );
           if (!Number.isFinite(value) || value <= 0) return lead;
-          return { ...lead, stage, value };
+          const now = new Date().toISOString();
+          return { ...lead, stage, value, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
         }
-        return { ...lead, stage, value: 0 };
+        const now = new Date().toISOString();
+        return { ...lead, stage, value: 0, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}) };
       }),
     );
   const addLead = (lead: Lead) => {
@@ -348,9 +354,9 @@ export default function CRM() {
             {["comercial", "pipeline", "contatos"].includes(view) && <button onClick={() => setAdding(true)}>+ Novo lead</button>}
           </div>
         </header>
-        {view === "geral" && <ExecutiveOverview leads={reportingLeads} traffic={traffic.filter((item) => item.month === selectedMonth)} />}
+        {view === "geral" && <ExecutiveOverview leads={leads} month={selectedMonth} traffic={traffic.filter((item) => item.month === selectedMonth)} />}
         {view === "comercial" && (
-          <Dashboard leads={reportingLeads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} />
+          <Dashboard leads={leads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} />
         )}
         {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => item.month === selectedMonth)} month={selectedMonth} save={(record) => saveTraffic([record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} />}
         {view === "pipeline" && (
@@ -369,7 +375,8 @@ export default function CRM() {
           update={(changes) => updateLead(selected.id, changes)}
           move={(stage) => {
             moveLead(selected.id, stage);
-            setSelected((current) => current ? { ...current, stage } : current);
+            const now = new Date().toISOString();
+            setSelected((current) => current ? { ...current, stage, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) } : current);
           }}
         />
       )}
@@ -377,12 +384,13 @@ export default function CRM() {
   );
 }
 
-function ExecutiveOverview({ leads, traffic }: { leads: Lead[]; traffic: TrafficRecord[] }) {
-  const organicRevenue = leads.filter((lead) => lead.stage === "Fechado").reduce((sum, lead) => sum + lead.value, 0);
+function ExecutiveOverview({ leads, month, traffic }: { leads: Lead[]; month: string; traffic: TrafficRecord[] }) {
+  const organicClosings = leads.filter((lead) => inMonth(lead.closedAt, month));
+  const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
   const trafficRevenue = traffic.reduce((sum, item) => sum + item.revenue, 0);
   const investment = traffic.reduce((sum, item) => sum + item.investment, 0);
   const directSales = traffic.reduce((sum, item) => sum + item.sales, 0);
-  const organicSales = leads.filter((lead) => lead.stage === "Fechado").length;
+  const organicSales = organicClosings.length;
   const totalRevenue = organicRevenue + trafficRevenue;
   const totalSales = organicSales + directSales;
   const roas = investment ? trafficRevenue / investment : 0;
@@ -441,9 +449,9 @@ function Dashboard({
   useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
   const funnelSteps = [
-    { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
-    { label: "Conversas iniciadas", count: leads.filter((lead) => lead.stage !== "Novo lead").length, detail: "Primeiro contato realizado" },
-    { label: "Reuniões agendadas", count: leads.filter((lead) => ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage)).length, detail: "Reuniões marcadas" },
+    { label: "Leads gerados", count: leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)).length, detail: "Total de oportunidades" },
+    { label: "Conversas iniciadas", count: leads.filter((lead) => inMonth(lead.conversationAt, selectedMonth)).length, detail: "Primeiro contato realizado" },
+    { label: "Reuniões agendadas", count: leads.filter((lead) => inMonth(lead.meetingAt, selectedMonth)).length, detail: "Reuniões marcadas" },
     { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
     { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
   ];
@@ -477,14 +485,14 @@ function Dashboard({
         </article>
       </div>
       <FinancialSummary stats={stats} />
-      <div className={styles.analysisColumn}><ProductValueChart leads={leads} /></div>
+      <div className={styles.analysisColumn}><ProductValueChart leads={leads} month={selectedMonth} /></div>
       <section className={styles.funnelColumn}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
-        <FunnelVisualization steps={funnelSteps} total={leads.length} />
-        <OriginValueChart leads={leads} />
+        <FunnelVisualization steps={funnelSteps} total={leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)).length} />
+        <OriginValueChart leads={leads} month={selectedMonth} />
       </section>
       <MonthlyMetricsChart leads={allLeads} endMonth={selectedMonth} goals={monthlyGoals} setGoal={updateMonthlyGoal} />
     </div>
@@ -837,6 +845,16 @@ function LeadDrawer({
             <span>{lead.date}</span>
           </div>
         </section>
+        <section>
+          <small>Histórico de datas</small>
+          <div className={styles.leadTimeline}>
+            <p><span>Lead gerado</span><b>{formatEventDate(lead.createdAt)}</b></p>
+            <p><span>Conversa iniciada</span><b>{formatEventDate(lead.conversationAt)}</b></p>
+            <p><span>Reunião agendada</span><b>{formatEventDate(lead.meetingAt)}</b></p>
+            <p><span>Proposta enviada</span><b>{formatEventDate(lead.proposalAt)}</b></p>
+            <p><span>Fechamento</span><b>{formatEventDate(lead.closedAt)}</b></p>
+          </div>
+        </section>
       </aside>
     </div>
   );
@@ -883,7 +901,7 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
     const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const items = leads.filter((lead) => (lead.createdAt || "").slice(0, 7) === key);
-    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, closedValue: items.filter((lead) => lead.stage === "Fechado").reduce((sum, lead) => sum + lead.value, 0), goal: goals[key] || 0 };
+    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, closedValue: leads.filter((lead) => inMonth(lead.closedAt, key)).reduce((sum, lead) => sum + lead.value, 0), goal: goals[key] || 0 };
   });
   const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
   const maxLeads = Math.max(1, ...months.map((item) => item.leads));
@@ -900,16 +918,16 @@ function PeriodFilter({ month, setMonth }: { month: string; setMonth: (month: st
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
   return <section className={styles.periodFilter}><label><span>Filtro</span><input type="month" value={month} aria-label={`Filtro: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
 }
-function ProductValueChart({ leads }: { leads: Lead[] }) {
+function ProductValueChart({ leads, month }: { leads: Lead[]; month: string }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => lead.stage === "Fechado"); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inMonth(lead.closedAt, month)); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => inMonth(lead.proposalAt, month)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
-function OriginValueChart({ leads }: { leads: Lead[] }) {
+function OriginValueChart({ leads, month }: { leads: Lead[]; month: string }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = leadSources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => lead.stage === "Fechado"); return { source, leads: items.length, conversations: items.filter((lead) => lead.stage !== "Novo lead").length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const origins = leadSources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => inMonth(lead.closedAt, month)); return { source, leads: items.filter((lead) => inMonth(lead.createdAt, month)).length, conversations: items.filter((lead) => inMonth(lead.conversationAt, month)).length, proposals: items.filter((lead) => inMonth(lead.proposalAt, month)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
