@@ -2049,7 +2049,7 @@
 
 /* Leitura da seção de conversão da esquerda para a direita. */
 .dashboardContent>.financialSummary>header{text-align:left}
-.dashboardContent>.financialSummary article{align-items:flex-start;text-align:left}
+.dashboardContent>.financialSummary article{align-items:center;text-align:center}
 .dashboardContent>.financialSummary article>span,
-.dashboardContent>.financialSummary article>small{justify-content:flex-start;text-align:left}
-.dashboardContent>.financialSummary article>strong{align-self:flex-start;text-align:left}
+.dashboardContent>.financialSummary article>small{justify-content:center;text-align:center}
+.dashboardContent>.financialSummary article>strong{align-self:center;text-align:center}
