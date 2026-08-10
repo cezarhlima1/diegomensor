@@ -67,5 +67,7 @@ export const steps = [
   },
 ] satisfies Array<{ eyebrow: string; title: string; description: string; questions: Question[] }>;
 
-export const allQuestions = steps.flatMap((step) => step.questions);
-
+export const allQuestions: Question[] = steps.reduce<Question[]>(
+  (questions, step) => questions.concat(step.questions),
+  [],
+);
