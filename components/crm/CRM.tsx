@@ -318,7 +318,7 @@ export default function CRM() {
                 />
               </label>
             )}
-            <button onClick={() => setAdding(true)}>+ Nova oportunidade</button>
+            <button onClick={() => setAdding(true)}>+ Novo lead</button>
           </div>
         </header>
         {view === "inicio" && (
@@ -821,11 +821,10 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
   const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
   return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor fechado × meta</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta</span><span><i className={styles.closedLegend} />Valor fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
 }
-function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (month: string) => void; total: number }) {
+function PeriodFilter({ month, setMonth }: { month: string; setMonth: (month: string) => void; total: number }) {
   const [year, monthNumber] = month.split("-").map(Number);
-  const lastDay = new Date(year, monthNumber, 0).getDate();
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
-  return <section className={styles.periodFilter}><div><span>Período atual</span><h2>01/{String(monthNumber).padStart(2, "0")} — {lastDay}/{String(monthNumber).padStart(2, "0")}</h2><p>{total} leads no período</p></div><label><span>Alterar mês</span><input type="month" value={month} aria-label={`Período: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
+  return <section className={styles.periodFilter}><label><span>Filtro</span><input type="month" value={month} aria-label={`Filtro: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
 }
 function ProductValueChart({ leads }: { leads: Lead[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");

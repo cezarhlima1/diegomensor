@@ -1942,3 +1942,11 @@
 /* Meta mensal editável e identificação dos produtos na pipeline. */
 .goalKpi>label{display:flex;align-items:center;justify-content:space-between;color:#91a5b0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}.goalKpi>label span{padding:4px 7px;border:1px solid rgba(80,191,240,.18);border-radius:999px;color:#69c9f2;font-size:8px;letter-spacing:.06em}.goalKpi>div{display:flex;align-items:baseline;gap:5px;margin:15px 0 8px}.goalKpi>div small{color:#8ba2ad;font-size:12px}.goalKpi>div input{min-width:0;width:100%;padding:0;border:0;outline:0;background:transparent;color:#f5fafc;font:750 26px var(--font-archivo);appearance:textfield}.goalKpi>div input::-webkit-inner-spin-button,.goalKpi>div input::-webkit-outer-spin-button{margin:0;appearance:none}.goalKpi>small{color:#6dbde2!important;font-size:10px}.productTag{display:inline-flex;width:max-content;max-width:100%;margin-top:8px;padding:5px 8px;overflow:hidden;border:1px solid rgba(211,174,101,.2);border-radius:999px;background:rgba(211,174,101,.07);color:#d5b879;font-size:8px;font-style:normal;font-weight:700;line-height:1;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:700px){.goalKpi>div input{font-size:23px}.productTag{font-size:7px}}
+
+/* O controle da meta fica somente no cartão superior; cabeçalho reduzido ao filtro. */
+.monthlyChart>.goalControl{display:none}
+.topbar>.periodFilter{display:flex;align-items:center;width:auto;padding:7px 10px}
+.topbar>.periodFilter>label{display:flex;align-items:center;gap:10px}
+.topbar>.periodFilter>label>span{color:#8ea4af;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.topbar>.periodFilter>label>input{width:175px}
+@media(max-width:700px){.topbar>.periodFilter{display:flex;grid-column:1/-1;width:100%;padding-top:9px}.topbar>.periodFilter>label{display:flex;width:100%}.topbar>.periodFilter>label>span{display:block}.topbar>.periodFilter>label>input{flex:1;width:auto}}
