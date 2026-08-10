@@ -1787,3 +1787,50 @@
     font-size: 15px;
   }
 }
+
+/* Conversão financeira e funil lado a lado na visão geral. */
+.dashboardContent {
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: start;
+}
+.dashboardContent > .kpis,
+.dashboardContent > .dashboardGrid {
+  grid-column: 1 / -1;
+}
+.dashboardContent > .financialSummary,
+.dashboardContent > .sourcePanel {
+  align-self: stretch;
+  height: 100%;
+}
+.dashboardContent > .financialSummary > div {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.dashboardContent > .financialSummary article:last-child {
+  grid-column: 1 / -1;
+}
+.dashboardContent .conversionFunnel {
+  padding-inline: 0;
+}
+.dashboardContent .conversionFunnel article {
+  width: 100% !important;
+}
+.dashboardContent .conversionFunnel article > div > b {
+  font-size: 13px;
+}
+@media (max-width: 1100px) {
+  .dashboardContent {
+    grid-template-columns: 1fr;
+  }
+  .dashboardContent > .financialSummary,
+  .dashboardContent > .sourcePanel {
+    grid-column: 1;
+  }
+}
+@media (max-width: 700px) {
+  .dashboardContent > .financialSummary > div {
+    grid-template-columns: 1fr;
+  }
+  .dashboardContent > .financialSummary article:last-child {
+    grid-column: auto;
+  }
+}

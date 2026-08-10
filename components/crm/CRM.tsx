@@ -354,7 +354,7 @@ function Dashboard({
     { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
   ];
   return (
-    <div className={styles.content}>
+    <div className={`${styles.content} ${styles.dashboardContent}`}>
       <div className={styles.kpis}>
         <Kpi
           label="Leads gerados no mês"
