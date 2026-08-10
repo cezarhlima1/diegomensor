@@ -838,6 +838,10 @@
   }
 }
 
+.contactFilters{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:-3px 0 16px;padding:17px 18px;border:1px solid var(--line);border-radius:12px;background:#091923}
+.contactFilters>div{display:grid;gap:5px}.contactFilters>div>span{color:#eef7fb;font-size:13px;font-weight:750}.contactFilters>div>small{color:#8fa5b1;font-size:10px}.contactFilters label{display:grid;gap:6px;min-width:210px}.contactFilters label>span{color:#9db1bc;font-size:10px;font-weight:700}.contactFilters select{height:42px;padding:0 12px;border:1px solid var(--line);border-radius:9px;outline:0;background:#102735;color:#f1f7fa;font-size:12px}.sourceChips{display:flex;gap:7px;margin-bottom:17px;padding-bottom:3px;overflow-x:auto}.sourceChips button{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#0a1c28;color:#9fb2bc;font-size:11px;cursor:pointer}.sourceChips button b{display:grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border-radius:999px;background:#142f3e;color:#bcd0d9;font-size:9px}.sourceChips .selectedChip{border-color:#168fd0;background:#0d3347;color:#fff}.sourceChips .selectedChip b{background:#168fd0;color:#fff}.sourceTag{display:inline-flex;padding:6px 9px;border:1px solid rgba(105,205,245,.2);border-radius:999px;background:rgba(7,139,212,.12);color:#72d3fa;font-size:10px;font-style:normal;font-weight:700}.emptyContacts{padding:42px 15px;border-top:1px solid var(--line);color:#8fa5b1;font-size:12px;text-align:center}
+@media(max-width:700px){.contactFilters{align-items:stretch;flex-direction:column;gap:14px;padding:14px}.contactFilters label{min-width:0}.contactFilters>div>small{font-size:10px;line-height:1.45}.sourceChips{margin-inline:-2px}}
+
 /* Navegação principal compacta e centralizada no topo. */
 .crm {
   display: block;

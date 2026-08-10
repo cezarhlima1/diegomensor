@@ -533,13 +533,24 @@ function Contacts({
   leads: Lead[];
   select: (lead: Lead) => void;
 }) {
+  const [sourceFilter, setSourceFilter] = useState("Todos");
+  const sourceTags = Array.from(new Set(leads.map((lead) => lead.source.trim()).filter(Boolean))).sort();
+  const visibleLeads = sourceFilter === "Todos" ? leads : leads.filter((lead) => lead.source.trim() === sourceFilter);
   return (
     <div className={styles.content}>
       <section className={styles.panel}>
         <PanelTitle
           eyebrow="Base comercial"
-          title={`${leads.length} contatos`}
+          title={`${visibleLeads.length} contatos`}
         />
+        <div className={styles.contactFilters}>
+          <div><span>Filtrar por funil de origem</span><small>As etiquetas são criadas automaticamente conforme a origem dos leads.</small></div>
+          <label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label>
+        </div>
+        <div className={styles.sourceChips}>
+          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.length}</b></button>
+          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
+        </div>
         <div className={styles.contactTable}>
           <header>
             <b>Contato</b>
@@ -548,7 +559,7 @@ function Contacts({
             <b>Valor</b>
             <b>Próxima ação</b>
           </header>
-          {leads.map((lead) => (
+          {visibleLeads.map((lead) => (
             <button key={lead.id} onClick={() => select(lead)}>
               <span>
                 <i>{lead.name.slice(0, 2).toUpperCase()}</i>
@@ -559,7 +570,7 @@ function Contacts({
                   </small>
                 </span>
               </span>
-              <span>{lead.source}</span>
+              <span><i className={styles.sourceTag}>{lead.source}</i></span>
               <span>{lead.stage}</span>
               <strong>
                 {lead.value ? currency.format(lead.value) : "A definir"}
@@ -567,6 +578,7 @@ function Contacts({
               <span>{lead.nextAction}</span>
             </button>
           ))}
+          {!visibleLeads.length && <div className={styles.emptyContacts}>Nenhum contato encontrado com essa etiqueta de origem.</div>}
         </div>
       </section>
     </div>
