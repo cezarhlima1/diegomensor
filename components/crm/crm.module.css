@@ -1552,9 +1552,6 @@
   .financialSummary > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .financialSummary article:last-child {
-    grid-column: 1/-1;
-  }
 }
 @media (max-width: 700px) {
   .financialSummary {
@@ -1808,9 +1805,6 @@
 }
 .dashboardContent > .financialSummary > div {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.dashboardContent > .financialSummary article:last-child {
-  grid-column: 1 / -1;
 }
 .dashboardContent .conversionFunnel {
   padding-inline: 0;

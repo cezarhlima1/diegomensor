@@ -871,14 +871,6 @@ function FinancialSummary({
             {stats.closed} de {stats.proposals} propostas enviadas
           </small>
         </article>
-        <article>
-          <span>Conversão financeira</span>
-          <strong>{stats.valueConversion.toFixed(1)}%</strong>
-          <small>
-            {currency.format(stats.wonValue)} de{" "}
-            {currency.format(stats.proposalValue)}
-          </small>
-        </article>
       </div>
     </section>
   );
