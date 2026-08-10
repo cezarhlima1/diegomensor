@@ -354,39 +354,12 @@ function Dashboard({
   };
   openPipeline: () => void;
 }) {
-  const sources = Array.from(new Set(leads.map((lead) => lead.source)))
-    .map((source) => {
-      const sourceLeads = leads.filter((lead) => lead.source === source);
-      const meetings = sourceLeads.filter((lead) =>
-        ["Diagnóstico", "Proposta", "Fechado"].includes(lead.stage),
-      ).length;
-      const closed = sourceLeads.filter(
-        (lead) => lead.stage === "Fechado",
-      ).length;
-      return {
-        source,
-        leads: sourceLeads.length,
-        meetings,
-        closed,
-        share: leads.length ? (sourceLeads.length / leads.length) * 100 : 0,
-        conversion: sourceLeads.length
-          ? (closed / sourceLeads.length) * 100
-          : 0,
-        value: sourceLeads
-          .filter((lead) => ["Proposta", "Fechado"].includes(lead.stage))
-          .reduce((sum, lead) => sum + lead.value, 0),
-      };
-    })
-    .sort((a, b) => b.leads - a.leads);
-  const sourceColors = [
-    "#159fe0",
-    "#8b5cf6",
-    "#22c58b",
-    "#f5a524",
-    "#ec5f8b",
-    "#42c7d9",
-    "#f97316",
-    "#a3e635",
+  const funnelSteps = [
+    { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
+    { label: "Conversas iniciadas", count: leads.filter((lead) => lead.stage !== "Novo lead").length, detail: "Primeiro contato realizado" },
+    { label: "Reuniões realizadas", count: leads.filter((lead) => ["Diagnóstico", "Proposta", "Fechado"].includes(lead.stage)).length, detail: "Diagnósticos e reuniões" },
+    { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
+    { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
   ];
   return (
     <div className={styles.content}>
@@ -422,62 +395,15 @@ function Dashboard({
       </div>
       <FinancialSummary stats={stats} />
       <section className={`${styles.panel} ${styles.sourcePanel}`}>
-        <PanelTitle eyebrow="Aquisição" title="De onde estão vindo os leads" />
+        <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
-          Distribuição e qualidade das oportunidades por origem.
+          Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
-        <div className={styles.sourceVisual}>
-          <SourcePieChart
-            sources={sources}
-            colors={sourceColors}
-            total={leads.length}
-          />
-          <div className={styles.sourceLegend}>
-            {sources.map((item, index) => (
-              <div key={item.source}>
-                <i
-                  style={{
-                    background: sourceColors[index % sourceColors.length],
-                  }}
-                />
-                <span>{item.source}</span>
-                <strong>{item.leads}</strong>
-                <small>{item.share.toFixed(1)}%</small>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className={styles.sourceTable}>
-          <header>
-            <b>Origem</b>
-            <b>Leads</b>
-            <b>Participação</b>
-            <b>Reuniões</b>
-            <b>Fechamentos</b>
-            <b>Conversão</b>
-            <b>Valor em propostas</b>
-          </header>
-          {sources.map((item) => (
-            <div key={item.source}>
-              <span>
-                <i>{item.source.slice(0, 2).toUpperCase()}</i>
-                <b>{item.source}</b>
-              </span>
-              <strong>{item.leads}</strong>
-              <span className={styles.sourceShare}>
-                <em>
-                  <i style={{ width: `${item.share}%` }} />
-                </em>
-                <b>{item.share.toFixed(1)}%</b>
-              </span>
-              <strong>{item.meetings}</strong>
-              <strong>{item.closed}</strong>
-              <b className={styles.sourceConversion}>
-                {item.conversion.toFixed(1)}%
-              </b>
-              <strong>{currency.format(item.value)}</strong>
-            </div>
-          ))}
+        <div className={styles.conversionFunnel}>
+          {funnelSteps.map((step, index) => {
+            const percentage = leads.length ? (step.count / leads.length) * 100 : 0;
+            return <article key={step.label} style={{ width: `${100 - index * 10}%` }}><div><span>{String(index + 1).padStart(2, "0")}</span><b>{step.label}</b><small>{step.detail}</small></div><strong>{step.count}</strong><em>{percentage.toFixed(1)}%</em></article>;
+          })}
         </div>
       </section>
       <div className={styles.dashboardGrid}>
