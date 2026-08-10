@@ -1813,9 +1813,6 @@
 .dashboardContent .conversionFunnel {
   padding-inline: 0;
 }
-.dashboardContent .conversionFunnel article {
-  width: 100% !important;
-}
 .dashboardContent .conversionFunnel article > div > b {
   font-size: 13px;
 }
