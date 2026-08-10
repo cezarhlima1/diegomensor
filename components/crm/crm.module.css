@@ -34,7 +34,7 @@
 
 /* A visão geral usa o espaço inteiro para o funil; a agenda fica na aba de tarefas. */
 .dashboardGrid{grid-template-columns:1fr}
-.dashboardGrid>.panel:last-child{display:none}
+.dashboardGrid>section:nth-of-type(2){display:none!important}
 
 .sourceVisual{display:grid;grid-template-columns:220px minmax(0,1fr);align-items:center;gap:38px;margin:20px 0 28px;padding:24px;border:1px solid var(--line);border-radius:14px;background:#091923}
 .sourcePie{position:relative;width:190px;aspect-ratio:1;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 18px 45px rgba(0,0,0,.25)}
