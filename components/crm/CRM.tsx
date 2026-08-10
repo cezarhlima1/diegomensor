@@ -27,6 +27,15 @@ type Lead = {
   createdAt?: string;
 };
 
+const products = [
+  { name: "Precificação para oficinas", price: 197 },
+  { name: "Produtividade para oficinas", price: 97 },
+  { name: "Calculadora de precificação", price: 497 },
+  { name: "Treinamento OAP", price: 1197 },
+  { name: "Mentoria OAG", price: 10000 },
+] as const;
+const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
+
 const stages: Stage[] = [
   "Novo lead",
   "Contato feito",
@@ -172,7 +181,7 @@ export default function CRM() {
           (JSON.parse(saved) as Lead[]).map((lead) => {
             const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
             const createdAt = lead.createdAt || new Date().toISOString();
-            const product = lead.product || "Não informado";
+            const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
             return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt, product } : { ...lead, stage, createdAt, product, value: 0 };
           }),
         );
@@ -231,7 +240,7 @@ export default function CRM() {
               : "Confirme o valor final recebido:";
           const informed = window.prompt(
             label,
-            lead.value ? String(lead.value) : "",
+            String(lead.value || productPrice(lead.product) || ""),
           );
           if (informed === null) return lead;
           const value = Number(
@@ -249,6 +258,10 @@ export default function CRM() {
   const addLead = (lead: Lead) => {
     setLeads((current) => [lead, ...current]);
     setAdding(false);
+  };
+  const updateLead = (id: string, changes: Partial<Lead>) => {
+    setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, ...changes } : lead));
+    setSelected((current) => current?.id === id ? { ...current, ...changes } : current);
   };
 
   const navigation: Array<[View, string, string]> = [
@@ -324,9 +337,10 @@ export default function CRM() {
         <LeadDrawer
           lead={selected}
           close={() => setSelected(null)}
+          update={(changes) => updateLead(selected.id, changes)}
           move={(stage) => {
             moveLead(selected.id, stage);
-            setSelected({ ...selected, stage });
+            setSelected((current) => current ? { ...current, stage } : current);
           }}
         />
       )}
@@ -390,7 +404,11 @@ function Dashboard({
           value={String(stats.closed)}
           detail={`${currency.format(stats.wonValue)} recebidos`}
         />
-        <Kpi label="Meta do mês" value={currency.format(monthlyGoals[selectedMonth] || 0)} detail={monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Defina a meta no gráfico"} />
+        <article className={styles.goalKpi}>
+          <label htmlFor="monthly-goal">Meta do mês <span>Editar</span></label>
+          <div><small>R$</small><input id="monthly-goal" type="number" min="0" step="100" value={monthlyGoals[selectedMonth] || ""} onChange={(event) => updateMonthlyGoal(selectedMonth, Number(event.target.value) || 0)} placeholder="0" /></div>
+          <small>{monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Preencha a meta deste mês"}</small>
+        </article>
       </div>
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart leads={leads} /><OriginValueChart leads={leads} /></div>
@@ -456,6 +474,7 @@ function Pipeline({
                       <div>
                         <h3>{lead.name}</h3>
                         <p><span>Origem</span>{lead.source}</p>
+                        {lead.product && lead.product !== "Não informado" && <em className={styles.productTag}>{lead.product}</em>}
                       </div>
                       {lead.phone && (
                         <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
@@ -565,7 +584,7 @@ function LeadModal({
     phone: "",
     email: "",
     source: "Formulário mentoria",
-    product: "Mentoria",
+    product: "Mentoria OAG",
     temperature: "Morno" as Lead["temperature"],
     nextAction: "Fazer primeiro contato",
   });
@@ -624,7 +643,12 @@ function LeadModal({
             value={draft.source}
             set={(source) => setDraft({ ...draft, source })}
           />
-          <Input label="Produto" value={draft.product} set={(product) => setDraft({ ...draft, product })} />
+          <label>
+            <span>Produto</span>
+            <select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>
+              {products.map((product) => <option key={product.name} value={product.name}>{product.name} — {currency.format(product.price)}</option>)}
+            </select>
+          </label>
           <label>
             <span>Temperatura</span>
             <select
@@ -661,10 +685,12 @@ function LeadDrawer({
   lead,
   close,
   move,
+  update,
 }: {
   lead: Lead;
   close: () => void;
   move: (stage: Stage) => void;
+  update: (changes: Partial<Lead>) => void;
 }) {
   return (
     <div className={styles.backdrop} onMouseDown={close}>
@@ -697,6 +723,13 @@ function LeadDrawer({
         </section>
         <section>
           <small>Oportunidade</small>
+          <label>
+            <span>Produto</span>
+            <select value={lead.product || "Não informado"} onChange={(event) => update({ product: event.target.value })}>
+              <option value="Não informado">Não informado</option>
+              {products.map((product) => <option key={product.name} value={product.name}>{product.name} — {currency.format(product.price)}</option>)}
+            </select>
+          </label>
           <p>
             <span>
               {lead.stage === "Fechado"
@@ -795,10 +828,11 @@ function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (mo
   return <section className={styles.periodFilter}><div><span>Período atual</span><h2>01/{String(monthNumber).padStart(2, "0")} — {lastDay}/{String(monthNumber).padStart(2, "0")}</h2><p>{total} leads no período</p></div><label><span>Alterar mês</span><input type="month" value={month} aria-label={`Período: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
 }
 function ProductValueChart({ leads }: { leads: Lead[] }) {
-  const products = Array.from(new Set(leads.map((lead) => lead.product || "Não informado"))).map((product) => { const items = leads.filter((lead) => (lead.product || "Não informado") === product); const closed = items.filter((lead) => lead.stage === "Fechado"); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length }; }).sort((a,b) => b.value - a.value);
-  const total = products.reduce((sum, product) => sum + product.value, 0);
+  const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => lead.stage === "Fechado"); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length }; }).sort((a,b) => b.value - a.value);
+  const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
-  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Quanto cada produto representa do valor total recebido.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{products.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(products.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{products.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
+  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads }: { leads: Lead[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
