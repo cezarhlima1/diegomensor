@@ -23,6 +23,7 @@ type Lead = {
   temperature: "Quente" | "Morno" | "Frio";
   nextAction: string;
   date: string;
+  createdAt?: string;
 };
 
 const stages: Stage[] = [
@@ -160,6 +161,7 @@ export default function CRM() {
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     try {
@@ -168,7 +170,8 @@ export default function CRM() {
         setLeads(
           (JSON.parse(saved) as Lead[]).map((lead) => {
             const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
-            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage } : { ...lead, stage, value: 0 };
+            const createdAt = lead.createdAt || new Date().toISOString();
+            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage, createdAt } : { ...lead, stage, createdAt, value: 0 };
           }),
         );
     } catch {}
@@ -178,22 +181,23 @@ export default function CRM() {
     if (loaded) localStorage.setItem("mensor-crm-v1", JSON.stringify(leads));
   }, [leads, loaded]);
 
+  const reportingLeads = useMemo(() => leads.filter((lead) => (lead.createdAt || new Date().toISOString()).slice(0, 7) === selectedMonth), [leads, selectedMonth]);
   const stats = useMemo(() => {
-    const open = leads.filter((lead) => lead.stage === "Proposta");
-    const won = leads.filter((lead) => lead.stage === "Fechado");
-    const proposals = leads.filter((lead) =>
+    const open = reportingLeads.filter((lead) => lead.stage === "Proposta");
+    const won = reportingLeads.filter((lead) => lead.stage === "Fechado");
+    const proposals = reportingLeads.filter((lead) =>
       ["Proposta", "Fechado"].includes(lead.stage),
     );
     return {
-      total: leads.length,
-      meetings: leads.filter((lead) =>
+      total: reportingLeads.length,
+      meetings: reportingLeads.filter((lead) =>
         ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage),
       ).length,
       proposals: proposals.length,
       closed: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
       wonValue: won.reduce((sum, lead) => sum + lead.value, 0),
-      conversion: leads.length ? (won.length / leads.length) * 100 : 0,
+      conversion: reportingLeads.length ? (won.length / reportingLeads.length) * 100 : 0,
       proposalConversion: proposals.length
         ? (won.length / proposals.length) * 100
         : 0,
@@ -203,11 +207,11 @@ export default function CRM() {
             proposals.reduce((sum, lead) => sum + lead.value, 0)) *
           100
         : 0,
-      hot: leads.filter(
+      hot: reportingLeads.filter(
         (lead) => lead.temperature === "Quente" && lead.stage !== "Fechado",
       ).length,
     };
-  }, [leads]);
+  }, [reportingLeads]);
 
   const filtered = leads.filter((lead) =>
     `${lead.name} ${lead.company} ${lead.email}`
@@ -302,7 +306,7 @@ export default function CRM() {
           </div>
         </header>
         {view === "inicio" && (
-          <Dashboard leads={leads} stats={stats} />
+          <Dashboard leads={reportingLeads} stats={stats} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} />
         )}
         {view === "pipeline" && (
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
@@ -330,6 +334,8 @@ export default function CRM() {
 function Dashboard({
   leads,
   stats,
+  selectedMonth,
+  setSelectedMonth,
 }: {
   leads: Lead[];
   stats: {
@@ -345,6 +351,8 @@ function Dashboard({
     valueConversion: number;
     hot: number;
   };
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
 }) {
   const funnelSteps = [
     { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
@@ -355,6 +363,7 @@ function Dashboard({
   ];
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
+      <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={leads.length} />
       <div className={styles.kpis}>
         <Kpi
           label="Leads gerados no mês"
@@ -630,6 +639,7 @@ function LeadModal({
             stage: "Novo lead",
             value: 0,
             date: "Hoje",
+            createdAt: new Date().toISOString(),
           });
         }}
       >
@@ -807,6 +817,12 @@ function Input({
 }
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
+}
+function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (month: string) => void; total: number }) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(year, monthNumber, 0).getDate();
+  const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
+  return <section className={styles.periodFilter}><div><span>Período da visão geral</span><h2>{monthName.charAt(0).toUpperCase() + monthName.slice(1)}</h2><p>Dados de 01/{String(monthNumber).padStart(2, "0")} a {lastDay}/{String(monthNumber).padStart(2, "0")} · {total} leads no período</p></div><label><span>Selecionar mês</span><input type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
 }
 function FinancialSummary({
   stats,

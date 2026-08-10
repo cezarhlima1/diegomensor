@@ -1794,9 +1794,11 @@
   align-items: start;
 }
 .dashboardContent > .kpis,
+.dashboardContent > .periodFilter,
 .dashboardContent > .dashboardGrid {
   grid-column: 1 / -1;
 }
+.periodFilter{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 21px;border:1px solid var(--line);border-radius:14px;background:#0a1c28}.periodFilter>div>span{color:#69cdf5;font:700 10px var(--font-jetbrains);letter-spacing:.12em;text-transform:uppercase}.periodFilter h2{margin:5px 0 4px;color:#fff;font:720 20px var(--font-archivo)}.periodFilter p{margin:0;color:#93a9b4;font-size:11px}.periodFilter label{display:grid;gap:6px;min-width:205px}.periodFilter label>span{color:#a9bbc4;font-size:10px;font-weight:700}.periodFilter input{height:43px;padding:0 12px;border:1px solid var(--line);border-radius:9px;outline:0;background:#102735;color:#f2f8fa;font:700 12px var(--font-archivo);color-scheme:dark}.periodFilter input:focus{border-color:#168fd0}@media(max-width:700px){.periodFilter{align-items:stretch;flex-direction:column;padding:16px}.periodFilter label{min-width:0}.periodFilter h2{font-size:19px}.periodFilter p{font-size:10px;line-height:1.5}}
 .dashboardContent > .financialSummary,
 .dashboardContent > .sourcePanel {
   align-self: stretch;
