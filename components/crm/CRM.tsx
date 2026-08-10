@@ -6,7 +6,8 @@ import styles from "./crm.module.css";
 type Stage =
   | "Novo lead"
   | "Contato feito"
-  | "Diagnóstico"
+  | "Em conversação"
+  | "Reunião agendada"
   | "Proposta"
   | "Fechado";
 type View = "inicio" | "pipeline" | "contatos" | "tarefas";
@@ -27,7 +28,8 @@ type Lead = {
 const stages: Stage[] = [
   "Novo lead",
   "Contato feito",
-  "Diagnóstico",
+  "Em conversação",
+  "Reunião agendada",
   "Proposta",
   "Fechado",
 ];
@@ -91,7 +93,7 @@ const initialLeads: Lead[] = [
     phone: "(48) 99913-2041",
     email: "fernando@limacar.com",
     source: "Formulário mentoria",
-    stage: "Diagnóstico",
+    stage: "Reunião agendada",
     value: 0,
     temperature: "Quente",
     nextAction: "Reunião de diagnóstico",
@@ -164,11 +166,10 @@ export default function CRM() {
       const saved = localStorage.getItem("mensor-crm-v1");
       if (saved)
         setLeads(
-          (JSON.parse(saved) as Lead[]).map((lead) =>
-            ["Proposta", "Fechado"].includes(lead.stage)
-              ? lead
-              : { ...lead, value: 0 },
-          ),
+          (JSON.parse(saved) as Lead[]).map((lead) => {
+            const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
+            return ["Proposta", "Fechado"].includes(stage) ? { ...lead, stage } : { ...lead, stage, value: 0 };
+          }),
         );
     } catch {}
     setLoaded(true);
@@ -186,7 +187,7 @@ export default function CRM() {
     return {
       total: leads.length,
       meetings: leads.filter((lead) =>
-        ["Diagnóstico", "Proposta", "Fechado"].includes(lead.stage),
+        ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage),
       ).length,
       proposals: proposals.length,
       closed: won.length,
@@ -351,7 +352,7 @@ function Dashboard({
   const funnelSteps = [
     { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
     { label: "Conversas iniciadas", count: leads.filter((lead) => lead.stage !== "Novo lead").length, detail: "Primeiro contato realizado" },
-    { label: "Reuniões realizadas", count: leads.filter((lead) => ["Diagnóstico", "Proposta", "Fechado"].includes(lead.stage)).length, detail: "Diagnósticos e reuniões" },
+    { label: "Reuniões agendadas", count: leads.filter((lead) => ["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage)).length, detail: "Reuniões marcadas" },
     { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
     { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
   ];
@@ -366,7 +367,7 @@ function Dashboard({
         <Kpi
           label="Reuniões agendadas"
           value={String(stats.meetings)}
-          detail="Diagnósticos marcados"
+          detail="Reuniões marcadas"
         />
         <Kpi
           label="Propostas enviadas"

@@ -331,9 +331,9 @@
 }
 .pipeline {
   display: grid;
-  grid-template-columns: repeat(5, minmax(245px, 1fr));
+  grid-template-columns: repeat(6, minmax(245px, 1fr));
   gap: 10px;
-  min-width: 1260px;
+  min-width: 1510px;
   padding: 0 24px;
 }
 .pipeline > section {
