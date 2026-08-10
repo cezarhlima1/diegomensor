@@ -1986,3 +1986,21 @@
 .dashboardContent>.sourcePanel>.originAnalysis{width:100%;margin:0;padding:18px;border-radius:16px}
 @media(max-width:1100px){.dashboardContent>.sourcePanel>.funnelVisual{min-height:400px}}
 @media(max-width:700px){.dashboardContent>.sourcePanel{gap:12px}.dashboardContent>.sourcePanel>.funnelVisual{min-height:320px;padding:6px 0}.dashboardContent>.sourcePanel>.originAnalysis{padding:14px}}
+
+/* Indicadores centralizados com uma única hierarquia tipográfica. */
+.dashboardContent .kpis article{display:flex;align-items:center;justify-content:center;min-height:142px;flex-direction:column;padding:19px 14px;text-align:center}
+.dashboardContent .kpis article>span{min-height:28px;display:flex;align-items:center;justify-content:center;color:#9bafb9;font-size:10px;font-weight:700;line-height:1.35}
+.dashboardContent .kpis article>strong{margin:10px 0 7px;font-size:29px;line-height:1}
+.dashboardContent .kpis article>small{min-height:15px;font-size:9.5px;line-height:1.4}
+.dashboardContent .goalKpi>label{min-height:28px;justify-content:center;gap:8px;text-align:center}
+.dashboardContent .goalKpi>div{justify-content:center;width:100%;margin:9px 0 7px}
+.dashboardContent .goalKpi>div input{width:112px;flex:0 1 112px;font-size:27px;line-height:1;text-align:center}
+.dashboardContent .goalKpi>small{min-height:15px}
+.dashboardContent>.financialSummary>header{text-align:center}
+.dashboardContent>.financialSummary>header h3{margin:0 0 14px;font-size:20px;line-height:1.25}
+.dashboardContent>.financialSummary>div{gap:12px}
+.dashboardContent>.financialSummary article{display:flex;align-items:center;justify-content:center;min-height:122px;flex-direction:column;padding:17px 14px;text-align:center}
+.dashboardContent>.financialSummary article>span{min-height:28px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;line-height:1.35}
+.dashboardContent>.financialSummary article>strong{margin:8px 0 7px;font-size:23px;line-height:1}
+.dashboardContent>.financialSummary article>small{min-height:27px;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1.4}
+@media(max-width:700px){.dashboardContent .kpis article{min-height:126px;padding:15px 10px}.dashboardContent .kpis article>strong{font-size:25px}.dashboardContent>.financialSummary article{min-height:112px}.dashboardContent .goalKpi>div input{font-size:23px}}
