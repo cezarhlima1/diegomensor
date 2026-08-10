@@ -15,3 +15,50 @@
 .mentorBrand{display:flex;align-items:center;gap:8px;color:#fff;font-size:12px}.intro .mentorBrand{justify-content:center}.mentorBrand b{font:750 12px var(--font-archivo)}.mentorBrand i{color:#4f6979;font-style:normal}.mentorBrand span{color:#91a7b4;font-size:11px}.header .mentorBrand b{color:#07131d}.header .mentorBrand span{color:#607683}
 @media(max-width:700px){.mentorBrand{gap:6px}.mentorBrand b{font-size:10px}.mentorBrand span{font-size:9px}.header .mentorBrand span{max-width:120px;line-height:1.2}.header>small{font-size:6px}}
 .formShell .stepIntro h1{color:#07131d}.formShell .stepIntro p{color:#536b79}.formShell .field legend{color:#102633}
+
+/* Composição mobile final do formulário. */
+@media(max-width:700px){
+  .page{padding-bottom:76px;background:#edf2f5}
+  .header{position:sticky;z-index:20;top:0;height:58px;padding:0 14px;box-shadow:0 5px 18px rgba(17,45,61,.05)}
+  .header>small{display:none}
+  .header .mentorBrand span{max-width:none;font-size:9px;white-space:nowrap}
+  .header .mentorBrand b{font-size:10px}
+  .progressWrap{margin-top:18px;padding:0 14px}
+  .progressWrap>div:first-child{margin-bottom:7px;font-size:8px}
+  .progress{height:4px}
+  .formShell{width:calc(100% - 16px);margin-top:14px;padding:25px 17px 23px;border-radius:15px;box-shadow:0 14px 38px rgba(21,51,68,.06)}
+  .stepIntro{padding-bottom:18px}
+  .stepIntro>span{font-size:8px}
+  .stepIntro h1{margin:9px 0;font-size:28px;line-height:1.1;letter-spacing:-.035em}
+  .stepIntro p{font-size:13px;line-height:1.55}
+  .questions{gap:31px;margin-top:22px}
+  .field legend{gap:9px;font-size:16px;line-height:1.35}
+  .field legend>span{width:27px;height:25px}
+  .field>p{margin:8px 0 0;color:#607683;font-size:11px;line-height:1.5}
+  .field>input,.field>textarea{width:100%;margin:13px 0 0;padding-inline:12px;font-size:14px}
+  .field>input{height:48px}
+  .field>textarea{min-height:112px;padding-top:12px}
+  .field>small{margin:7px 0 0}
+  .options{grid-template-columns:1fr;gap:8px;margin:13px 0 0}
+  .options label{grid-template-columns:27px minmax(0,1fr) 16px;gap:9px;min-height:50px;padding:8px 10px}
+  .options label>span{font-size:12px;line-height:1.35}
+  .actions{align-items:stretch;flex-direction:column-reverse;gap:12px;margin-top:34px;padding-top:20px}
+  .next{width:100%;height:51px;min-width:0;margin:0}
+  .back{min-height:40px;padding:8px;text-align:center}
+  .submitError{margin-top:22px}
+  .musicControl{right:10px;bottom:10px;padding:6px}
+  .musicControl span{display:none}
+  .musicControl i{width:29px;height:29px}
+}
+@media(max-width:430px){
+  .intro{padding:24px 16px 30px}
+  .intro .mentorBrand{flex-wrap:wrap;row-gap:2px}
+  .kicker{margin-top:29px}
+  .intro h1{font-size:29px;line-height:1.1}
+  .introLead{font-size:13px;line-height:1.6}
+  .introMeta{gap:8px;margin-top:22px}
+  .introMeta b{font-size:15px}
+  .intro button{height:54px;margin-top:24px}
+  .formShell{padding-inline:14px}
+  .stepIntro h1{font-size:27px}
+}
