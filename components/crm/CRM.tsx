@@ -787,7 +787,7 @@ function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (mo
   const [year, monthNumber] = month.split("-").map(Number);
   const lastDay = new Date(year, monthNumber, 0).getDate();
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
-  return <section className={styles.periodFilter}><div><span>Período da visão geral</span><h2>{monthName.charAt(0).toUpperCase() + monthName.slice(1)}</h2><p>Dados de 01/{String(monthNumber).padStart(2, "0")} a {lastDay}/{String(monthNumber).padStart(2, "0")} · {total} leads no período</p></div><label><span>Selecionar mês</span><input type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
+  return <section className={styles.periodFilter}><div><span>Período atual</span><h2>01/{String(monthNumber).padStart(2, "0")} — {lastDay}/{String(monthNumber).padStart(2, "0")}</h2><p>{total} leads no período</p></div><label><span>Alterar mês</span><input type="month" value={month} aria-label={`Período: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
 }
 function FinancialSummary({
   stats,
