@@ -1343,7 +1343,7 @@
 
 /* A visão geral usa o espaço inteiro para o funil; a agenda fica na aba de tarefas. */
 .dashboardGrid {
-  display: none;
+  display: grid;
   grid-template-columns: 1fr;
 }
 
