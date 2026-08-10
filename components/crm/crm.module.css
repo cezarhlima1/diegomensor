@@ -1831,3 +1831,7 @@
 }
 
 .messageWorkspace{display:block}.messageLibrary{width:100%}.messageModal{position:relative;top:auto;width:min(100%,580px);max-height:calc(100vh - 36px);overflow:auto}
+
+/* Filtro de origem compacto e alinhado. */
+.contactFilters{display:grid;grid-template-columns:minmax(0,1fr) 190px;align-items:center;width:min(100%,720px);gap:22px;margin:0 0 16px;padding:13px 15px}.contactFilters>div{align-content:center;gap:3px}.contactFilters>div>span{line-height:1.25}.contactFilters>div>small{line-height:1.4}.contactFilters label{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px;min-width:0}.contactFilters label>span{margin:0;white-space:nowrap}.contactFilters select{width:100%;height:37px;padding-inline:10px}
+@media(max-width:700px){.contactFilters{grid-template-columns:1fr;width:100%;gap:11px;padding:13px}.contactFilters label{grid-template-columns:55px minmax(0,1fr)}.contactFilters select{height:40px}}
