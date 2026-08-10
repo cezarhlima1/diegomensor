@@ -355,6 +355,9 @@ function Dashboard({
   };
   selectedMonth: string;
 }) {
+  const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
+  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
+  const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
   const funnelSteps = [
     { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
     { label: "Conversas iniciadas", count: leads.filter((lead) => lead.stage !== "Novo lead").length, detail: "Primeiro contato realizado" },
@@ -385,6 +388,7 @@ function Dashboard({
           value={String(stats.closed)}
           detail={`${currency.format(stats.wonValue)} recebidos`}
         />
+        <Kpi label="Meta do mês" value={currency.format(monthlyGoals[selectedMonth] || 0)} detail={monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Defina a meta no gráfico"} />
       </div>
       <FinancialSummary stats={stats} leads={leads} />
       <section className={`${styles.panel} ${styles.sourcePanel}`}>
@@ -394,7 +398,7 @@ function Dashboard({
         </p>
         <FunnelVisualization steps={funnelSteps} total={leads.length} />
       </section>
-      <MonthlyMetricsChart leads={allLeads} endMonth={selectedMonth} />
+      <MonthlyMetricsChart leads={allLeads} endMonth={selectedMonth} goals={monthlyGoals} setGoal={updateMonthlyGoal} />
     </div>
   );
 }
@@ -757,9 +761,7 @@ function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; c
   const colors = ["#1689b8", "#14799f", "#126985", "#10586e", "#0f485a"];
   return <div className={styles.funnelVisual}><svg viewBox="0 0 600 470" role="img" aria-label="Funil de conversão de leads"><defs><filter id="funnel-shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="7" floodOpacity=".25" /></filter><filter id="floor-blur"><feGaussianBlur stdDeviation="8" /></filter></defs>{steps.map((step,index) => { const width = 510 - index * 72; const x = (600 - width) / 2; const y = 18 + index * 76; const bottomInset = 18; const percentage = total ? step.count / total * 100 : 0; return <g key={step.label} filter="url(#funnel-shadow)"><path d={`M ${x} ${y + 9} L ${x + width} ${y + 9} L ${x + width - bottomInset} ${y + 59} Q ${x + width / 2} ${y + 71} ${x + bottomInset} ${y + 59} Z`} fill={colors[index]} /><ellipse cx="300" cy={y + 9} rx={width / 2} ry="11" fill={colors[index]} stroke="rgba(189,235,250,.3)" strokeWidth="1.2" /><ellipse cx="300" cy={y + 8} rx={width / 2 - 5} ry="7" fill="rgba(166,226,247,.1)" /><text x={x + 39} y={y + 39} className={styles.funnelStep}>{String(index + 1).padStart(2,"0")}</text><text x={x + 72} y={y + 38} className={styles.funnelLabel}>{step.label}</text><text x={x + width - 76} y={y + 38} textAnchor="end" className={styles.funnelCount}>{step.count}</text><text x={x + width - 35} y={y + 38} textAnchor="end" className={styles.funnelPercent}>{percentage.toFixed(0)}%</text></g>; })}<path d="M 287 408 H 313 V 426 H 329 L 300 454 L 271 426 H 287 Z" fill="#14789e" /><ellipse cx="300" cy="462" rx="62" ry="8" fill="rgba(0,0,0,.42)" filter="url(#floor-blur)" /></svg></div>;
 }
-function MonthlyMetricsChart({ leads, endMonth }: { leads: Lead[]; endMonth: string }) {
-  const [goals, setGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
+function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[]; endMonth: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const [year, month] = endMonth.split("-").map(Number);
   const start = new Date(2026, 6, 1);
   const end = new Date(year, month - 1, 1);
@@ -778,7 +780,7 @@ function MonthlyMetricsChart({ leads, endMonth }: { leads: Lead[]; endMonth: str
   const areaPath = leadPoints.length ? `${leadPath} L ${leadPoints.at(-1)!.x} 230 L ${leadPoints[0].x} 230 Z` : "";
   const valueTicks = [maxValue, maxValue * .75, maxValue * .5, maxValue * .25, 0];
   const leadTicks = [maxLeads, Math.round(maxLeads * .75), Math.round(maxLeads * .5), Math.round(maxLeads * .25), 0];
-  const saveGoal = (value: string) => { const next = { ...goals, [endMonth]: Number(value) || 0 }; setGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
+  const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
   return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor fechado × meta</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta</span><span><i className={styles.closedLegend} />Valor fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
 }
 function PeriodFilter({ month, setMonth, total }: { month: string; setMonth: (month: string) => void; total: number }) {
