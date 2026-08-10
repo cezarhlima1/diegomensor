@@ -859,7 +859,6 @@ function FinancialSummary({
   return (
     <section className={styles.financialSummary}>
       <header>
-        <span>Métricas detalhadas</span>
         <h3>Conversão e valores</h3>
       </header>
       <div>
