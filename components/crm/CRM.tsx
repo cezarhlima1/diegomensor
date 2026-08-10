@@ -299,11 +299,7 @@ export default function CRM() {
           </div>
         </header>
         {view === "inicio" && (
-          <Dashboard
-            leads={leads}
-            stats={stats}
-            openPipeline={() => setView("pipeline")}
-          />
+          <Dashboard leads={leads} stats={stats} />
         )}
         {view === "pipeline" && (
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
@@ -336,7 +332,6 @@ export default function CRM() {
 function Dashboard({
   leads,
   stats,
-  openPipeline,
 }: {
   leads: Lead[];
   stats: {
@@ -352,7 +347,6 @@ function Dashboard({
     valueConversion: number;
     hot: number;
   };
-  openPipeline: () => void;
 }) {
   const funnelSteps = [
     { label: "Leads gerados", count: leads.length, detail: "Total de oportunidades" },
@@ -363,14 +357,6 @@ function Dashboard({
   ];
   return (
     <div className={styles.content}>
-      <section className={styles.welcome}>
-        <div>
-          <span>Resumo comercial</span>
-          <h2>Bom dia, Diego.</h2>
-          <p>Acompanhe as oportunidades que precisam da sua atenção hoje.</p>
-        </div>
-        <button onClick={openPipeline}>Abrir pipeline →</button>
-      </section>
       <div className={styles.kpis}>
         <Kpi
           label="Leads gerados no mês"
