@@ -1952,8 +1952,8 @@
 @media(max-width:700px){.topbar>.periodFilter{display:flex;grid-column:1/-1;width:100%;padding-top:9px}.topbar>.periodFilter>label{display:flex;width:100%}.topbar>.periodFilter>label>span{display:block}.topbar>.periodFilter>label>input{flex:1;width:auto}}
 
 /* Receita por origem abaixo do funil, com as duas colunas alinhadas. */
-.dashboardContent>.analysisColumn{grid-template-rows:1fr}
-.dashboardContent>.analysisColumn>.productChart{height:100%}
+.dashboardContent>.analysisColumn{grid-template-rows:auto;align-self:start}
+.dashboardContent>.analysisColumn>.productChart{height:auto}
 .dashboardContent>.sourcePanel{display:grid;grid-template-rows:minmax(420px,1fr) auto;place-items:stretch;align-content:stretch;gap:16px}
 .dashboardContent>.sourcePanel>.funnelVisual{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:420px}
 .dashboardContent>.sourcePanel>.originAnalysis{width:100%;margin:0}
@@ -1979,35 +1979,10 @@
 .dashboardContent .funnelOutsidePercent{fill:#63c9f2;font-size:13px;font-weight:800}
 @media(max-width:700px){.dashboardContent .funnelOutsideLabel{font-size:10.5px}.dashboardContent .funnelInsideCount{font-size:22px}.dashboardContent .funnelOutsidePercent{font-size:11.5px}}
 
-/* Normalização estrutural da dashboard: proporções, ritmos e encaixes consistentes. */
-.dashboardContent{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px;row-gap:20px}
-.dashboardContent>.kpis{gap:14px}
-.dashboardContent>.financialSummary{display:block;padding-top:2px}
-.dashboardContent>.financialSummary>header{margin:0 0 14px;padding:0}
-.dashboardContent>.financialSummary>header h3{margin:0;font-size:20px;line-height:1.2}
-.dashboardContent>.financialSummary>div{gap:14px}
-.dashboardContent>.financialSummary article{display:flex;min-height:116px;flex-direction:column;justify-content:space-between;padding:18px}
-.dashboardContent>.analysisColumn{align-content:stretch}
-.dashboardContent>.analysisColumn>.productChart{display:flex;height:100%;min-height:0;flex-direction:column;padding:22px}
-.dashboardContent>.analysisColumn>.productChart>header{min-height:65px;margin-bottom:20px}
-.dashboardContent>.analysisColumn>.productChart>.productList{display:grid;grid-template-rows:repeat(5,minmax(58px,1fr));flex:1;align-content:stretch;margin-top:18px}
-.dashboardContent>.analysisColumn>.productChart>.productList article{min-height:58px;padding-block:12px}
-.dashboardContent>.sourcePanel{grid-template-rows:480px auto;gap:20px;padding:0}
-.dashboardContent>.sourcePanel>.funnelVisual{min-height:480px}
-.dashboardContent>.sourcePanel>.originAnalysis{padding:18px;border-radius:16px}
-.dashboardContent>.monthlyChart{margin-top:0}
-@media(max-width:1100px){
-  .dashboardContent{grid-template-columns:1fr;row-gap:18px}
-  .dashboardContent>.analysisColumn>.productChart{height:auto}
-  .dashboardContent>.analysisColumn>.productChart>.productList{grid-template-rows:none}
-  .dashboardContent>.sourcePanel{grid-template-rows:auto auto}
-  .dashboardContent>.sourcePanel>.funnelVisual{min-height:420px}
-}
-@media(max-width:700px){
-  .dashboardContent{row-gap:14px;padding-inline:12px}
-  .dashboardContent>.financialSummary>div{gap:10px}
-  .dashboardContent>.financialSummary article{min-height:102px;padding:15px}
-  .dashboardContent>.analysisColumn>.productChart{padding:16px}
-  .dashboardContent>.sourcePanel{gap:14px}
-  .dashboardContent>.sourcePanel>.funnelVisual{min-height:320px}
-}
+/* Organização exclusiva da coluna direita: funil e receita por origem. */
+.dashboardContent>.sourcePanel{display:grid;grid-template-rows:auto auto;align-self:start;place-items:stretch;gap:16px;padding:0}
+.dashboardContent>.sourcePanel>.funnelVisual{display:flex;align-items:center;justify-content:center;width:100%;height:auto;min-height:440px;padding:12px 10px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:#0a1b27}
+.dashboardContent>.sourcePanel>.funnelVisual svg{display:block;width:100%;max-width:760px;transform:none}
+.dashboardContent>.sourcePanel>.originAnalysis{width:100%;margin:0;padding:18px;border-radius:16px}
+@media(max-width:1100px){.dashboardContent>.sourcePanel>.funnelVisual{min-height:400px}}
+@media(max-width:700px){.dashboardContent>.sourcePanel{gap:12px}.dashboardContent>.sourcePanel>.funnelVisual{min-height:320px;padding:6px 0}.dashboardContent>.sourcePanel>.originAnalysis{padding:14px}}
