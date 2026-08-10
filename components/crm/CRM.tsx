@@ -43,7 +43,7 @@ type TrafficRecord = {
   sales: number;
   revenue: number;
 };
-type ProductDefinition = { name: string; price: number };
+type ProductDefinition = { name: string; price: number; netPrice?: number };
 
 const products = [
   { name: "Precificação para oficinas", price: 197 },
@@ -62,6 +62,7 @@ const legacySources: Record<string, string> = {
 };
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
+const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
@@ -230,7 +231,7 @@ export default function CRM() {
   }, [leads, loaded]);
   useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-traffic-v1"); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
   const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem("mensor-crm-traffic-v1", JSON.stringify(next)); };
-  useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts(JSON.parse(savedProducts)); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
+  useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
   const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
@@ -248,6 +249,7 @@ export default function CRM() {
       closed: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
       wonValue: won.reduce((sum, lead) => sum + lead.value, 0),
+      netWonValue: won.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, catalogProducts), 0),
       conversion: reportingLeads.length ? (won.length / reportingLeads.length) * 100 : 0,
       proposalConversion: proposals.length
         ? (won.length / proposals.length) * 100
@@ -262,7 +264,7 @@ export default function CRM() {
         (lead) => lead.temperature === "Quente" && lead.stage !== "Fechado",
       ).length,
     };
-  }, [reportingLeads, leads, dateRange]);
+  }, [reportingLeads, leads, dateRange, catalogProducts]);
 
   const filtered = leads.filter((lead) =>
     `${lead.name} ${lead.company} ${lead.email}`
@@ -365,7 +367,7 @@ export default function CRM() {
             {["comercial", "pipeline", "contatos"].includes(view) && <button onClick={() => setAdding(true)}>+ Novo lead</button>}
           </div>
         </header>
-        {view === "geral" && <ExecutiveOverview leads={leads} start={dateRange.start} end={dateRange.end} traffic={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} />}
+        {view === "geral" && <ExecutiveOverview leads={leads} products={catalogProducts} start={dateRange.start} end={dateRange.end} traffic={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} />}
         {view === "comercial" && (
           <Dashboard leads={leads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} />
         )}
@@ -397,23 +399,24 @@ export default function CRM() {
   );
 }
 
-function ExecutiveOverview({ leads, start, end, traffic }: { leads: Lead[]; start: string; end: string; traffic: TrafficRecord[] }) {
+function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; start: string; end: string; traffic: TrafficRecord[] }) {
   const organicClosings = leads.filter((lead) => inRange(lead.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
+  const organicNet = organicClosings.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, products), 0);
   const trafficRevenue = traffic.reduce((sum, item) => sum + item.revenue, 0);
-  const investment = traffic.reduce((sum, item) => sum + item.investment, 0);
+  const trafficNet = traffic.reduce((sum, item) => sum + netForValue(item.revenue, item.product, products), 0);
   const directSales = traffic.reduce((sum, item) => sum + item.sales, 0);
   const organicSales = organicClosings.length;
   const totalRevenue = organicRevenue + trafficRevenue;
+  const totalNet = organicNet + trafficNet;
   const totalSales = organicSales + directSales;
-  const roas = investment ? trafficRevenue / investment : 0;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
     <section className={styles.overviewHero}><div><span>Resultado consolidado</span><h2>Orgânico e tráfego em uma única visão</h2><p>Os canais permanecem separados na operação e somados apenas na leitura executiva.</p></div><strong>{currency.format(totalRevenue)}<small>receita total do período</small></strong></section>
     <div className={styles.overviewKpis}>
-      <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`${organicSales} fechamentos orgânicos`} />
-      <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`${directSales} vendas diretas`} />
-      <Kpi label="Investimento em tráfego" value={currency.format(investment)} detail={investment ? `ROAS ${roas.toFixed(2)}x` : "Sem investimento lançado"} />
-      <Kpi label="Vendas totais" value={String(totalSales)} detail={totalSales ? `Ticket médio ${currency.format(totalRevenue / totalSales)}` : "Nenhuma venda no período"} />
+      <Kpi label="Receita bruta" value={currency.format(totalRevenue)} detail={`${totalSales} vendas totais`} />
+      <Kpi label="Receita líquida" value={currency.format(totalNet)} detail={`${currency.format(Math.max(0, totalRevenue - totalNet))} em taxas`} />
+      <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`Líquido ${currency.format(organicNet)}`} />
+      <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`Líquido ${currency.format(trafficNet)}`} />
     </div>
     <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Orgânico</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
   </div>;
@@ -426,10 +429,11 @@ function TrafficDashboard({ records, month, products, save, remove }: { records:
   const cpa = totals.sales ? totals.investment / totals.sales : 0;
   const roas = totals.investment ? totals.revenue / totals.investment : 0;
   const conversion = totals.pageViews ? totals.sales / totals.pageViews * 100 : 0;
+  const netRevenue = records.reduce((sum, item) => sum + netForValue(item.revenue, item.product, products), 0);
   const submit = (event: React.FormEvent) => { event.preventDefault(); save({ id: String(Date.now()), month, date: new Date().toISOString().slice(0, 10), campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment) || 0, clicks: Number(draft.clicks) || 0, pageViews: Number(draft.pageViews) || 0, checkouts: Number(draft.checkouts) || 0, sales: Number(draft.sales) || 0, revenue: Number(draft.revenue) || 0 }); setAdding(false); setDraft({ campaign: "", product: products[0]?.name || "", investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" }); };
   return <div className={`${styles.content} ${styles.trafficDashboard}`}>
     <header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas e gateway</h2><p>Cadastre os resultados consolidados sem misturar essas vendas com a pipeline comercial.</p></div><button onClick={() => setAdding(true)}>+ Adicionar campanha</button></header>
-    <div className={styles.trafficKpis}><Kpi label="Investimento" value={currency.format(totals.investment)} detail={`${totals.clicks} cliques`} /><Kpi label="Faturamento" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas aprovadas`} /><Kpi label="CPA" value={currency.format(cpa)} detail="Custo por compra" /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`${conversion.toFixed(2)}% de conversão`} /></div>
+    <div className={styles.trafficKpis}><Kpi label="Investimento" value={currency.format(totals.investment)} detail={`${totals.clicks} cliques`} /><Kpi label="Faturamento bruto" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas aprovadas`} /><Kpi label="Faturamento líquido" value={currency.format(netRevenue)} detail={`${currency.format(Math.max(0, totals.revenue - netRevenue))} em taxas`} /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`CPA ${currency.format(cpa)} · ${conversion.toFixed(2)}% conversão`} /></div>
     <section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Resultados por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => <article key={item.id}><div><b>{item.campaign}</b><small>{item.product}</small></div><span><small>Investimento</small>{currency.format(item.investment)}</span><span><small>Vendas</small>{item.sales}</span><span><small>Receita</small>{currency.format(item.revenue)}</span><span><small>ROAS</small>{item.investment ? (item.revenue / item.investment).toFixed(2) : "0.00"}x</span><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></article>)}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>
     {adding && <div className={styles.backdrop} onMouseDown={() => setAdding(false)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Tráfego pago</span><h2>Adicionar campanha</h2></div><button type="button" onClick={() => setAdding(false)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({ ...draft, campaign })} required /><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label>{([['investment','Investimento'],['clicks','Cliques'],['pageViews','Visualizações da página'],['checkouts','Checkouts iniciados'],['sales','Compras aprovadas'],['revenue','Faturamento']] as const).map(([key,label]) => <Input key={key} label={label} value={draft[key]} set={(value) => setDraft({ ...draft, [key]: value })} type="number" />)}</div><footer><button type="button" onClick={() => setAdding(false)}>Cancelar</button><button type="submit">Salvar campanha</button></footer></form></div>}
   </div>;
@@ -454,6 +458,7 @@ function Dashboard({
     closed: number;
     openValue: number;
     wonValue: number;
+    netWonValue: number;
     conversion: number;
     proposalConversion: number;
     proposalValue: number;
@@ -661,16 +666,16 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   const saveTemplates = (next: Array<{ id: string; title: string; text: string }>) => { setTemplates(next); localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(next)); };
   const addTemplate = (event: React.FormEvent) => { event.preventDefault(); if (!title.trim() || !message.trim()) return; saveTemplates([{ id: String(Date.now()), title: title.trim(), text: message.trim() }, ...templates]); setTitle(""); setMessage(""); setAddingMessage(false); };
   const copyTemplate = async (id: string, text: string) => { await navigator.clipboard.writeText(text); setCopied(id); window.setTimeout(() => setCopied(null), 1800); };
-  const addProduct = () => { const name = window.prompt("Nome do produto:")?.trim(); if (!name || products.some((item) => item.name.toLowerCase() === name.toLowerCase())) return; const value = window.prompt("Valor padrão do produto:", "0"); if (value === null) return; const price = Number(value.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); saveProducts([...products, { name, price: Number.isFinite(price) ? price : 0 }]); };
+  const addProduct = () => { const name = window.prompt("Nome do produto:")?.trim(); if (!name || products.some((item) => item.name.toLowerCase() === name.toLowerCase())) return; const gross = window.prompt("Valor bruto do produto:", "0"); if (gross === null) return; const net = window.prompt("Valor líquido do produto:", gross); if (net === null) return; const price = Number(gross.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); const netPrice = Number(net.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); saveProducts([...products, { name, price: Number.isFinite(price) ? price : 0, netPrice: Number.isFinite(netPrice) ? netPrice : 0 }]); };
   const addSource = () => { const source = window.prompt("Nome da origem do lead:")?.trim(); if (!source || sources.some((item) => item.toLowerCase() === source.toLowerCase())) return; saveSources([...sources, source]); };
-  const editProduct = (product: ProductDefinition) => { const name = window.prompt("Nome do produto:", product.name)?.trim(); if (!name) return; const value = window.prompt("Valor padrão do produto:", String(product.price)); if (value === null) return; const price = Number(value.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); renameProduct(product.name, { name, price: Number.isFinite(price) ? price : 0 }); };
+  const editProduct = (product: ProductDefinition) => { const name = window.prompt("Nome do produto:", product.name)?.trim(); if (!name) return; const gross = window.prompt("Valor bruto do produto:", String(product.price)); if (gross === null) return; const net = window.prompt("Valor líquido do produto:", String(product.netPrice ?? product.price)); if (net === null) return; const price = Number(gross.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); const netPrice = Number(net.replace(/[^0-9,.-]/g, "").replace(".", "").replace(",", ".")); renameProduct(product.name, { name, price: Number.isFinite(price) ? price : 0, netPrice: Number.isFinite(netPrice) ? netPrice : 0 }); };
   const editSource = (source: string) => { const name = window.prompt("Nome da origem do lead:", source)?.trim(); if (!name) return; renameSource(source, name); };
   const editTemplate = (template: { id: string; title: string; text: string }) => { const nextTitle = window.prompt("Nome da mensagem:", template.title)?.trim(); if (!nextTitle) return; const nextText = window.prompt("Texto da mensagem:", template.text)?.trim(); if (!nextText) return; saveTemplates(templates.map((item) => item.id === template.id ? { ...item, title: nextTitle, text: nextText } : item)); };
   return (
     <div className={`${styles.content} ${styles.detailsPage}`}>
       <header className={styles.detailsIntro}><span>Configurações do CRM</span><h2>Cadastros e recursos da operação</h2><p>Gerencie os registros utilizados na pipeline, nos filtros e nas métricas.</p></header>
       <div className={styles.detailCatalogs}>
-        <section className={styles.detailCatalog}><header><div><span>Catálogo</span><h3>Produtos</h3></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product) => <article key={product.name}><div><b>{product.name}</b><small>Valor padrão</small></div><strong>{currency.format(product.price)}</strong><div className={styles.catalogActions}><button onClick={() => editProduct(product)}>Editar</button><button onClick={() => saveProducts(products.filter((item) => item.name !== product.name))} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
+        <section className={styles.detailCatalog}><header><div><span>Catálogo</span><h3>Produtos</h3></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product) => <article key={product.name}><div><b>{product.name}</b><small>Taxas: {currency.format(Math.max(0, product.price - (product.netPrice ?? product.price)))}</small></div><div className={styles.productValues}><span>Bruto <b>{currency.format(product.price)}</b></span><span>Líquido <b>{currency.format(product.netPrice ?? product.price)}</b></span></div><div className={styles.catalogActions}><button onClick={() => editProduct(product)}>Editar</button><button onClick={() => saveProducts(products.filter((item) => item.name !== product.name))} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
         <section className={styles.detailCatalog}><header><div><span>Etiquetas</span><h3>Origens de lead</h3></div><button onClick={addSource}>+ Origem</button></header><div>{sources.map((source) => <article key={source}><div><b>{source}</b><small>Origem disponível no CRM</small></div><i className={styles.sourceTag}>{source}</i><div className={styles.catalogActions}><button onClick={() => editSource(source)}>Editar</button><button onClick={() => saveSources(sources.filter((item) => item !== source))} aria-label={`Excluir ${source}`}>×</button></div></article>)}</div></section>
       </div>
       <section className={styles.messageWorkspace}>
@@ -961,10 +966,10 @@ function PeriodFilter({ start, end, setRange }: { start: string; end: string; se
 }
 function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inRange(lead.closedAt, start, end)); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inRange(lead.closedAt, start, end)); const value = closed.reduce((sum, lead) => sum + lead.value, 0); return { product, value, net: closed.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, products), 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
-  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
+  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido {currency.format(item.net)}</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
@@ -982,6 +987,7 @@ function FinancialSummary({
     closed: number;
     openValue: number;
     wonValue: number;
+    netWonValue: number;
     proposalValue: number;
     conversion: number;
     proposalConversion: number;
@@ -1002,7 +1008,7 @@ function FinancialSummary({
         <article>
           <span>Valor final fechado</span>
           <strong>{currency.format(stats.wonValue)}</strong>
-          <small>Valor confirmado no fechamento</small>
+          <small>Líquido {currency.format(stats.netWonValue)} · taxas {currency.format(Math.max(0, stats.wonValue - stats.netWonValue))}</small>
         </article>
         <article>
           <span>Fechamento sobre leads</span>
