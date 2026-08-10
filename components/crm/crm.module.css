@@ -2004,3 +2004,6 @@
 .dashboardContent>.financialSummary article>strong{margin:8px 0 7px;font-size:23px;line-height:1}
 .dashboardContent>.financialSummary article>small{min-height:27px;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1.4}
 @media(max-width:700px){.dashboardContent .kpis article{min-height:126px;padding:15px 10px}.dashboardContent .kpis article>strong{font-size:25px}.dashboardContent>.financialSummary article{min-height:112px}.dashboardContent .goalKpi>div input{font-size:23px}}
+
+/* Cabeçalho integrado diretamente à área principal, sem linha divisória. */
+.topbar{border-bottom:0}
