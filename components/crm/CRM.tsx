@@ -392,8 +392,8 @@ function Dashboard({
         />
         <Kpi label="Meta do mês" value={currency.format(monthlyGoals[selectedMonth] || 0)} detail={monthlyGoals[selectedMonth] ? `${(stats.wonValue / monthlyGoals[selectedMonth] * 100).toFixed(1)}% atingido` : "Defina a meta no gráfico"} />
       </div>
-      <FinancialSummary stats={stats} leads={leads} />
-      <ProductValueChart leads={leads} />
+      <FinancialSummary stats={stats} />
+      <div className={styles.analysisColumn}><ProductValueChart leads={leads} /><OriginValueChart leads={leads} /></div>
       <section className={`${styles.panel} ${styles.sourcePanel}`}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
@@ -800,9 +800,15 @@ function ProductValueChart({ leads }: { leads: Lead[] }) {
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Quanto cada produto representa do valor total recebido.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{products.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(products.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{products.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
+function OriginValueChart({ leads }: { leads: Lead[] }) {
+  const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
+  const origins = Array.from(new Set(leads.map((lead) => lead.source))).map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => lead.stage === "Fechado"); return { source, leads: items.length, conversations: items.filter((lead) => lead.stage !== "Novo lead").length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const maximum = Math.max(1, ...origins.map((origin) => origin.value));
+  const selected = origins.find((origin) => origin.source === selectedOrigin);
+  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
+}
 function FinancialSummary({
   stats,
-  leads,
 }: {
   stats: {
     total: number;
@@ -815,16 +821,7 @@ function FinancialSummary({
     proposalConversion: number;
     valueConversion: number;
   };
-  leads: Lead[];
 }) {
-  const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = Array.from(new Set(leads.map((lead) => lead.source))).map((source) => {
-    const items = leads.filter((lead) => lead.source === source);
-    const closedItems = items.filter((lead) => lead.stage === "Fechado");
-    return { source, leads: items.length, conversations: items.filter((lead) => lead.stage !== "Novo lead").length, proposals: items.filter((lead) => ["Proposta", "Fechado"].includes(lead.stage)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) };
-  }).sort((a, b) => b.value - a.value || b.leads - a.leads);
-  const maxOriginValue = Math.max(1, ...origins.map((origin) => origin.value));
-  const selected = origins.find((origin) => origin.source === selectedOrigin);
   return (
     <section className={styles.financialSummary}>
       <header>
@@ -857,8 +854,6 @@ function FinancialSummary({
           </small>
         </article>
       </div>
-      <div className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maxOriginValue * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div></div>
-      {selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}
     </section>
   );
 }
