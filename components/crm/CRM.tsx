@@ -412,7 +412,7 @@ function Dashboard({
       </div>
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart leads={leads} /></div>
-      <section className={`${styles.panel} ${styles.sourcePanel}`}>
+      <section className={styles.funnelColumn}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.

@@ -2007,3 +2007,42 @@
 
 /* Cabeçalho integrado diretamente à área principal, sem linha divisória. */
 .topbar{border-bottom:0}
+
+/* Grade final validada visualmente em desktop e mobile. */
+.dashboardContent{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;column-gap:18px;row-gap:18px}
+.dashboardContent>.analysisColumn{align-self:stretch;width:100%;min-width:0}
+.dashboardContent>.analysisColumn>.productChart{display:flex;height:100%;min-height:568px;flex-direction:column}
+.dashboardContent>.analysisColumn>.productChart>.productList{display:grid;grid-template-rows:repeat(5,minmax(0,1fr));flex:1}
+.dashboardContent>.sourcePanel{justify-self:stretch;width:100%;min-width:0;gap:16px}
+.dashboardContent>.sourcePanel>.funnelVisual{width:100%;min-height:348px;height:348px;padding:8px 12px}
+.dashboardContent>.sourcePanel>.funnelVisual svg{width:min(100%,580px);max-width:580px;height:auto}
+.dashboardContent>.sourcePanel>.originAnalysis{min-height:204px}
+.dashboardContent>.financialSummary article>small{width:100%;text-align:center}
+@media(max-width:1100px){
+  .dashboardContent{grid-template-columns:1fr}
+  .dashboardContent>.analysisColumn>.productChart{height:auto;min-height:0}
+  .dashboardContent>.analysisColumn>.productChart>.productList{grid-template-rows:none}
+  .dashboardContent>.sourcePanel>.funnelVisual{min-height:390px;height:auto}
+}
+@media(max-width:700px){.dashboardContent{row-gap:14px}.dashboardContent>.sourcePanel>.funnelVisual{min-height:310px}.dashboardContent>.sourcePanel>.originAnalysis{min-height:0}}
+
+.dashboardContent>.sourcePanel{inline-size:100%!important;max-width:none!important;justify-self:stretch!important;justify-items:stretch!important}
+.dashboardContent>.sourcePanel>.funnelVisual,
+.dashboardContent>.sourcePanel>.originAnalysis{inline-size:100%!important;min-width:100%!important;max-width:none!important;box-sizing:border-box;justify-self:stretch!important}
+
+/* Coluna nova, isolada das regras antigas do painel de funil. */
+.dashboardContent>.funnelColumn{grid-column:2;display:grid;width:100%;min-width:0;align-self:start;gap:16px}
+.dashboardContent>.funnelColumn>.panelTitle,
+.dashboardContent>.funnelColumn>.sourceIntro{display:none}
+.dashboardContent>.funnelColumn>.funnelVisual{display:flex;width:100%;height:348px;min-height:348px;align-items:center;justify-content:center;box-sizing:border-box;padding:8px 12px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:#0a1b27}
+.dashboardContent>.funnelColumn>.funnelVisual svg{display:block;width:min(100%,580px);max-width:580px;height:auto;transform:none}
+.dashboardContent>.funnelColumn>.originAnalysis{width:100%;min-height:204px;margin:0;box-sizing:border-box;padding:18px;border-radius:16px}
+@media(max-width:1100px){.dashboardContent>.funnelColumn{grid-column:1/-1}.dashboardContent>.funnelColumn>.funnelVisual{height:auto;min-height:390px}}
+@media(max-width:700px){.dashboardContent>.funnelColumn{gap:12px}.dashboardContent>.funnelColumn>.funnelVisual{min-height:310px;padding:6px 0}.dashboardContent>.funnelColumn>.originAnalysis{min-height:0;padding:14px}}
+
+/* Contenção responsiva: nenhum card força a largura da página. */
+.crm,.workspace{max-width:100%;overflow-x:hidden}
+.dashboardContent>*{min-width:0}
+.dashboardContent .kpis,.dashboardContent>.financialSummary,.dashboardContent>.analysisColumn,.dashboardContent>.funnelColumn,.dashboardContent>.monthlyChart{width:100%;max-width:100%}
+.dashboardContent .kpis article,.dashboardContent>.financialSummary article{min-width:0}
+@media(max-width:560px){.dashboardContent .kpis{grid-template-columns:1fr}.dashboardContent .kpis article:last-child{grid-column:auto}}
