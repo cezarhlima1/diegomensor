@@ -33,6 +33,7 @@ type Lead = {
 type TrafficRecord = {
   id: string;
   month: string;
+  date?: string;
   campaign: string;
   product: string;
   investment: number;
@@ -62,6 +63,7 @@ const legacySources: Record<string, string> = {
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
+const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
 const hydrateLeadDates = (lead: Lead, createdAt: string): Lead => ({ ...lead, createdAt, conversationAt: lead.conversationAt || (lead.stage !== "Novo lead" ? createdAt : undefined), meetingAt: lead.meetingAt || (["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), proposalAt: lead.proposalAt || (["Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), closedAt: lead.closedAt || (lead.stage === "Fechado" ? createdAt : undefined) });
 
@@ -201,6 +203,7 @@ export default function CRM() {
   const [selected, setSelected] = useState<Lead | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [dateRange, setDateRange] = useState(() => { const now = new Date(); const month = now.toISOString().slice(0, 7); return { start: `${month}-01`, end: `${month}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}` }; });
   const [traffic, setTraffic] = useState<TrafficRecord[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
@@ -231,14 +234,14 @@ export default function CRM() {
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
 
-  const reportingLeads = useMemo(() => leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)), [leads, selectedMonth]);
+  const reportingLeads = useMemo(() => leads.filter((lead) => inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {
-    const open = leads.filter((lead) => lead.stage === "Proposta" && inMonth(lead.proposalAt, selectedMonth));
-    const won = leads.filter((lead) => inMonth(lead.closedAt, selectedMonth));
-    const proposals = leads.filter((lead) => inMonth(lead.proposalAt, selectedMonth));
+    const open = leads.filter((lead) => lead.stage === "Proposta" && inRange(lead.proposalAt, dateRange.start, dateRange.end));
+    const won = leads.filter((lead) => inRange(lead.closedAt, dateRange.start, dateRange.end));
+    const proposals = leads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
       total: reportingLeads.length,
-      meetings: leads.filter((lead) => inMonth(lead.meetingAt, selectedMonth)).length,
+      meetings: leads.filter((lead) => inRange(lead.meetingAt, dateRange.start, dateRange.end)).length,
       proposals: proposals.length,
       closed: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
@@ -257,7 +260,7 @@ export default function CRM() {
         (lead) => lead.temperature === "Quente" && lead.stage !== "Fechado",
       ).length,
     };
-  }, [reportingLeads, leads, selectedMonth]);
+  }, [reportingLeads, leads, dateRange]);
 
   const filtered = leads.filter((lead) =>
     `${lead.name} ${lead.company} ${lead.email}`
@@ -306,7 +309,7 @@ export default function CRM() {
     ["comercial", "Orgânico", "◫"],
     ["trafego", "Tráfego", "↗"],
     ["pipeline", "Pipeline", "▦"],
-    ["contatos", "Contatos", "◎"],
+    ["contatos", "Leads", "◎"],
     ["mensagens", "Detalhes", "⚙"],
   ];
   return (
@@ -345,7 +348,7 @@ export default function CRM() {
             <small>Mensor Treinamentos / {navigation.find(([id]) => id === view)?.[1]}</small>
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
           </div>
-          {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter month={selectedMonth} setMonth={setSelectedMonth} total={reportingLeads.length} />}
+          {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
             {(view === "pipeline" || view === "contatos") && (
               <label>
@@ -360,11 +363,11 @@ export default function CRM() {
             {["comercial", "pipeline", "contatos"].includes(view) && <button onClick={() => setAdding(true)}>+ Novo lead</button>}
           </div>
         </header>
-        {view === "geral" && <ExecutiveOverview leads={leads} month={selectedMonth} traffic={traffic.filter((item) => item.month === selectedMonth)} />}
+        {view === "geral" && <ExecutiveOverview leads={leads} start={dateRange.start} end={dateRange.end} traffic={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} />}
         {view === "comercial" && (
-          <Dashboard leads={leads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} products={catalogProducts} sources={catalogSources} />
+          <Dashboard leads={leads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} />
         )}
-        {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => item.month === selectedMonth)} month={selectedMonth} products={catalogProducts} save={(record) => saveTraffic([record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} />}
+        {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} save={(record) => saveTraffic([record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
         )}
@@ -392,8 +395,8 @@ export default function CRM() {
   );
 }
 
-function ExecutiveOverview({ leads, month, traffic }: { leads: Lead[]; month: string; traffic: TrafficRecord[] }) {
-  const organicClosings = leads.filter((lead) => inMonth(lead.closedAt, month));
+function ExecutiveOverview({ leads, start, end, traffic }: { leads: Lead[]; start: string; end: string; traffic: TrafficRecord[] }) {
+  const organicClosings = leads.filter((lead) => inRange(lead.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
   const trafficRevenue = traffic.reduce((sum, item) => sum + item.revenue, 0);
   const investment = traffic.reduce((sum, item) => sum + item.investment, 0);
@@ -421,7 +424,7 @@ function TrafficDashboard({ records, month, products, save, remove }: { records:
   const cpa = totals.sales ? totals.investment / totals.sales : 0;
   const roas = totals.investment ? totals.revenue / totals.investment : 0;
   const conversion = totals.pageViews ? totals.sales / totals.pageViews * 100 : 0;
-  const submit = (event: React.FormEvent) => { event.preventDefault(); save({ id: String(Date.now()), month, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment) || 0, clicks: Number(draft.clicks) || 0, pageViews: Number(draft.pageViews) || 0, checkouts: Number(draft.checkouts) || 0, sales: Number(draft.sales) || 0, revenue: Number(draft.revenue) || 0 }); setAdding(false); setDraft({ campaign: "", product: products[0]?.name || "", investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" }); };
+  const submit = (event: React.FormEvent) => { event.preventDefault(); save({ id: String(Date.now()), month, date: new Date().toISOString().slice(0, 10), campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment) || 0, clicks: Number(draft.clicks) || 0, pageViews: Number(draft.pageViews) || 0, checkouts: Number(draft.checkouts) || 0, sales: Number(draft.sales) || 0, revenue: Number(draft.revenue) || 0 }); setAdding(false); setDraft({ campaign: "", product: products[0]?.name || "", investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" }); };
   return <div className={`${styles.content} ${styles.trafficDashboard}`}>
     <header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas e gateway</h2><p>Cadastre os resultados consolidados sem misturar essas vendas com a pipeline comercial.</p></div><button onClick={() => setAdding(true)}>+ Adicionar campanha</button></header>
     <div className={styles.trafficKpis}><Kpi label="Investimento" value={currency.format(totals.investment)} detail={`${totals.clicks} cliques`} /><Kpi label="Faturamento" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas aprovadas`} /><Kpi label="CPA" value={currency.format(cpa)} detail="Custo por compra" /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`${conversion.toFixed(2)}% de conversão`} /></div>
@@ -435,6 +438,8 @@ function Dashboard({
   allLeads,
   stats,
   selectedMonth,
+  start,
+  end,
   products,
   sources,
 }: {
@@ -454,6 +459,8 @@ function Dashboard({
     hot: number;
   };
   selectedMonth: string;
+  start: string;
+  end: string;
   products: ProductDefinition[];
   sources: string[];
 }) {
@@ -461,9 +468,9 @@ function Dashboard({
   useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
   const funnelSteps = [
-    { label: "Leads gerados", count: leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)).length, detail: "Total de oportunidades" },
-    { label: "Conversas iniciadas", count: leads.filter((lead) => inMonth(lead.conversationAt, selectedMonth)).length, detail: "Primeiro contato realizado" },
-    { label: "Reuniões agendadas", count: leads.filter((lead) => inMonth(lead.meetingAt, selectedMonth)).length, detail: "Reuniões marcadas" },
+    { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
+    { label: "Conversas iniciadas", count: leads.filter((lead) => inRange(lead.conversationAt, start, end)).length, detail: "Primeiro contato realizado" },
+    { label: "Reuniões agendadas", count: leads.filter((lead) => inRange(lead.meetingAt, start, end)).length, detail: "Reuniões marcadas" },
     { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
     { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
   ];
@@ -497,14 +504,14 @@ function Dashboard({
         </article>
       </div>
       <FinancialSummary stats={stats} />
-      <div className={styles.analysisColumn}><ProductValueChart leads={leads} month={selectedMonth} products={products} /></div>
+      <div className={styles.analysisColumn}><ProductValueChart leads={leads} start={start} end={end} products={products} /></div>
       <section className={styles.funnelColumn}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
         <p className={styles.sourceIntro}>
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
-        <FunnelVisualization steps={funnelSteps} total={leads.filter((lead) => inMonth(lead.createdAt, selectedMonth)).length} />
-        <OriginValueChart leads={leads} month={selectedMonth} sources={sources} />
+        <FunnelVisualization steps={funnelSteps} total={leads.filter((lead) => inRange(lead.createdAt, start, end)).length} />
+        <OriginValueChart leads={leads} start={start} end={end} sources={sources} />
       </section>
       <MonthlyMetricsChart leads={allLeads} endMonth={selectedMonth} goals={monthlyGoals} setGoal={updateMonthlyGoal} />
     </div>
@@ -590,22 +597,24 @@ function Contacts({
   select: (lead: Lead) => void;
 }) {
   const [sourceFilter, setSourceFilter] = useState("Todos");
+  const [contactRange, setContactRange] = useState(() => { const now = new Date(); const month = now.toISOString().slice(0, 7); return { start: `${month}-01`, end: `${month}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}` }; });
   const sourceTags = sources;
-  const visibleLeads = sourceFilter === "Todos" ? leads : leads.filter((lead) => lead.source.trim() === sourceFilter);
+  const visibleLeads = leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter));
+  const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = `leads-${contactRange.start}-${contactRange.end}.csv`; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
       <section className={styles.panel}>
         <PanelTitle
           eyebrow="Base comercial"
-          title={`${visibleLeads.length} contatos`}
+          title={`${visibleLeads.length} leads`}
         />
         <div className={styles.contactFilters}>
-          <div><span>Filtrar por funil de origem</span><small>As etiquetas são criadas automaticamente conforme a origem dos leads.</small></div>
-          <label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label>
+          <div><span>Filtrar leads</span><small>Combine o período com as etiquetas de origem para localizar ou exportar os registros.</small></div>
+          <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
-          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.length}</b></button>
-          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
+          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end)).length}</b></button>
+          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inRange(lead.createdAt, contactRange.start, contactRange.end)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
         </div>
         <div className={styles.contactTable}>
           <header>
@@ -942,21 +951,19 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
   const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
   return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor fechado × meta</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta</span><span><i className={styles.closedLegend} />Valor fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
 }
-function PeriodFilter({ month, setMonth }: { month: string; setMonth: (month: string) => void; total: number }) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
-  return <section className={styles.periodFilter}><label><span>Filtro</span><input type="month" value={month} aria-label={`Filtro: ${monthName}`} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label></section>;
+function PeriodFilter({ start, end, setRange }: { start: string; end: string; setRange: (start: string, end: string) => void }) {
+  return <section className={styles.periodFilter}><span>Filtro</span><label><small>Início</small><input type="date" value={start} max={end} onChange={(event) => event.target.value && setRange(event.target.value, end)} /></label><label><small>Final</small><input type="date" value={end} min={start} onChange={(event) => event.target.value && setRange(start, event.target.value)} /></label></section>;
 }
-function ProductValueChart({ leads, month, products }: { leads: Lead[]; month: string; products: ProductDefinition[] }) {
+function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inMonth(lead.closedAt, month)); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => inMonth(lead.proposalAt, month)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inRange(lead.closedAt, start, end)); return { product, value: closed.reduce((sum, lead) => sum + lead.value, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · {item.proposals} propostas</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
-function OriginValueChart({ leads, month, sources }: { leads: Lead[]; month: string; sources: string[] }) {
+function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => inMonth(lead.closedAt, month)); return { source, leads: items.filter((lead) => inMonth(lead.createdAt, month)).length, conversations: items.filter((lead) => inMonth(lead.conversationAt, month)).length, proposals: items.filter((lead) => inMonth(lead.proposalAt, month)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => inRange(lead.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
