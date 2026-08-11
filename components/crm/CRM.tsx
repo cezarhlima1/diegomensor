@@ -194,22 +194,7 @@ export default function CRM() {
       current.map((lead) => {
         if (lead.id !== id) return lead;
         if (stage === "Proposta" || stage === "Fechado") {
-          const label =
-            stage === "Proposta"
-              ? "Informe o valor da proposta enviada:"
-              : "Confirme o valor final recebido:";
-          const informed = window.prompt(
-            label,
-            String(lead.value || catalogProducts.find((item) => item.name === lead.product)?.price || productPrice(lead.product) || ""),
-          );
-          if (informed === null) return lead;
-          const value = Number(
-            informed
-              .replace(/[^0-9,.-]/g, "")
-              .replace(".", "")
-              .replace(",", "."),
-          );
-          if (!Number.isFinite(value) || value <= 0) return lead;
+          const value = catalogProducts.find((item) => item.name === lead.product)?.price || productPrice(lead.product) || 0;
           const now = new Date().toISOString();
           return { ...lead, stage, value, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
         }
@@ -501,13 +486,6 @@ function Pipeline({
                   <b>{stage}</b>
                   <span>{items.length}</span>
                 </div>
-                <small>
-                  {stage === "Proposta" || stage === "Fechado"
-                    ? currency.format(
-                        items.reduce((sum, lead) => sum + lead.value, 0),
-                      )
-                    : "Sem valor"}
-                </small>
               </header>
               <div className={styles.cards}>
                 {items.map((lead) => (
@@ -675,7 +653,7 @@ function LeadModal({
             ...draft,
             id: String(Date.now()),
             stage: "Novo lead",
-            value: 0,
+            value: products.find((product) => product.name === draft.product)?.price || 0,
             date: "Hoje",
             createdAt: new Date().toISOString(),
           });
@@ -723,7 +701,7 @@ function LeadModal({
           <label>
             <span>Produto</span>
             <select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>
-              {products.map((product) => <option key={product.name} value={product.name}>{product.name} — {currency.format(product.price)}</option>)}
+              {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
             </select>
           </label>
           <label>
@@ -812,25 +790,11 @@ function LeadDrawer({
           <small>Oportunidade</small>
           <label>
             <span>Produto</span>
-            <select value={lead.product || "Não informado"} onChange={(event) => update({ product: event.target.value })}>
+            <select value={lead.product || "Não informado"} onChange={(event) => { const product = event.target.value; update({ product, value: products.find((item) => item.name === product)?.price || 0 }); }}>
               <option value="Não informado">Não informado</option>
-              {products.map((product) => <option key={product.name} value={product.name}>{product.name} — {currency.format(product.price)}</option>)}
+              {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
             </select>
           </label>
-          <p>
-            <span>
-              {lead.stage === "Fechado"
-                ? "Valor recebido"
-                : lead.stage === "Proposta"
-                  ? "Valor da proposta"
-                  : "Valor"}
-            </span>
-            <b>
-              {lead.value
-                ? currency.format(lead.value)
-                : "Definido ao enviar proposta"}
-            </b>
-          </p>
           <label>
             <span>Etapa atual</span>
             <select
