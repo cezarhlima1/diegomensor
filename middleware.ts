@@ -92,5 +92,5 @@ export const config = {
   // Somente a área logada passa pelo middleware; todas as rotas públicas
   // (/, /quiz, /cadastro, /bio, /v1, /obrigado, /api/lead, /licenca-expirada, ...)
   // são ignoradas.
-  matcher: ["/calculadora/:path*", "/conta/:path*", "/admin/:path*"],
+  matcher: ["/calculadora/:path*", "/conta/:path*", "/admin/:path*", "/CRM/:path*", "/api/crm/:path*"],
 };

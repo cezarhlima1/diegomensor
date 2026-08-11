@@ -118,6 +118,9 @@ export default function CRM() {
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [databaseReady, setDatabaseReady] = useState(false);
+  const [databaseStatus, setDatabaseStatus] = useState<"connecting" | "connected" | "offline">("connecting");
+  const [syncRevision, setSyncRevision] = useState(0);
 
   useEffect(() => { const savedTheme = localStorage.getItem("mensor-crm-theme"); if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme); }, []);
   const toggleTheme = () => setTheme((current) => { const next = current === "dark" ? "light" : "dark"; localStorage.setItem("mensor-crm-theme", next); return next; });
@@ -181,6 +184,44 @@ export default function CRM() {
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
   const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
   const renameSource = (oldName: string, name: string) => { saveSources(catalogSources.map((item) => item === oldName ? name : item)); setLeads((current) => current.map((lead) => lead.source === oldName ? { ...lead, source: name } : lead)); };
+
+  useEffect(() => {
+    const handleLocalChange = () => setSyncRevision((value) => value + 1);
+    window.addEventListener("mensor-crm-change", handleLocalChange);
+    return () => window.removeEventListener("mensor-crm-change", handleLocalChange);
+  }, []);
+  useEffect(() => {
+    if (!loaded || !catalogLoaded || databaseReady) return;
+    let cancelled = false;
+    const connectDatabase = async () => {
+      try {
+        const response = await fetch("/api/crm", { cache: "no-store" });
+        if (!response.ok) { setDatabaseStatus("offline"); return; }
+        const remote = await response.json();
+        const hasRemoteData = remote.leads?.length || remote.traffic?.length || remote.products?.length || remote.sources?.length || remote.messages?.length || Object.keys(remote.goals || {}).length;
+        if (hasRemoteData) {
+          if (cancelled) return;
+          setLeads(remote.leads || []); setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
+          localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || [])); localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
+          window.dispatchEvent(new Event("mensor-crm-database-loaded"));
+        } else {
+          const migration = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) });
+          if (!migration.ok) { setDatabaseStatus("offline"); return; }
+        }
+        setDatabaseStatus("connected");
+      } catch (error) { setDatabaseStatus("offline"); console.error("Falha ao conectar CRM ao banco", error); }
+      finally { if (!cancelled) setDatabaseReady(true); }
+    };
+    connectDatabase();
+    return () => { cancelled = true; };
+  }, [loaded, catalogLoaded, databaseReady]);
+  useEffect(() => {
+    if (!databaseReady) return;
+    const timeout = window.setTimeout(() => {
+      fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) }).then((response) => setDatabaseStatus(response.ok ? "connected" : "offline")).catch((error) => { setDatabaseStatus("offline"); console.error("Falha ao sincronizar CRM", error); });
+    }, 500);
+    return () => window.clearTimeout(timeout);
+  }, [databaseReady, leads, traffic, catalogProducts, catalogSources, syncRevision]);
 
   const reportingLeads = useMemo(() => leads.filter((lead) => inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {
@@ -289,8 +330,8 @@ export default function CRM() {
         <div className={styles.localNotice}>
           <i>●</i>
           <div>
-            <b>Modo local</b>
-            <span>Sem banco de dados</span>
+            <b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b>
+            <span>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? "Sincronização indisponível" : "Validando dados"}</span>
           </div>
         </div>
       </aside>
@@ -353,9 +394,9 @@ export default function CRM() {
 
 function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; start: string; end: string; traffic: TrafficRecord[] }) {
   const [goals, setGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
+  useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const goalMonth = start.slice(0, 7);
-  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); };
+  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
   const organicClosings = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => inRange(purchase.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
@@ -463,8 +504,8 @@ function Dashboard({
   sources: string[];
 }) {
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
-  const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); };
+  useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
+  const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const funnelSteps = [
     { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
     { label: "Conversas iniciadas", count: leads.filter((lead) => inRange(lead.conversationAt, start, end)).length, detail: "Primeiro contato realizado" },
@@ -649,8 +690,8 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   const [productDraft, setProductDraft] = useState({ name: "", gross: "", net: "" });
   const [editingSource, setEditingSource] = useState<string | "new" | null>(null);
   const [sourceDraft, setSourceDraft] = useState("");
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-messages-v1"); if (saved) setTemplates(JSON.parse(saved)); } catch {} }, []);
-  const saveTemplates = (next: Array<{ id: string; title: string; text: string }>) => { setTemplates(next); localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(next)); };
+  useEffect(() => { const load = () => { try { const saved = localStorage.getItem("mensor-crm-messages-v1"); if (saved) setTemplates(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
+  const saveTemplates = (next: Array<{ id: string; title: string; text: string }>) => { setTemplates(next); localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const addTemplate = (event: React.FormEvent) => { event.preventDefault(); if (!title.trim() || !message.trim()) return; saveTemplates(editingMessage ? templates.map((item) => item.id === editingMessage ? { ...item, title: title.trim(), text: message.trim() } : item) : [{ id: String(Date.now()), title: title.trim(), text: message.trim() }, ...templates]); setTitle(""); setMessage(""); setEditingMessage(null); setAddingMessage(false); };
   const copyTemplate = async (id: string, text: string) => { await navigator.clipboard.writeText(text); setCopied(id); window.setTimeout(() => setCopied(null), 1800); };
   const addProduct = () => { setProductDraft({ name: "", gross: "", net: "" }); setEditingProduct("new"); };
