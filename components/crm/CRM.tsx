@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 
 type Stage =
@@ -95,6 +95,10 @@ const currency = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+const accountingNumber = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function Money({ value }: { value: number }) {
+  return <span className={styles.money}><small>R$</small><span>{accountingNumber.format(value)}</span></span>;
+}
 const whatsappLink = (lead: Lead) => {
   const digits = lead.phone.replace(/\D/g, "");
   const phone = digits.startsWith("55") ? digits : `55${digits}`;
@@ -435,19 +439,19 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const goal = goals[goalMonth] || 0;
   const goalProgress = goal ? totalRevenue / goal * 100 : 0;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
-    <section className={styles.overviewHero}><div><h2>Orgânico x Tráfego</h2></div><strong>{currency.format(periodBalance)}<small>saldo do período</small></strong></section>
+    <section className={styles.overviewHero}><div><h2>Orgânico x Tráfego</h2></div><strong><Money value={periodBalance} /><small>saldo do período</small></strong></section>
     <div className={styles.overviewKpis}>
-      <Kpi label="Receita bruta" value={currency.format(totalRevenue)} detail={`${totalSales} vendas totais`} />
-      <Kpi label="Receita líquida" value={currency.format(totalNet)} detail={`${currency.format(Math.max(0, totalRevenue - totalNet))} em taxas`} />
-      <Kpi label="Investimento em tráfego" value={currency.format(trafficInvestment)} detail="Descontado do saldo do período" />
-      <Kpi label="Saldo do período" value={currency.format(periodBalance)} detail={`${currency.format(totalNet)} líquidos − investimento`} />
-      <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`Líquido ${currency.format(organicNet)}`} />
-      <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`Líquido ${currency.format(trafficNet)}`} />
-      <Kpi label="Receita de recompra" value={currency.format(repurchaseRevenue)} detail={`${repurchaseShare.toFixed(1)}% da receita orgânica`} />
+      <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail={`${totalSales} vendas totais`} />
+      <Kpi label="Receita líquida" value={<Money value={totalNet} />} detail={<><Money value={Math.max(0, totalRevenue - totalNet)} /> em taxas</>} />
+      <Kpi label="Investimento em tráfego" value={<Money value={trafficInvestment} />} detail="Descontado do saldo do período" />
+      <Kpi label="Saldo do período" value={<Money value={periodBalance} />} detail={<><Money value={totalNet} /> líquidos − investimento</>} />
+      <Kpi label="Receita orgânica" value={<Money value={organicRevenue} />} detail={<>Líquido <Money value={organicNet} /></>} />
+      <Kpi label="Receita do tráfego" value={<Money value={trafficRevenue} />} detail={<>Líquido <Money value={trafficNet} /></>} />
+      <Kpi label="Receita de recompra" value={<Money value={repurchaseRevenue} />} detail={`${repurchaseShare.toFixed(1)}% da receita orgânica`} />
       <Kpi label="Participação da base" value={`${repurchaseShare.toFixed(1)}%`} detail={`${organicClosings.filter((purchase) => purchase.repurchase).length} recompras no período`} />
       <article className={styles.overviewGoal}><label htmlFor="overview-goal">Meta do mês</label><div><small>R$</small><input id="overview-goal" type="number" min="0" step="100" value={goal || ""} onChange={(event) => updateGoal(goalMonth, Number(event.target.value) || 0)} placeholder="0" /></div><span>{goal ? `${goalProgress.toFixed(1)}% atingido` : "Preencha a meta do mês"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
     </div>
-    <section className={`${styles.panel} ${styles.channelComposition}`}><header><h3>Composição da receita</h3></header><div><article><span>Orgânico</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
+    <section className={`${styles.panel} ${styles.channelComposition}`}><header><h3>Composição da receita</h3></header><div><article><span>Orgânico</span><strong><Money value={organicRevenue} /></strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong><Money value={trafficRevenue} /></strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
     <UnifiedRevenueAnalysis leads={leads} traffic={traffic} products={products} start={start} end={end} goals={goals} setGoal={updateGoal} />
   </div>;
 }
@@ -1027,7 +1031,7 @@ function LeadDrawer({
             <p><span>Fechamento</span><b>{formatEventDate(lead.closedAt)}</b></p>
           </div>
         </section>
-        {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"} · {formatEventDate(purchase.closedAt)}</small></div><strong>{currency.format(purchase.value)}</strong></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}
+        {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"} · {formatEventDate(purchase.closedAt)}</small></div><strong><Money value={purchase.value} /></strong></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}
       </aside>
     </div>
   );
@@ -1096,14 +1100,14 @@ function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; sta
   const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
-  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido {currency.format(item.net)}</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
+  return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong><Money value={total} /><small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido <Money value={item.net} /></small></div><strong><Money value={item.value} /></strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
   const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.flatMap((lead) => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ value: lead.value, closedAt: lead.closedAt }] : []).filter((purchase) => inRange(purchase.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
-  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
+  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
 }
 function FinancialSummary({
   stats,
@@ -1129,12 +1133,12 @@ function FinancialSummary({
       <div>
         <article>
           <span>Valor em propostas abertas</span>
-          <strong>{currency.format(stats.openValue)}</strong>
+          <strong><Money value={stats.openValue} /></strong>
           <small>Montante disponível no pipeline</small>
         </article>
         <article>
           <span>Valor final fechado</span>
-          <strong>{currency.format(stats.wonValue)}</strong>
+          <strong><Money value={stats.wonValue} /></strong>
           <small>Líquido {currency.format(stats.netWonValue)} · taxas {currency.format(Math.max(0, stats.wonValue - stats.netWonValue))}</small>
         </article>
         <article>
@@ -1255,8 +1259,8 @@ function Kpi({
   detail,
 }: {
   label: string;
-  value: string;
-  detail: string;
+  value: ReactNode;
+  detail: ReactNode;
 }) {
   return (
     <article>
