@@ -11,6 +11,7 @@ type Stage =
   | "Proposta"
   | "Fechado";
 type View = "geral" | "comercial" | "trafego" | "pipeline" | "contatos" | "mensagens";
+type Purchase = { id: string; product: string; value: number; netValue: number; closedAt: string; repurchase: boolean };
 type Lead = {
   id: string;
   name: string;
@@ -29,6 +30,7 @@ type Lead = {
   meetingAt?: string;
   proposalAt?: string;
   closedAt?: string;
+  purchases?: Purchase[];
 };
 type TrafficRecord = {
   id: string;
@@ -65,6 +67,8 @@ const legacySources: Record<string, string> = {
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
+const productLadder = (catalog: ProductDefinition[]) => [...catalog].sort((a, b) => a.price - b.price);
+const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
@@ -121,7 +125,8 @@ export default function CRM() {
             const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
             const source = normalizeSource(lead.source);
             const migrated = hydrateLeadDates({ ...lead, stage, product, source }, createdAt);
-            return ["Proposta", "Fechado"].includes(stage) ? migrated : { ...migrated, value: 0 };
+            if (stage === "Fechado" && !migrated.purchases?.length) return { ...migrated, purchases: purchasesForLead(migrated, [...products]) };
+            return stage === "Proposta" ? migrated : { ...migrated, value: 0 };
           }),
         );
     } catch {}
@@ -158,7 +163,7 @@ export default function CRM() {
   const reportingLeads = useMemo(() => leads.filter((lead) => inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {
     const open = leads.filter((lead) => lead.stage === "Proposta" && inRange(lead.proposalAt, dateRange.start, dateRange.end));
-    const won = leads.filter((lead) => inRange(lead.closedAt, dateRange.start, dateRange.end));
+    const won = leads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end));
     const proposals = leads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
       total: reportingLeads.length,
@@ -166,15 +171,15 @@ export default function CRM() {
       proposals: proposals.length,
       closed: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
-      wonValue: won.reduce((sum, lead) => sum + lead.value, 0),
-      netWonValue: won.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, catalogProducts), 0),
+      wonValue: won.reduce((sum, purchase) => sum + purchase.value, 0),
+      netWonValue: won.reduce((sum, purchase) => sum + purchase.netValue, 0),
       conversion: reportingLeads.length ? (won.length / reportingLeads.length) * 100 : 0,
       proposalConversion: proposals.length
         ? (won.length / proposals.length) * 100
         : 0,
       proposalValue: proposals.reduce((sum, lead) => sum + lead.value, 0),
       valueConversion: proposals.reduce((sum, lead) => sum + lead.value, 0)
-        ? (won.reduce((sum, lead) => sum + lead.value, 0) /
+        ? (won.reduce((sum, purchase) => sum + purchase.value, 0) /
             proposals.reduce((sum, lead) => sum + lead.value, 0)) *
           100
         : 0,
@@ -196,6 +201,11 @@ export default function CRM() {
         if (stage === "Proposta" || stage === "Fechado") {
           const value = catalogProducts.find((item) => item.name === lead.product)?.price || productPrice(lead.product) || 0;
           const now = new Date().toISOString();
+          if (stage === "Fechado" && lead.stage !== "Fechado") {
+            const history = purchasesForLead(lead, catalogProducts);
+            const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: lead.product || "Não informado", value, netValue: netForValue(value, lead.product, catalogProducts), closedAt: now, repurchase: history.length > 0 };
+            return { ...lead, stage, value, closedAt: now, purchases: [...history, purchase] };
+          }
           return { ...lead, stage, value, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
         }
         const now = new Date().toISOString();
@@ -209,6 +219,17 @@ export default function CRM() {
   const updateLead = (id: string, changes: Partial<Lead>) => {
     setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, ...changes } : lead));
     setSelected((current) => current?.id === id ? { ...current, ...changes } : current);
+  };
+  const startAscension = (id: string) => {
+    const lead = leads.find((item) => item.id === id);
+    if (!lead) return;
+    const history = purchasesForLead(lead, catalogProducts);
+    const lastProduct = history.at(-1)?.product || lead.product;
+    const ladder = productLadder(catalogProducts);
+    const currentIndex = ladder.findIndex((item) => item.name === lastProduct);
+    const nextProduct = ladder[currentIndex + 1];
+    if (!nextProduct) return;
+    updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, proposalAt: undefined, closedAt: undefined });
   };
 
   const navigation: Array<[View, string, string]> = [
@@ -279,7 +300,7 @@ export default function CRM() {
           <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
         )}
         {view === "contatos" && (
-          <Contacts leads={filtered} sources={catalogSources} select={setSelected} />
+          <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} />}
       </section>
@@ -294,8 +315,9 @@ export default function CRM() {
           move={(stage) => {
             moveLead(selected.id, stage);
             const now = new Date().toISOString();
-            setSelected((current) => current ? { ...current, stage, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) } : current);
+            setSelected((current) => { if (!current) return current; const value = catalogProducts.find((item) => item.name === current.product)?.price || 0; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue: netForValue(value, current.product, catalogProducts), closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, purchases, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
           }}
+          startAscension={() => startAscension(selected.id)}
         />
       )}
     </main>
@@ -308,9 +330,11 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const goalMonth = start.slice(0, 7);
   const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
-  const organicClosings = leads.filter((lead) => inRange(lead.closedAt, start, end));
-  const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
-  const organicNet = organicClosings.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, products), 0);
+  const organicClosings = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => inRange(purchase.closedAt, start, end));
+  const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
+  const organicNet = organicClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
+  const repurchaseRevenue = organicClosings.filter((purchase) => purchase.repurchase).reduce((sum, purchase) => sum + purchase.value, 0);
+  const repurchaseShare = organicRevenue ? repurchaseRevenue / organicRevenue * 100 : 0;
   const trafficRevenue = periodTraffic.reduce((sum, item) => sum + item.revenue, 0);
   const trafficNet = periodTraffic.reduce((sum, item) => sum + (item.netRevenue ?? netForValue(item.revenue, item.product, products)), 0);
   const trafficInvestment = periodTraffic.reduce((sum, item) => sum + item.investment, 0);
@@ -331,6 +355,8 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
       <Kpi label="Saldo do período" value={currency.format(periodBalance)} detail={`${currency.format(totalNet)} líquidos − investimento`} />
       <Kpi label="Receita orgânica" value={currency.format(organicRevenue)} detail={`Líquido ${currency.format(organicNet)}`} />
       <Kpi label="Receita do tráfego" value={currency.format(trafficRevenue)} detail={`Líquido ${currency.format(trafficNet)}`} />
+      <Kpi label="Receita de recompra" value={currency.format(repurchaseRevenue)} detail={`${repurchaseShare.toFixed(1)}% da receita orgânica`} />
+      <Kpi label="Participação da base" value={`${repurchaseShare.toFixed(1)}%`} detail={`${organicClosings.filter((purchase) => purchase.repurchase).length} recompras no período`} />
       <article className={styles.overviewGoal}><label htmlFor="overview-goal">Meta do mês</label><div><small>R$</small><input id="overview-goal" type="number" min="0" step="100" value={goal || ""} onChange={(event) => updateGoal(goalMonth, Number(event.target.value) || 0)} placeholder="0" /></div><span>{goal ? `${goalProgress.toFixed(1)}% atingido` : "Preencha a meta do mês"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
     </div>
     <section className={`${styles.panel} ${styles.channelComposition}`}><header><span>Composição da receita</span><h3>Participação por canal</h3></header><div><article><span>Orgânico</span><strong>{currency.format(organicRevenue)}</strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong>{currency.format(trafficRevenue)}</strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
@@ -523,16 +549,21 @@ function Pipeline({
 function Contacts({
   leads,
   sources,
+  products,
   select,
 }: {
   leads: Lead[];
   sources: string[];
+  products: ProductDefinition[];
   select: (lead: Lead) => void;
 }) {
   const [sourceFilter, setSourceFilter] = useState("Todos");
+  const [ascensionFilter, setAscensionFilter] = useState("Todos");
   const [contactRange, setContactRange] = useState(() => { const now = new Date(); const month = now.toISOString().slice(0, 7); return { start: `${month}-01`, end: `${month}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}` }; });
   const sourceTags = sources;
-  const visibleLeads = leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter));
+  const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
+  const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
+  const visibleLeads = leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = `leads-${contactRange.start}-${contactRange.end}.csv`; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
@@ -543,7 +574,7 @@ function Contacts({
         />
         <div className={styles.contactFilters}>
           <div><span>Filtrar leads</span><small>Combine o período com as etiquetas de origem para localizar ou exportar os registros.</small></div>
-          <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
+          <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
           <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end)).length}</b></button>
@@ -554,7 +585,7 @@ function Contacts({
             <b>Contato</b>
             <b>Origem</b>
             <b>Etapa</b>
-            <b>Valor</b>
+            <b>Esteira</b>
             <b>Próxima ação</b>
           </header>
           {visibleLeads.map((lead) => (
@@ -570,9 +601,7 @@ function Contacts({
               </span>
               <span><i className={styles.sourceTag}>{lead.source}</i></span>
               <span>{lead.stage}</span>
-              <strong>
-                {lead.value ? currency.format(lead.value) : "A definir"}
-              </strong>
+              <strong>{canAscend(lead) ? "Possível ascensão" : hasRepurchase(lead) ? "Recompra" : purchasesForLead(lead, products).length ? "Cliente" : "Novo lead"}</strong>
               <span>{lead.nextAction}</span>
             </button>
           ))}
@@ -743,6 +772,7 @@ function LeadDrawer({
   close,
   move,
   update,
+  startAscension,
 }: {
   lead: Lead;
   products: ProductDefinition[];
@@ -750,7 +780,13 @@ function LeadDrawer({
   close: () => void;
   move: (stage: Stage) => void;
   update: (changes: Partial<Lead>) => void;
+  startAscension: () => void;
 }) {
+  const purchaseHistory = purchasesForLead(lead, products);
+  const lastProduct = purchaseHistory.at(-1)?.product;
+  const ladder = productLadder(products);
+  const lastProductIndex = ladder.findIndex((product) => product.name === lastProduct);
+  const nextProduct = ladder[lastProductIndex + 1];
   return (
     <div className={styles.backdrop} onMouseDown={close}>
       <aside
@@ -824,6 +860,7 @@ function LeadDrawer({
             <p><span>Fechamento</span><b>{formatEventDate(lead.closedAt)}</b></p>
           </div>
         </section>
+        {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"} · {formatEventDate(purchase.closedAt)}</small></div><strong>{currency.format(purchase.value)}</strong></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}
       </aside>
     </div>
   );
@@ -870,7 +907,8 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
     const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const items = leads.filter((lead) => (lead.createdAt || "").slice(0, 7) === key);
-    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, closedValue: leads.filter((lead) => inMonth(lead.closedAt, key)).reduce((sum, lead) => sum + lead.value, 0), goal: goals[key] || 0 };
+    const purchases = leads.flatMap((lead) => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ value: lead.value, closedAt: lead.closedAt }] : []);
+    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.value, 0), goal: goals[key] || 0 };
   });
   const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
   const maxLeads = Math.max(1, ...months.map((item) => item.leads));
@@ -887,14 +925,14 @@ function PeriodFilter({ start, end, setRange }: { start: string; end: string; se
 }
 function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = items.filter((lead) => inRange(lead.closedAt, start, end)); const value = closed.reduce((sum, lead) => sum + lead.value, 0); return { product, value, net: closed.reduce((sum, lead) => sum + netForValue(lead.value, lead.product, products), 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong>{currency.format(total)}<small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido {currency.format(item.net)}</small></div><strong>{currency.format(item.value)}</strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.filter((lead) => inRange(lead.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, lead) => sum + lead.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.flatMap((lead) => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ value: lead.value, closedAt: lead.closedAt }] : []).filter((purchase) => inRange(purchase.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong>{currency.format(origin.value)}</strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong>{currency.format(selected.value)}<small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
