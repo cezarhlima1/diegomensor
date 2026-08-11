@@ -155,6 +155,17 @@ export default function CRM() {
   }, []);
   const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem(trafficStorageKey, JSON.stringify(next)); };
   useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
+  useEffect(() => {
+    if (!loaded) return;
+    setLeads((current) => current.map((lead) => {
+      const product = catalogProducts.find((item) => item.name === lead.product);
+      const purchases = lead.purchases?.map((purchase) => {
+        const purchaseProduct = catalogProducts.find((item) => item.name === purchase.product);
+        return purchaseProduct ? { ...purchase, value: purchaseProduct.price, netValue: purchaseProduct.netPrice ?? purchaseProduct.price } : purchase;
+      });
+      return { ...lead, value: product ? product.price : lead.value, purchases };
+    }));
+  }, [catalogProducts, loaded]);
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
   const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
