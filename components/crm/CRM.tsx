@@ -108,6 +108,7 @@ export default function CRM() {
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -308,6 +309,7 @@ export default function CRM() {
               </label>
             )}
             {["comercial", "pipeline", "contatos"].includes(view) && <button onClick={() => setAdding(true)}>+ Novo lead</button>}
+            {(view === "pipeline" || view === "contatos") && <button className={styles.importButton} onClick={() => setImporting(true)}>↑ Importar</button>}
           </div>
         </header>
         {view === "geral" && <ExecutiveOverview leads={leads} products={catalogProducts} start={dateRange.start} end={dateRange.end} traffic={traffic} />}
@@ -324,6 +326,7 @@ export default function CRM() {
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} />}
       </section>
       {adding && <LeadModal products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} save={addLead} />}
+      {importing && <ImportLeadsModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={(imported) => { setLeads((current) => [...imported, ...current]); setImporting(false); }} />}
       {selected && (
         <LeadDrawer
           lead={selected}
@@ -667,6 +670,57 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
       {editingSource && <div className={styles.backdrop} onMouseDown={() => setEditingSource(null)}><form className={`${styles.modal} ${styles.detailModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submitSource}><header><div><span>Origem</span><h2>{editingSource === "new" ? "Cadastrar origem" : "Editar origem"}</h2></div><button type="button" onClick={() => setEditingSource(null)}>×</button></header><div className={styles.formGrid}><Input label="Nome da origem" value={sourceDraft} set={setSourceDraft} required /></div><footer><button type="button" onClick={() => setEditingSource(null)}>Cancelar</button><button type="submit">Salvar origem</button></footer></form></div>}
     </div>
   );
+}
+
+function ImportLeadsModal({ existing, products, sources, close, save }: { existing: Lead[]; products: ProductDefinition[]; sources: string[]; close: () => void; save: (leads: Lead[]) => void }) {
+  type PreviewRow = { name: string; company: string; source: string; product: string; stage: string; lead?: Lead; status: "Pronto" | "Duplicado" | "Inválido"; issue?: string };
+  const [rows, setRows] = useState<PreviewRow[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [reading, setReading] = useState(false);
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const parseDate = (value: unknown) => {
+    if (typeof value === "number") { const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000); return date.toISOString(); }
+    const text = String(value || "").trim();
+    if (!text) return undefined;
+    const brazilian = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const date = brazilian ? new Date(Number(brazilian[3]), Number(brazilian[2]) - 1, Number(brazilian[1]), 12) : new Date(text.length === 10 ? `${text}T12:00:00` : text);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  };
+  const numberValue = (value: unknown) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".")) || 0;
+  const downloadTemplate = async () => { const XLSX = await import("xlsx"); const headers = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Temperatura", "Data do lead", "Data da conversa", "Data da reunião", "Data da proposta", "Data do fechamento", "Próxima ação", "Valor bruto personalizado", "Valor líquido personalizado"]]; const sheet = XLSX.utils.aoa_to_sheet(headers); sheet["!cols"] = headers[0].map((header) => ({ wch: Math.max(18, header.length + 3) })); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, sheet, "Leads"); XLSX.writeFile(workbook, "modelo-importacao-leads.xlsx"); };
+  const readFile = async (file: File) => {
+    setReading(true); setFileName(file.name);
+    try {
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+      const existingKeys = new Set(existing.flatMap((lead) => [lead.email ? `e:${lead.email.trim().toLowerCase()}` : "", lead.phone ? `p:${lead.phone.replace(/\D/g, "")}` : ""]).filter(Boolean));
+      const importedKeys = new Set<string>();
+      const parsed = rawRows.map((raw, index): PreviewRow => {
+        const keyed = Object.fromEntries(Object.entries(raw).map(([key, value]) => [normalize(key), value]));
+        const get = (...keys: string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? "";
+        const name = String(get("Nome")).trim(); const company = String(get("Empresa", "Oficina")).trim(); const phone = String(get("WhatsApp", "Telefone")).trim(); const email = String(get("E-mail", "Email")).trim().toLowerCase();
+        const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || "Cadastro";
+        const productInput = String(get("Produto")).trim(); const catalogProduct = products.find((item) => normalize(item.name) === normalize(productInput)); const product = normalize(productInput) === normalize("Outro valor") ? "Outro valor" : catalogProduct?.name || productInput || "Não informado";
+        const stageInput = String(get("Etapa")).trim(); const stage = stages.find((item) => normalize(item) === normalize(stageInput)) || "Novo lead";
+        const temperatureInput = String(get("Temperatura")).trim(); const temperature: Lead["temperature"] = ["Quente","Morno","Frio"].find((item) => normalize(item) === normalize(temperatureInput)) as Lead["temperature"] || "Morno";
+        const createdAt = parseDate(get("Data do lead", "Data lead", "Data")); const conversationAt = parseDate(get("Data da conversa")); const meetingAt = parseDate(get("Data da reunião", "Data da reuniao")); const proposalAt = parseDate(get("Data da proposta")); const closedAt = parseDate(get("Data do fechamento"));
+        const value = product === "Outro valor" ? numberValue(get("Valor bruto personalizado", "Valor bruto")) : catalogProduct?.price || 0; const netValue = product === "Outro valor" ? numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido")) : catalogProduct?.netPrice ?? catalogProduct?.price ?? 0;
+        const keys = [email ? `e:${email}` : "", phone ? `p:${phone.replace(/\D/g, "")}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
+        let issue = !name ? "Nome não informado" : !createdAt ? "Data do lead inválida" : "";
+        if (!issue && productInput && product === productInput && product !== "Outro valor" && !catalogProduct) issue = "Produto não cadastrado";
+        if (!issue && stage === "Fechado" && !closedAt) issue = "Fechamento sem data";
+        if (!issue && product === "Outro valor" && (!value || !netValue)) issue = "Bruto/líquido não informado";
+        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: `import-${Date.now()}-${index}`, product, value, netValue, closedAt, repurchase: false }] : undefined;
+        const lead: Lead | undefined = issue ? undefined : { id: `import-${Date.now()}-${index}`, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: String(get("Próxima ação", "Proxima acao")).trim() || "Fazer primeiro contato", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
+        return { name: name || `Linha ${index + 2}`, company, source, product, stage, lead, status: issue ? "Inválido" : duplicate ? "Duplicado" : "Pronto", issue: issue || (duplicate ? "WhatsApp ou e-mail já cadastrado" : undefined) };
+      });
+      setRows(parsed);
+    } catch { setRows([{ name: "Arquivo não reconhecido", company: "", source: "", product: "", stage: "", status: "Inválido", issue: "Use o modelo em XLSX ou CSV" }]); }
+    finally { setReading(false); }
+  };
+  const ready = rows.filter((row) => row.status === "Pronto" && row.lead).map((row) => row.lead as Lead);
+  return <div className={styles.backdrop} onMouseDown={close}><section className={`${styles.modal} ${styles.importModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Importação de contatos</span><h2>Subir leads por planilha</h2></div><button onClick={close}>×</button></header><div className={styles.importIntro}><p>Use o modelo para manter produtos, etapas e datas coerentes com as dashboards.</p><button onClick={downloadTemplate}>↓ Baixar planilha-modelo</button></div><label className={styles.fileDrop}><input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0])} /><span>{reading ? "Lendo planilha..." : fileName || "Selecionar arquivo XLSX ou CSV"}</span><small>Clique para escolher a planilha</small></label>{rows.length > 0 && <><div className={styles.importSummary}><span><b>{ready.length}</b> prontos</span><span><b>{rows.filter((row) => row.status === "Duplicado").length}</b> duplicados</span><span><b>{rows.filter((row) => row.status === "Inválido").length}</b> inválidos</span></div><div className={styles.importPreview}><header><b>Lead</b><b>Origem / produto</b><b>Etapa</b><b>Status</b></header>{rows.slice(0,10).map((row,index) => <article key={`${row.name}-${index}`}><span><b>{row.name}</b><small>{row.company}</small></span><span><b>{row.source}</b><small>{row.product}</small></span><span>{row.stage}</span><em className={row.status === "Pronto" ? styles.importReady : row.status === "Duplicado" ? styles.importDuplicate : styles.importInvalid}>{row.status}<small>{row.issue}</small></em></article>)}</div>{rows.length > 10 && <small className={styles.previewLimit}>Exibindo 10 de {rows.length} linhas.</small>}</>}<footer><button onClick={close}>Cancelar</button><button disabled={!ready.length} onClick={() => save(ready)}>Importar {ready.length} leads</button></footer></section></div>;
 }
 
 function LeadModal({
