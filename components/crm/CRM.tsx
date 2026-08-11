@@ -18,6 +18,8 @@ type Lead = {
   company: string;
   phone: string;
   email: string;
+  notes?: string;
+  tags?: string[];
   source: string;
   product?: string;
   stage: Stage;
@@ -935,6 +937,12 @@ function LeadDrawer({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature, nextAction: lead.nextAction });
+  const [newTag, setNewTag] = useState("");
+  const [editingTag, setEditingTag] = useState<number | null>(null);
+  const [tagDraft, setTagDraft] = useState("");
+  const tags = lead.tags || [];
+  const addTag = () => { const tag = newTag.trim(); if (!tag || tags.some((item) => item.toLowerCase() === tag.toLowerCase())) return; update({ tags: [...tags, tag] }); setNewTag(""); };
+  const saveTag = (index: number) => { const tag = tagDraft.trim(); if (!tag) return; update({ tags: tags.map((item, itemIndex) => itemIndex === index ? tag : item) }); setEditingTag(null); setTagDraft(""); };
   const purchaseHistory = purchasesForLead(lead, products);
   const lastProduct = purchaseHistory.at(-1)?.product;
   const ladder = productLadder(products);
@@ -1013,6 +1021,15 @@ function LeadDrawer({
               ))}
             </select>
           </label>
+        </section>
+        <section className={styles.leadNotesSection}>
+          <small>Observação e etiquetas</small>
+          <label><span>Observação do lead</span><textarea value={lead.notes || ""} onChange={(event) => update({ notes: event.target.value })} placeholder="Registre contexto, objeções e próximos detalhes importantes..." rows={4} /></label>
+          <div className={styles.leadTags}>
+            <span>Etiquetas</span>
+            <div>{tags.map((tag, index) => editingTag === index ? <form key={`${tag}-${index}`} onSubmit={(event) => { event.preventDefault(); saveTag(index); }}><input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} autoFocus /><button type="submit">Salvar</button><button type="button" onClick={() => setEditingTag(null)}>×</button></form> : <span key={`${tag}-${index}`}><button type="button" onClick={() => { setEditingTag(index); setTagDraft(tag); }}>{tag}</button><button type="button" aria-label={`Excluir etiqueta ${tag}`} onClick={() => update({ tags: tags.filter((_, itemIndex) => itemIndex !== index) })}>×</button></span>)}</div>
+            <form onSubmit={(event) => { event.preventDefault(); addTag(); }}><input value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder="Nova etiqueta" /><button type="submit">+ Adicionar</button></form>
+          </div>
         </section>
         <section>
           <small>Próxima ação</small>

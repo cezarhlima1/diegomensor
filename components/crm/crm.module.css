@@ -702,6 +702,7 @@
   font-weight: 750;
   cursor: pointer;
 }
+.leadNotesSection{grid-column:1/-1}.leadNotesSection>label{display:grid;gap:7px;margin-top:14px}.leadNotesSection textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;outline:0;resize:vertical;background:#102735;color:#f0f7fa;font:inherit;font-size:11px;line-height:1.5}.leadNotesSection textarea:focus,.leadTags input:focus{border-color:#168fd0}.leadTags{display:grid;gap:9px;margin-top:15px}.leadTags>span{color:#adc0ca;font-size:10px;font-weight:700}.leadTags>div{display:flex;flex-wrap:wrap;gap:7px}.leadTags>div>span,.leadTags>div>form{display:flex;align-items:center;overflow:hidden;border:1px solid rgba(105,205,245,.2);border-radius:999px;background:rgba(7,139,212,.1)}.leadTags>div>span button,.leadTags>div>form button{min-height:29px;padding:0 9px;border:0;background:transparent;color:#78d2f4;font-size:9px;cursor:pointer}.leadTags>div>span button:last-child,.leadTags>div>form button:last-child{padding-left:2px;color:#8fa4ae;font-size:14px}.leadTags>div>form input{width:110px;height:29px;padding:0 9px;border:0;outline:0;background:#102735;color:#fff;font-size:9px}.leadTags>form{display:flex;gap:7px;max-width:310px}.leadTags>form input{min-width:0;flex:1;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;outline:0;background:#102735;color:#fff;font-size:10px}.leadTags>form button{height:38px;padding:0 11px;border:1px solid rgba(105,205,245,.24);border-radius:8px;background:rgba(7,139,212,.12);color:#78d2f4;font-size:9px;font-weight:750;cursor:pointer}
 .leadActions button:last-child {
   border-color: rgba(239, 115, 123, .28);
   background: rgba(239, 115, 123, .1);
@@ -2271,3 +2272,4 @@
 .crm[data-theme="light"] .overviewGoal{border-color:rgba(47,157,107,.22)!important;background:linear-gradient(145deg,#dff3e9,#ecf8f2)!important}
 .crm[data-theme="light"] .overviewGoal>label,.crm[data-theme="light"] .overviewGoal>div small,.crm[data-theme="light"] .overviewGoal>span,.crm[data-theme="light"] .overviewGoal input{color:#294c3d!important}
 .crm[data-theme="light"] .overviewHero{background:transparent!important;box-shadow:none!important}
+.crm[data-theme="light"] .leadNotesSection textarea,.crm[data-theme="light"] .leadTags input{border-color:rgba(35,68,84,.12);background:#f3f7f9;color:#203743}.crm[data-theme="light"] .leadTags>div>span,.crm[data-theme="light"] .leadTags>div>form{border-color:rgba(38,128,167,.18);background:rgba(38,128,167,.08)}
