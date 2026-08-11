@@ -685,6 +685,60 @@
   color: #718692;
   font-size: 11px;
 }
+.leadActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.leadActions button,
+.saveLeadEdit {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(105, 205, 245, .25);
+  border-radius: 8px;
+  background: rgba(7, 139, 212, .12);
+  color: #75d4fa;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.leadActions button:last-child {
+  border-color: rgba(239, 115, 123, .28);
+  background: rgba(239, 115, 123, .1);
+  color: #ff9ca3;
+}
+.leadEditSection {
+  grid-column: 1 / -1;
+}
+.leadEditGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.leadEditGrid label {
+  display: grid;
+  gap: 6px;
+  margin-top: 0;
+}
+.leadEditGrid input {
+  width: 100%;
+  height: 43px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  background: #102735;
+  color: #f0f7fa;
+  font: inherit;
+  font-size: 12px;
+}
+.saveLeadEdit {
+  margin-top: 14px;
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
 .drawer > section {
   padding: 21px 22px;
   border-bottom: 1px solid var(--line);
@@ -1636,6 +1690,12 @@
   }
   .drawer h2 {
     font-size: 22px;
+  }
+  .leadActions {
+    flex-wrap: wrap;
+  }
+  .leadEditGrid {
+    grid-template-columns: 1fr;
   }
   .leadModal {
     width: 100%;

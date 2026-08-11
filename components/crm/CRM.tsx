@@ -395,6 +395,11 @@ export default function CRM() {
           sources={catalogSources}
           close={() => setSelected(null)}
           update={(changes) => updateLead(selected.id, changes)}
+          remove={() => {
+            if (!window.confirm(`Excluir o lead ${selected.name}? Essa ação não poderá ser desfeita.`)) return;
+            setLeads((current) => current.filter((lead) => lead.id !== selected.id));
+            setSelected(null);
+          }}
           move={(stage) => {
             moveLead(selected.id, stage);
             const now = new Date().toISOString();
@@ -911,6 +916,7 @@ function LeadDrawer({
   close,
   move,
   update,
+  remove,
   startAscension,
 }: {
   lead: Lead;
@@ -919,8 +925,11 @@ function LeadDrawer({
   close: () => void;
   move: (stage: Stage) => void;
   update: (changes: Partial<Lead>) => void;
+  remove: () => void;
   startAscension: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature, nextAction: lead.nextAction });
   const purchaseHistory = purchasesForLead(lead, products);
   const lastProduct = purchaseHistory.at(-1)?.product;
   const ladder = productLadder(products);
@@ -939,7 +948,23 @@ function LeadDrawer({
           </span>
           <h2>{lead.name}</h2>
           <p>{lead.company}</p>
+          <div className={styles.leadActions}>
+            <button type="button" onClick={() => setEditing((current) => !current)}>{editing ? "Cancelar edição" : "Editar dados"}</button>
+            <button type="button" onClick={remove}>Excluir lead</button>
+          </div>
         </header>
+        {editing && <section className={styles.leadEditSection}>
+          <small>Editar dados do lead</small>
+          <div className={styles.leadEditGrid}>
+            <Input label="Nome" value={draft.name} set={(name) => setDraft({ ...draft, name })} required />
+            <Input label="Oficina / empresa" value={draft.company} set={(company) => setDraft({ ...draft, company })} />
+            <Input label="WhatsApp" value={draft.phone} set={(phone) => setDraft({ ...draft, phone })} />
+            <Input label="E-mail" value={draft.email} set={(email) => setDraft({ ...draft, email })} type="email" />
+            <label><span>Temperatura</span><select value={draft.temperature} onChange={(event) => setDraft({ ...draft, temperature: event.target.value as Lead["temperature"] })}><option>Quente</option><option>Morno</option><option>Frio</option></select></label>
+            <Input label="Próxima ação" value={draft.nextAction} set={(nextAction) => setDraft({ ...draft, nextAction })} />
+          </div>
+          <button className={styles.saveLeadEdit} type="button" onClick={() => { update(draft); setEditing(false); }}>Salvar alterações</button>
+        </section>}
         <section>
           <small>Dados de contato</small>
           <p>
