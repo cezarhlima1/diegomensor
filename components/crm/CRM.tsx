@@ -105,6 +105,7 @@ const whatsappLink = (lead: Lead) => {
 
 export default function CRM() {
   const [view, setView] = useState<View>("geral");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
@@ -117,6 +118,9 @@ export default function CRM() {
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
+
+  useEffect(() => { const savedTheme = localStorage.getItem("mensor-crm-theme"); if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme); }, []);
+  const toggleTheme = () => setTheme((current) => { const next = current === "dark" ? "light" : "dark"; localStorage.setItem("mensor-crm-theme", next); return next; });
 
   useEffect(() => {
     try {
@@ -261,7 +265,7 @@ export default function CRM() {
     ["mensagens", "Detalhes", "⚙"],
   ];
   return (
-    <main className={styles.crm}>
+    <main className={styles.crm} data-theme={theme}>
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <span>MT</span>
@@ -298,6 +302,7 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
+            <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>
                 <span>⌕</span>
