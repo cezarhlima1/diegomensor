@@ -129,7 +129,24 @@ export default function CRM() {
   useEffect(() => {
     if (loaded) localStorage.setItem(leadsStorageKey, JSON.stringify(leads));
   }, [leads, loaded]);
-  useEffect(() => { try { const saved = localStorage.getItem(trafficStorageKey); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(trafficStorageKey);
+      const recoveryDone = localStorage.getItem("mensor-crm-traffic-recovery-v1");
+      const currentRecords = saved ? JSON.parse(saved) as TrafficRecord[] : [];
+      if (!recoveryDone && currentRecords.length === 0) {
+        const legacy = localStorage.getItem("mensor-crm-traffic-v1");
+        const recoveredRecords = legacy ? JSON.parse(legacy) as TrafficRecord[] : [];
+        if (recoveredRecords.length) {
+          setTraffic(recoveredRecords);
+          localStorage.setItem(trafficStorageKey, JSON.stringify(recoveredRecords));
+        }
+        localStorage.setItem("mensor-crm-traffic-recovery-v1", "done");
+        return;
+      }
+      setTraffic(currentRecords);
+    } catch {}
+  }, []);
   const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem(trafficStorageKey, JSON.stringify(next)); };
   useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
