@@ -2277,3 +2277,7 @@
 /* Cadastro de lead contido na área útil abaixo da navegação fixa. */
 .backdrop:has(.leadModal){z-index:1000;padding:86px 20px 18px}.leadModal{width:min(100%,600px);max-height:calc(100dvh - 104px)}.leadModal>header{padding:16px 20px}.leadModal h2{font-size:19px}.leadModal .formGrid{gap:10px;padding:15px 20px}.leadModal .formGrid input,.leadModal .formGrid select{height:41px}.leadModal>footer{padding:12px 20px}
 @media(max-width:700px){.backdrop:has(.leadModal){align-items:center;padding:80px 10px 10px}.leadModal{max-height:calc(100dvh - 90px)}.leadModal>header{padding:13px 15px}.leadModal .formGrid{padding:13px 15px}.leadModal>footer{padding:11px 15px}}
+
+/* Resumo consolidado compacto, alinhado e com tipografia leve. */
+.overviewHero{display:flex;align-items:center;justify-content:flex-start;gap:20px;min-height:44px;padding:2px!important}.overviewHero h2{margin:0;font-size:16px;font-weight:520;letter-spacing:-.01em}.overviewHero>strong{display:flex;align-items:baseline;gap:11px;color:#eaf2f5;font-family:var(--font-archivo);font-size:27px;font-weight:520;line-height:1;text-align:left}.overviewHero>strong .money>small{font-size:11px!important;font-weight:400!important}.overviewHero>strong .money>span{font-weight:520}.overviewHero>strong>small{color:#7e949f;font:500 9px var(--font-manrope);letter-spacing:.06em;text-transform:uppercase}
+@media(max-width:700px){.overviewHero{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 15px}.overviewHero>strong{justify-self:start;font-size:24px}.overviewHero>strong>small{font-size:8px}}

@@ -1032,13 +1032,6 @@ function LeadDrawer({
           </div>
         </section>
         <section>
-          <small>Próxima ação</small>
-          <div className={styles.nextAction}>
-            <b>{lead.nextAction}</b>
-            <span>{lead.date}</span>
-          </div>
-        </section>
-        <section>
           <small>Histórico de datas</small>
           <div className={styles.leadTimeline}>
             <p><span>Lead gerado</span><b>{formatEventDate(lead.createdAt)}</b></p>
