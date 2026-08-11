@@ -2258,3 +2258,13 @@
 /* Estado do banco no cabeçalho — a navegação horizontal oculta o bloco lateral. */
 .databaseStatus{display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 10px;border:1px solid rgba(190,215,225,.09);border-radius:9px;background:#0d222d}.databaseStatus>i{font-size:8px;font-style:normal}.databaseStatus>span{display:grid;gap:1px}.databaseStatus b{color:#dce8ed;font-size:8px;white-space:nowrap}.databaseStatus small{color:#718995!important;font-size:7px!important;white-space:nowrap}.databaseStatus.connected>i{color:#55d39d}.databaseStatus.connecting>i{color:#d0a75e}.databaseStatus.offline>i{color:#ef737b}.crm[data-theme="light"] .databaseStatus{border-color:rgba(35,68,84,.1);background:#f0f6f8}.crm[data-theme="light"] .databaseStatus b{color:#294451}.crm[data-theme="light"] .databaseStatus small{color:#718692!important}
 @media(max-width:820px){.databaseStatus{width:40px;justify-content:center;padding:0}.databaseStatus>span{display:none}}
+
+/* Meta destacada pelo fundo, não pela cor da tipografia. */
+.overviewGoal{border-color:rgba(73,202,143,.27)!important;background:linear-gradient(145deg,rgba(34,130,92,.42),rgba(17,79,58,.5))!important}
+.overviewGoal>label,.overviewGoal>div small,.overviewGoal>span{color:#d9ebe3!important}.overviewGoal input{color:#fff!important}
+
+/* O resumo consolidado fica direto na página, sem cartão externo. */
+.overviewHero{padding:3px 2px 8px;border:0!important;background:transparent!important;box-shadow:none!important}
+.crm[data-theme="light"] .overviewGoal{border-color:rgba(47,157,107,.22)!important;background:linear-gradient(145deg,#dff3e9,#ecf8f2)!important}
+.crm[data-theme="light"] .overviewGoal>label,.crm[data-theme="light"] .overviewGoal>div small,.crm[data-theme="light"] .overviewGoal>span,.crm[data-theme="light"] .overviewGoal input{color:#294c3d!important}
+.crm[data-theme="light"] .overviewHero{background:transparent!important;box-shadow:none!important}
