@@ -22,6 +22,7 @@ type Lead = {
   product?: string;
   stage: Stage;
   value: number;
+  netValue?: number;
   temperature: "Quente" | "Morno" | "Frio";
   nextAction: string;
   date: string;
@@ -69,7 +70,7 @@ const normalizeSource = (source: string) => legacySources[source] || (leadSource
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog].sort((a, b) => a.price - b.price);
-const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
+const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
@@ -215,14 +216,16 @@ export default function CRM() {
       current.map((lead) => {
         if (lead.id !== id) return lead;
         if (stage === "Proposta" || stage === "Fechado") {
-          const value = catalogProducts.find((item) => item.name === lead.product)?.price || productPrice(lead.product) || 0;
+          const catalogProduct = catalogProducts.find((item) => item.name === lead.product);
+          const value = catalogProduct?.price || lead.value || productPrice(lead.product) || 0;
+          const netValue = catalogProduct?.netPrice ?? catalogProduct?.price ?? lead.netValue ?? value;
           const now = new Date().toISOString();
           if (stage === "Fechado" && lead.stage !== "Fechado") {
             const history = purchasesForLead(lead, catalogProducts);
-            const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: lead.product || "Não informado", value, netValue: netForValue(value, lead.product, catalogProducts), closedAt: now, repurchase: history.length > 0 };
-            return { ...lead, stage, value, closedAt: now, purchases: [...history, purchase] };
+            const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: lead.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 };
+            return { ...lead, stage, value, netValue, closedAt: now, purchases: [...history, purchase] };
           }
-          return { ...lead, stage, value, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
+          return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
         }
         const now = new Date().toISOString();
         return { ...lead, stage, value: 0, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}) };
@@ -331,7 +334,7 @@ export default function CRM() {
           move={(stage) => {
             moveLead(selected.id, stage);
             const now = new Date().toISOString();
-            setSelected((current) => { if (!current) return current; const value = catalogProducts.find((item) => item.name === current.product)?.price || 0; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue: netForValue(value, current.product, catalogProducts), closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, purchases, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
+            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = catalogProduct?.price || current.value || 0; const netValue = catalogProduct?.netPrice ?? catalogProduct?.price ?? current.netValue ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -684,6 +687,8 @@ function LeadModal({
     email: "",
     source: "Formulário",
     product: products[0]?.name || "",
+    customGross: "",
+    customNet: "",
     temperature: "Morno" as Lead["temperature"],
     nextAction: "Fazer primeiro contato",
   });
@@ -698,7 +703,8 @@ function LeadModal({
             ...draft,
             id: String(Date.now()),
             stage: "Novo lead",
-            value: products.find((product) => product.name === draft.product)?.price || 0,
+            value: draft.product === "Outro valor" ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
+            netValue: draft.product === "Outro valor" ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
             date: "Hoje",
             createdAt: new Date().toISOString(),
           });
@@ -747,8 +753,10 @@ function LeadModal({
             <span>Produto</span>
             <select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>
               {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
+              <option value="Outro valor">Outro valor</option>
             </select>
           </label>
+          {draft.product === "Outro valor" && <><Input label="Valor bruto negociado" value={draft.customGross} set={(customGross) => setDraft({ ...draft, customGross })} type="number" required /><Input label="Valor líquido negociado" value={draft.customNet} set={(customNet) => setDraft({ ...draft, customNet })} type="number" required /></>}
           <label>
             <span>Temperatura</span>
             <select
@@ -842,11 +850,13 @@ function LeadDrawer({
           <small>Oportunidade</small>
           <label>
             <span>Produto</span>
-            <select value={lead.product || "Não informado"} onChange={(event) => { const product = event.target.value; update({ product, value: products.find((item) => item.name === product)?.price || 0 }); }}>
+            <select value={lead.product || "Não informado"} onChange={(event) => { const product = event.target.value; const selectedProduct = products.find((item) => item.name === product); update({ product, value: selectedProduct?.price || 0, netValue: selectedProduct?.netPrice ?? selectedProduct?.price ?? 0 }); }}>
               <option value="Não informado">Não informado</option>
               {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
+              <option value="Outro valor">Outro valor</option>
             </select>
           </label>
+          {lead.product === "Outro valor" && <div className={styles.customDealValues}><label><span>Valor bruto negociado</span><input type="number" min="0" step="0.01" value={lead.value || ""} onChange={(event) => update({ value: Number(event.target.value) || 0 })} /></label><label><span>Valor líquido negociado</span><input type="number" min="0" step="0.01" value={lead.netValue || ""} onChange={(event) => update({ netValue: Number(event.target.value) || 0 })} /></label></div>}
           <label>
             <span>Etapa atual</span>
             <select
@@ -941,7 +951,7 @@ function PeriodFilter({ start, end, setRange }: { start: string; end: string; se
   return <section className={styles.periodFilter}><span>Filtro</span><label><small>Início</small><input type="date" value={start} max={end} onChange={(event) => event.target.value && setRange(event.target.value, end)} /></label><label><small>Final</small><input type="date" value={end} min={start} onChange={(event) => event.target.value && setRange(start, event.target.value)} /></label></section>;
 }
 function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
-  const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado")])).filter((product) => product !== "Não informado");
+  const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado"), ...leads.flatMap((lead) => purchasesForLead(lead, products).map((purchase) => purchase.product))])).filter((product) => product !== "Não informado");
   const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
