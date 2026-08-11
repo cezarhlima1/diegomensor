@@ -136,6 +136,7 @@ export default function CRM() {
         "database-write-failed": "Falha ao gravar no banco",
       };
       detail = labels[body.error] || detail;
+      if (body.account) detail += ` · ${body.account}`;
       if (body.code) detail += ` · código ${body.code}`;
     } catch { detail += ` · HTTP ${response.status}`; }
     setDatabaseIssue(detail);

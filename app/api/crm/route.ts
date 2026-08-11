@@ -18,10 +18,22 @@ async function authorized() {
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const allowedEmail = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com").toLowerCase();
     if (!user?.email) return { ok: false, reason: "session-missing" } as const;
-    if (user.email.toLowerCase() !== allowedEmail) return { ok: false, reason: "email-not-allowed" } as const;
-    return { ok: true } as const;
+    const allowedEmails = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com")
+      .replace(/["']/g, "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+    if (allowedEmails.includes(user.email.trim().toLowerCase())) return { ok: true } as const;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_super_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.is_super_admin) return { ok: true } as const;
+
+    return { ok: false, reason: "email-not-allowed", account: user.email } as const;
   } catch {
     return { ok: false, reason: "auth-unavailable" } as const;
   }
@@ -34,7 +46,7 @@ function databaseError(error: unknown, fallback: string) {
 
 export async function GET() {
   const auth = await authorized();
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 });
+  if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   try {
     const db = crmPool();
     const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult] = await Promise.all([
@@ -75,7 +87,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   const auth = await authorized();
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 });
+  if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   const length = Number(request.headers.get("content-length"));
   if (Number.isFinite(length) && length > 2_000_000) return NextResponse.json({ error: "payload-too-large" }, { status: 413 });
   let snapshot: Snapshot;
