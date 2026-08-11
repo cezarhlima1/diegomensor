@@ -363,7 +363,7 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const goal = goals[goalMonth] || 0;
   const goalProgress = goal ? totalRevenue / goal * 100 : 0;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
-    <section className={styles.overviewHero}><div><span>Resultado consolidado</span><h2>Orgânico e tráfego em uma única visão</h2><p>Receita líquida consolidada, já descontado o investimento em tráfego do período.</p></div><strong>{currency.format(periodBalance)}<small>saldo do período</small></strong></section>
+    <section className={styles.overviewHero}><div><h2>Orgânico x Tráfego</h2></div><strong>{currency.format(periodBalance)}<small>saldo do período</small></strong></section>
     <div className={styles.overviewKpis}>
       <Kpi label="Receita bruta" value={currency.format(totalRevenue)} detail={`${totalSales} vendas totais`} />
       <Kpi label="Receita líquida" value={currency.format(totalNet)} detail={`${currency.format(Math.max(0, totalRevenue - totalNet))} em taxas`} />
