@@ -647,12 +647,13 @@ function Contacts({
 }) {
   const [sourceFilter, setSourceFilter] = useState("Todos");
   const [ascensionFilter, setAscensionFilter] = useState("Todos");
-  const [contactRange, setContactRange] = useState(() => { const now = new Date(); const month = now.toISOString().slice(0, 7); return { start: `${month}-01`, end: `${month}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}` }; });
+  const [contactRange, setContactRange] = useState({ start: "", end: "" });
   const sourceTags = sources;
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
-  const visibleLeads = leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
-  const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = `leads-${contactRange.start}-${contactRange.end}.csv`; link.click(); URL.revokeObjectURL(url); };
+  const inContactRange = (lead: Lead) => (!contactRange.start || Boolean(lead.createdAt && lead.createdAt.slice(0, 10) >= contactRange.start)) && (!contactRange.end || Boolean(lead.createdAt && lead.createdAt.slice(0, 10) <= contactRange.end));
+  const visibleLeads = leads.filter((lead) => inContactRange(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
+  const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
       <section className={styles.panel}>
@@ -661,12 +662,12 @@ function Contacts({
           title={`${visibleLeads.length} leads`}
         />
         <div className={styles.contactFilters}>
-          <div><span>Filtrar leads</span><small>Combine o período com as etiquetas de origem para localizar ou exportar os registros.</small></div>
+          <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use período e etiquetas somente quando quiser refinar a visualização ou exportação.</small></div>
           <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
-          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter((lead) => inRange(lead.createdAt, contactRange.start, contactRange.end)).length}</b></button>
-          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inRange(lead.createdAt, contactRange.start, contactRange.end)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
+          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(inContactRange).length}</b></button>
+          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inContactRange(lead)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
         </div>
         <div className={styles.contactTable}>
           <header>
