@@ -19,14 +19,22 @@ async function authorized() {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     const allowedEmail = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com").toLowerCase();
-    return Boolean(user?.email && user.email.toLowerCase() === allowedEmail);
+    if (!user?.email) return { ok: false, reason: "session-missing" } as const;
+    if (user.email.toLowerCase() !== allowedEmail) return { ok: false, reason: "email-not-allowed" } as const;
+    return { ok: true } as const;
   } catch {
-    return false;
+    return { ok: false, reason: "auth-unavailable" } as const;
   }
 }
 
+function databaseError(error: unknown, fallback: string) {
+  const code = typeof error === "object" && error && "code" in error ? String(error.code) : undefined;
+  return NextResponse.json({ error: fallback, ...(code ? { code } : {}) }, { status: 503 });
+}
+
 export async function GET() {
-  if (!(await authorized())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const auth = await authorized();
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 });
   try {
     const db = crmPool();
     const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult] = await Promise.all([
@@ -61,12 +69,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error("CRM GET failed", error);
-    return NextResponse.json({ error: "database-unavailable" }, { status: 503 });
+    return databaseError(error, "database-unavailable");
   }
 }
 
 export async function PUT(request: Request) {
-  if (!(await authorized())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const auth = await authorized();
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 });
   const length = Number(request.headers.get("content-length"));
   if (Number.isFinite(length) && length > 2_000_000) return NextResponse.json({ error: "payload-too-large" }, { status: 413 });
   let snapshot: Snapshot;
@@ -106,6 +115,6 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("CRM PUT failed", error);
-    return NextResponse.json({ error: "database-write-failed" }, { status: 503 });
+    return databaseError(error, "database-write-failed");
   }
 }

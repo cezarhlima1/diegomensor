@@ -120,7 +120,27 @@ export default function CRM() {
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseStatus, setDatabaseStatus] = useState<"connecting" | "connected" | "offline">("connecting");
+  const [databaseIssue, setDatabaseIssue] = useState("");
   const [syncRevision, setSyncRevision] = useState(0);
+
+  const registerDatabaseFailure = async (response?: Response) => {
+    if (!response) { setDatabaseIssue("Falha de rede"); setDatabaseStatus("offline"); return; }
+    let detail = "Erro na sincronização";
+    try {
+      const body = await response.json();
+      const labels: Record<string, string> = {
+        "session-missing": "Sessão não identificada",
+        "email-not-allowed": "E-mail sem autorização",
+        "auth-unavailable": "Autenticação indisponível",
+        "database-unavailable": "Falha ao ler o banco",
+        "database-write-failed": "Falha ao gravar no banco",
+      };
+      detail = labels[body.error] || detail;
+      if (body.code) detail += ` · código ${body.code}`;
+    } catch { detail += ` · HTTP ${response.status}`; }
+    setDatabaseIssue(detail);
+    setDatabaseStatus("offline");
+  };
 
   useEffect(() => { const savedTheme = localStorage.getItem("mensor-crm-theme"); if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme); }, []);
   const toggleTheme = () => setTheme((current) => { const next = current === "dark" ? "light" : "dark"; localStorage.setItem("mensor-crm-theme", next); return next; });
@@ -196,7 +216,7 @@ export default function CRM() {
     const connectDatabase = async () => {
       try {
         const response = await fetch("/api/crm", { cache: "no-store" });
-        if (!response.ok) { setDatabaseStatus("offline"); return; }
+        if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
         const hasRemoteData = remote.leads?.length || remote.traffic?.length || remote.products?.length || remote.sources?.length || remote.messages?.length || Object.keys(remote.goals || {}).length;
         if (hasRemoteData) {
@@ -206,10 +226,11 @@ export default function CRM() {
           window.dispatchEvent(new Event("mensor-crm-database-loaded"));
         } else {
           const migration = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) });
-          if (!migration.ok) { setDatabaseStatus("offline"); return; }
+          if (!migration.ok) { await registerDatabaseFailure(migration); return; }
         }
+        setDatabaseIssue("");
         setDatabaseStatus("connected");
-      } catch (error) { setDatabaseStatus("offline"); console.error("Falha ao conectar CRM ao banco", error); }
+      } catch (error) { await registerDatabaseFailure(); console.error("Falha ao conectar CRM ao banco", error); }
       finally { if (!cancelled) setDatabaseReady(true); }
     };
     connectDatabase();
@@ -218,7 +239,7 @@ export default function CRM() {
   useEffect(() => {
     if (!databaseReady) return;
     const timeout = window.setTimeout(() => {
-      fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) }).then((response) => setDatabaseStatus(response.ok ? "connected" : "offline")).catch((error) => { setDatabaseStatus("offline"); console.error("Falha ao sincronizar CRM", error); });
+      fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) }).then(async (response) => { if (response.ok) { setDatabaseIssue(""); setDatabaseStatus("connected"); } else await registerDatabaseFailure(response); }).catch((error) => { void registerDatabaseFailure(); console.error("Falha ao sincronizar CRM", error); });
     }, 500);
     return () => window.clearTimeout(timeout);
   }, [databaseReady, leads, traffic, catalogProducts, catalogSources, syncRevision]);
@@ -343,7 +364,7 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
-            <div className={`${styles.databaseStatus} ${styles[databaseStatus]}`} title={databaseStatus === "connected" ? "Dados sincronizados com o banco" : databaseStatus === "offline" ? "Usando a cópia deste navegador" : "Verificando conexão com o banco"}><i>●</i><span><b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b><small>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? "Sincronização indisponível" : "Validando dados"}</small></span></div>
+            <div className={`${styles.databaseStatus} ${styles[databaseStatus]}`} title={databaseStatus === "connected" ? "Dados sincronizados com o banco" : databaseStatus === "offline" ? databaseIssue || "Usando a cópia deste navegador" : "Verificando conexão com o banco"}><i>●</i><span><b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b><small>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? databaseIssue || "Sincronização indisponível" : "Validando dados"}</small></span></div>
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>
