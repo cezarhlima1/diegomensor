@@ -47,7 +47,8 @@ type TrafficRecord = {
   revenue: number;
   netRevenue?: number;
 };
-type ProductDefinition = { name: string; price: number; netPrice?: number };
+type ProductPriceChange = { id: string; changedAt: string; previousPrice: number; previousNetPrice: number; price: number; netPrice: number };
+type ProductDefinition = { name: string; price: number; netPrice?: number; priceHistory?: ProductPriceChange[] };
 
 const products = [
   { name: "Precificação para oficinas", price: 197 },
@@ -113,6 +114,7 @@ export default function CRM() {
   const [traffic, setTraffic] = useState<TrafficRecord[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
 
   useEffect(() => {
     try {
@@ -154,18 +156,21 @@ export default function CRM() {
     } catch {}
   }, []);
   const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem(trafficStorageKey, JSON.stringify(next)); };
-  useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
+  useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} finally { setCatalogLoaded(true); } }, []);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !catalogLoaded) return;
+    const historicalCorrectionPending = !localStorage.getItem("mensor-crm-purchase-snapshot-v1");
     setLeads((current) => current.map((lead) => {
       const product = catalogProducts.find((item) => item.name === lead.product);
-      const purchases = lead.purchases?.map((purchase) => {
+      const purchases = historicalCorrectionPending ? lead.purchases?.map((purchase) => {
         const purchaseProduct = catalogProducts.find((item) => item.name === purchase.product);
         return purchaseProduct ? { ...purchase, value: purchaseProduct.price, netValue: purchaseProduct.netPrice ?? purchaseProduct.price } : purchase;
-      });
-      return { ...lead, value: product ? product.price : lead.value, purchases };
+      }) : lead.purchases;
+      const value = product && (historicalCorrectionPending || lead.stage !== "Fechado") ? product.price : lead.value;
+      return { ...lead, value, purchases };
     }));
-  }, [catalogProducts, loaded]);
+    if (historicalCorrectionPending) localStorage.setItem("mensor-crm-purchase-snapshot-v1", new Date().toISOString());
+  }, [catalogProducts, loaded, catalogLoaded]);
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
   const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
@@ -641,14 +646,14 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   const addSource = () => { setSourceDraft(""); setEditingSource("new"); };
   const editProduct = (product: ProductDefinition) => { setProductDraft({ name: product.name, gross: String(product.price), net: String(product.netPrice ?? product.price) }); setEditingProduct(product); };
   const editSource = (source: string) => { setSourceDraft(source); setEditingSource(source); };
-  const submitProduct = (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const next = { name, price: Number(productDraft.gross)||0, netPrice: Number(productDraft.net)||0 }; if (editingProduct === "new") saveProducts([...products,next]); else if (editingProduct) renameProduct(editingProduct.name,next); setEditingProduct(null); };
+  const submitProduct = (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const price = Number(productDraft.gross)||0; const netPrice = Number(productDraft.net)||0; if (editingProduct === "new") saveProducts([...products,{ name, price, netPrice, priceHistory: [] }]); else if (editingProduct) { const changed = editingProduct.price !== price || (editingProduct.netPrice ?? editingProduct.price) !== netPrice; const priceHistory = changed ? [...(editingProduct.priceHistory || []), { id: String(Date.now()), changedAt: new Date().toISOString(), previousPrice: editingProduct.price, previousNetPrice: editingProduct.netPrice ?? editingProduct.price, price, netPrice }] : editingProduct.priceHistory || []; renameProduct(editingProduct.name,{ name, price, netPrice, priceHistory }); } setEditingProduct(null); };
   const submitSource = (event: React.FormEvent) => { event.preventDefault(); const name = sourceDraft.trim(); if (!name) return; if (editingSource === "new") saveSources([...sources,name]); else if (editingSource) renameSource(editingSource,name); setEditingSource(null); };
   const editTemplate = (template: { id: string; title: string; text: string }) => { setTitle(template.title); setMessage(template.text); setEditingMessage(template.id); setAddingMessage(true); };
   return (
     <div className={`${styles.content} ${styles.detailsPage}`}>
       <header className={styles.detailsIntro}><span>Configurações do CRM</span><h2>Cadastros e recursos da operação</h2><p>Gerencie os registros utilizados na pipeline, nos filtros e nas métricas.</p></header>
       <div className={styles.detailCatalogs}>
-        <section className={styles.detailCatalog}><header><div><span>Catálogo</span><h3>Produtos</h3></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product) => <article key={product.name}><div><b>{product.name}</b><small>Taxas: {currency.format(Math.max(0, product.price - (product.netPrice ?? product.price)))}</small></div><div className={styles.productValues}><span>Bruto <b>{currency.format(product.price)}</b></span><span>Líquido <b>{currency.format(product.netPrice ?? product.price)}</b></span></div><div className={styles.catalogActions}><button onClick={() => editProduct(product)}>Editar</button><button onClick={() => saveProducts(products.filter((item) => item.name !== product.name))} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
+        <section className={styles.detailCatalog}><header><div><span>Catálogo</span><h3>Produtos</h3></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product) => <article key={product.name}><div><b>{product.name}</b><small>Taxas: {currency.format(Math.max(0, product.price - (product.netPrice ?? product.price)))}</small></div><div className={styles.productValues}><span>Bruto <b>{currency.format(product.price)}</b></span><span>Líquido <b>{currency.format(product.netPrice ?? product.price)}</b></span></div>{product.priceHistory?.length ? <details className={styles.priceHistory}><summary>Histórico de alterações <b>{product.priceHistory.length}</b></summary><div>{[...product.priceHistory].reverse().map((change) => <article key={change.id}><time>{formatEventDate(change.changedAt)}</time><span>Bruto: {currency.format(change.previousPrice)} → {currency.format(change.price)}</span><span>Líquido: {currency.format(change.previousNetPrice)} → {currency.format(change.netPrice)}</span></article>)}</div></details> : <small className={styles.noPriceHistory}>Nenhuma alteração de valor</small>}<div className={styles.catalogActions}><button onClick={() => editProduct(product)}>Editar</button><button onClick={() => saveProducts(products.filter((item) => item.name !== product.name))} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
         <section className={styles.detailCatalog}><header><div><span>Etiquetas</span><h3>Origens de lead</h3></div><button onClick={addSource}>+ Origem</button></header><div>{sources.map((source) => <article key={source}><div><b>{source}</b><small>Origem disponível no CRM</small></div><i className={styles.sourceTag}>{source}</i><div className={styles.catalogActions}><button onClick={() => editSource(source)}>Editar</button><button onClick={() => saveSources(sources.filter((item) => item !== source))} aria-label={`Excluir ${source}`}>×</button></div></article>)}</div></section>
       </div>
       <section className={styles.messageWorkspace}>
