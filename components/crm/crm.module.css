@@ -2273,3 +2273,7 @@
 .crm[data-theme="light"] .overviewGoal>label,.crm[data-theme="light"] .overviewGoal>div small,.crm[data-theme="light"] .overviewGoal>span,.crm[data-theme="light"] .overviewGoal input{color:#294c3d!important}
 .crm[data-theme="light"] .overviewHero{background:transparent!important;box-shadow:none!important}
 .crm[data-theme="light"] .leadNotesSection textarea,.crm[data-theme="light"] .leadTags input{border-color:rgba(35,68,84,.12);background:#f3f7f9;color:#203743}.crm[data-theme="light"] .leadTags>div>span,.crm[data-theme="light"] .leadTags>div>form{border-color:rgba(38,128,167,.18);background:rgba(38,128,167,.08)}
+
+/* Cadastro de lead contido na área útil abaixo da navegação fixa. */
+.backdrop:has(.leadModal){z-index:1000;padding:86px 20px 18px}.leadModal{width:min(100%,600px);max-height:calc(100dvh - 104px)}.leadModal>header{padding:16px 20px}.leadModal h2{font-size:19px}.leadModal .formGrid{gap:10px;padding:15px 20px}.leadModal .formGrid input,.leadModal .formGrid select{height:41px}.leadModal>footer{padding:12px 20px}
+@media(max-width:700px){.backdrop:has(.leadModal){align-items:center;padding:80px 10px 10px}.leadModal{max-height:calc(100dvh - 90px)}.leadModal>header{padding:13px 15px}.leadModal .formGrid{padding:13px 15px}.leadModal>footer{padding:11px 15px}}
