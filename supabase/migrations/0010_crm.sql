@@ -90,7 +90,7 @@ create table if not exists public.crm_traffic_campaigns (
 create index if not exists crm_traffic_campaign_date_idx on public.crm_traffic_campaigns (campaign_date);
 
 create table if not exists public.crm_monthly_goals (
-  month text primary key check (month ~ '^\\d{4}-\\d{2}$'),
+  month text primary key check (month ~ '^[0-9]{4}-[0-9]{2}$'),
   amount numeric(14,2) not null default 0,
   updated_at timestamptz not null default now()
 );
