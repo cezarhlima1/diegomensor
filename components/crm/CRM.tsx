@@ -77,112 +77,10 @@ const stages: Stage[] = [
   "Proposta",
   "Fechado",
 ];
-const initialLeads: Lead[] = [
-  {
-    id: "1",
-    name: "Rafael Martins",
-    company: "RM Auto Center",
-    phone: "(54) 99921-4301",
-    email: "rafael@rmauto.com",
-    source: "Formulário",
-    stage: "Novo lead",
-    value: 0,
-    temperature: "Quente",
-    nextAction: "Fazer primeiro contato",
-    date: "Hoje, 09:30",
-  },
-  {
-    id: "2",
-    name: "Marcelo Vieira",
-    company: "Vieira Motors",
-    phone: "(51) 99810-3210",
-    email: "marcelo@vieiramotors.com",
-    source: "Direct",
-    stage: "Novo lead",
-    value: 0,
-    temperature: "Morno",
-    nextAction: "Enviar mensagem",
-    date: "Hoje, 11:15",
-  },
-  {
-    id: "3",
-    name: "Ana Paula Costa",
-    company: "Costa Centro Automotivo",
-    phone: "(11) 99744-8200",
-    email: "ana@costacentro.com",
-    source: "Cadastro",
-    stage: "Contato feito",
-    value: 0,
-    temperature: "Quente",
-    nextAction: "Agendar diagnóstico",
-    date: "Amanhã, 10:00",
-  },
-  {
-    id: "4",
-    name: "Lucas Almeida",
-    company: "Box 12 Garage",
-    phone: "(47) 99102-5588",
-    email: "lucas@box12.com",
-    source: "Tráfego",
-    stage: "Contato feito",
-    value: 0,
-    temperature: "Morno",
-    nextAction: "Retorno no WhatsApp",
-    date: "12 ago, 14:00",
-  },
-  {
-    id: "5",
-    name: "Fernando Lima",
-    company: "LimaCar",
-    phone: "(48) 99913-2041",
-    email: "fernando@limacar.com",
-    source: "Formulário",
-    stage: "Reunião agendada",
-    value: 0,
-    temperature: "Quente",
-    nextAction: "Reunião de diagnóstico",
-    date: "Hoje, 16:30",
-  },
-  {
-    id: "6",
-    name: "Bruno Souza",
-    company: "BS Performance",
-    phone: "(19) 99670-1182",
-    email: "bruno@bsperformance.com",
-    source: "Quiz",
-    stage: "Proposta",
-    value: 12000,
-    temperature: "Quente",
-    nextAction: "Follow-up da proposta",
-    date: "Amanhã, 09:00",
-  },
-  {
-    id: "7",
-    name: "Carla Mendes",
-    company: "Mendes Auto Service",
-    phone: "(21) 99781-3009",
-    email: "carla@mendesauto.com",
-    source: "Direct",
-    stage: "Proposta",
-    value: 8500,
-    temperature: "Morno",
-    nextAction: "Validar decisor",
-    date: "13 ago, 15:00",
-  },
-  {
-    id: "8",
-    name: "Eduardo Rocha",
-    company: "Rocha Motors",
-    phone: "(31) 99803-6615",
-    email: "eduardo@rochamotors.com",
-    source: "Cadastro",
-    stage: "Fechado",
-    value: 12000,
-    temperature: "Quente",
-    nextAction: "Onboarding",
-    date: "Concluído",
-  },
-];
+const initialLeads: Lead[] = [];
+const leadsStorageKey = "mensor-crm-v2";
+const trafficStorageKey = "mensor-crm-traffic-v2";
+const goalsStorageKey = "mensor-crm-goals-v2";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -213,7 +111,7 @@ export default function CRM() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("mensor-crm-v1");
+      const saved = localStorage.getItem(leadsStorageKey);
       if (saved)
         setLeads(
           (JSON.parse(saved) as Lead[]).map((lead) => {
@@ -229,10 +127,10 @@ export default function CRM() {
     setLoaded(true);
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem("mensor-crm-v1", JSON.stringify(leads));
+    if (loaded) localStorage.setItem(leadsStorageKey, JSON.stringify(leads));
   }, [leads, loaded]);
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-traffic-v1"); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
-  const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem("mensor-crm-traffic-v1", JSON.stringify(next)); };
+  useEffect(() => { try { const saved = localStorage.getItem(trafficStorageKey); if (saved) setTraffic(JSON.parse(saved)); } catch {} }, []);
+  const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem(trafficStorageKey, JSON.stringify(next)); };
   useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} }, []);
   const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
   const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
@@ -403,9 +301,9 @@ export default function CRM() {
 
 function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; start: string; end: string; traffic: TrafficRecord[] }) {
   const [goals, setGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
+  useEffect(() => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setGoals(JSON.parse(saved)); } catch {} }, []);
   const goalMonth = start.slice(0, 7);
-  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
+  const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
   const organicClosings = leads.filter((lead) => inRange(lead.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, lead) => sum + lead.value, 0);
@@ -504,8 +402,8 @@ function Dashboard({
   sources: string[];
 }) {
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
-  useEffect(() => { try { const saved = localStorage.getItem("mensor-crm-goals-v1"); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
-  const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem("mensor-crm-goals-v1", JSON.stringify(next)); };
+  useEffect(() => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }, []);
+  const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); };
   const funnelSteps = [
     { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
     { label: "Conversas iniciadas", count: leads.filter((lead) => inRange(lead.conversationAt, start, end)).length, detail: "Primeiro contato realizado" },
