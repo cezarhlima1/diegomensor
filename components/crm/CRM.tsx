@@ -343,6 +343,7 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
+            <div className={`${styles.databaseStatus} ${styles[databaseStatus]}`} title={databaseStatus === "connected" ? "Dados sincronizados com o banco" : databaseStatus === "offline" ? "Usando a cópia deste navegador" : "Verificando conexão com o banco"}><i>●</i><span><b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b><small>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? "Sincronização indisponível" : "Validando dados"}</small></span></div>
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>
