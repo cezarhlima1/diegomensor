@@ -119,8 +119,8 @@ export default function CRM() {
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [databaseReady, setDatabaseReady] = useState(false);
-  const [databaseStatus, setDatabaseStatus] = useState<"connecting" | "connected" | "offline">("connecting");
-  const [databaseIssue, setDatabaseIssue] = useState("");
+  const [, setDatabaseStatus] = useState<"connecting" | "connected" | "offline">("connecting");
+  const [, setDatabaseIssue] = useState("");
   const [syncRevision, setSyncRevision] = useState(0);
 
   const registerDatabaseFailure = async (response?: Response) => {
@@ -349,13 +349,6 @@ export default function CRM() {
             </button>
           ))}
         </nav>
-        <div className={styles.localNotice}>
-          <i>●</i>
-          <div>
-            <b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b>
-            <span>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? "Sincronização indisponível" : "Validando dados"}</span>
-          </div>
-        </div>
       </aside>
       <section className={styles.workspace}>
         <header className={styles.topbar}>
@@ -365,7 +358,6 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
-            <div className={`${styles.databaseStatus} ${styles[databaseStatus]}`} title={databaseStatus === "connected" ? "Dados sincronizados com o banco" : databaseStatus === "offline" ? databaseIssue || "Usando a cópia deste navegador" : "Verificando conexão com o banco"}><i>●</i><span><b>{databaseStatus === "connected" ? "Banco conectado" : databaseStatus === "offline" ? "Cópia local" : "Conectando"}</b><small>{databaseStatus === "connected" ? "Supabase CRM" : databaseStatus === "offline" ? databaseIssue || "Sincronização indisponível" : "Validando dados"}</small></span></div>
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>
