@@ -570,6 +570,15 @@
   border-radius: 18px;
   background: #fff;
 }
+.leadModal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: calc(100dvh - 36px);
+}
+.leadModal .formGrid {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .modal > header {
   display: flex;
   align-items: center;
@@ -1578,10 +1587,11 @@
 .drawer {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  width: min(920px, 100%);
+  width: min(800px, 100%);
   height: auto;
-  max-height: calc(100vh - 48px);
+  max-height: min(760px, calc(100dvh - 48px));
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
@@ -1589,7 +1599,7 @@
 .drawer > header {
   grid-column: 1/-1;
   position: relative;
-  padding: 28px 30px 24px;
+  padding: 21px 24px 19px;
   background: linear-gradient(135deg, #0b2433, #0d3042);
 }
 .drawer > header > button {
@@ -1601,10 +1611,10 @@
   margin-top: 0;
 }
 .drawer h2 {
-  font-size: 30px;
+  font-size: 25px;
 }
 .drawer > section {
-  padding: 25px 30px;
+  padding: 18px 24px;
 }
 .drawer > section:last-child {
   grid-column: 1/-1;
@@ -1617,15 +1627,27 @@
   .drawer {
     display: block;
     width: 100%;
-    max-height: 92vh;
+    max-height: calc(100dvh - 20px);
     border-radius: 18px 18px 10px 10px;
   }
   .drawer > header,
   .drawer > section {
-    padding: 20px;
+    padding: 16px 18px;
   }
   .drawer h2 {
-    font-size: 25px;
+    font-size: 22px;
+  }
+  .leadModal {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+  }
+  .leadModal > header,
+  .leadModal > footer {
+    padding-block: 13px;
+  }
+  .leadModal .formGrid {
+    gap: 11px;
+    padding-block: 14px;
   }
 }
 

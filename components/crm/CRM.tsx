@@ -810,7 +810,7 @@ function LeadModal({
   return (
     <div className={styles.backdrop} onMouseDown={close}>
       <form
-        className={styles.modal}
+        className={`${styles.modal} ${styles.leadModal}`}
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault();
