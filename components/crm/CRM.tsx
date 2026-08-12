@@ -528,7 +528,35 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const parseMoney = (value: unknown) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".")) || 0;
   const parseDate = (value: unknown) => { if (typeof value === "number") return new Date(Date.UTC(1899,11,30) + value * 86400000).toISOString(); const text = String(value || "").trim(); const br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/); const date = br ? new Date(Number(br[3]),Number(br[2])-1,Number(br[1]),Number(br[4]||12),Number(br[5]||0),Number(br[6]||0)) : new Date(text); return Number.isNaN(date.getTime()) ? "" : date.toISOString(); };
-  const read = async (file: File) => { setFileName(file.name); setError(""); try { const XLSX = await import("xlsx"); const book = XLSX.read(await file.arrayBuffer(), { type: "array" }); const rows = XLSX.utils.sheet_to_json<Record<string,unknown>>(book.Sheets[book.SheetNames[0]], { defval: "" }); const parsed = rows.map((row) => { const keyed = Object.fromEntries(Object.entries(row).map(([key,value]) => [normalize(key),value])); const get = (...keys:string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? ""; return { code: String(get("Código da venda","Codigo da venda")).trim(), date: parseDate(get("Data de pagamento","Data")), name: String(get("Nome do cliente","Nome")).trim(), email: String(get("Email do cliente","Email")).trim().toLowerCase(), phone: String(get("Telefone","WhatsApp")).replace(/\D/g,""), gross: parseMoney(get("Valor Bruto")), net: parseMoney(get("Valor Líquido","Valor Liquido")) }; }).filter((sale) => sale.code && sale.date && sale.name && sale.gross >= 0 && sale.net >= 0); if (!parsed.length) throw new Error(); setSales(parsed); } catch { setSales([]); setError("Não foi possível reconhecer as colunas da planilha."); } };
+  const read = async (file: File) => {
+    setFileName(file.name); setError("");
+    try {
+      const XLSX = await import("xlsx");
+      const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const parsed: ImportedSale[] = [];
+      let headerFound = false;
+      for (const sheetName of book.SheetNames) {
+        const matrix = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName], { header: 1, defval: "", raw: true });
+        const headerIndex = matrix.findIndex((row) => { const keys = row.map((cell) => normalize(String(cell))); return keys.some((key) => ["codigodavenda", "codigovenda", "idvenda"].includes(key)) && keys.some((key) => ["nomedocliente", "nomecliente", "nome"].includes(key)); });
+        if (headerIndex < 0) continue;
+        headerFound = true;
+        const headers = matrix[headerIndex].map((cell) => normalize(String(cell)));
+        for (const values of matrix.slice(headerIndex + 1)) {
+          if (!values.some((value) => String(value ?? "").trim())) continue;
+          const keyed = Object.fromEntries(headers.map((key, index) => [key, values[index] ?? ""]));
+          const get = (...keys:string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? "";
+          const sale = { code: String(get("Código da venda", "Código venda", "ID venda")).trim(), date: parseDate(get("Data de pagamento", "Data da venda", "Data")), name: String(get("Nome do cliente", "Nome cliente", "Nome")).trim(), email: String(get("Email do cliente", "E-mail do cliente", "Email", "E-mail")).trim().toLowerCase(), phone: String(get("Telefone", "WhatsApp", "Celular")).replace(/\D/g,""), gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido")) };
+          if (sale.code && sale.date && sale.name && sale.gross > 0 && sale.net >= 0) parsed.push(sale);
+        }
+      }
+      if (!headerFound) throw new Error("Não encontrei a linha com os títulos Código da venda e Nome do cliente.");
+      if (!parsed.length) throw new Error("Encontrei as colunas, mas nenhuma venda tinha código, nome, data e valor bruto válidos.");
+      setSales(parsed);
+    } catch (reason) {
+      setSales([]);
+      setError(reason instanceof Error && reason.message ? reason.message : "Não foi possível abrir a planilha. Tente exportar novamente em XLSX ou CSV.");
+    }
+  };
   const codes = new Set<string>(); const duplicateCodes = sales.filter((sale) => codes.has(sale.code) || !codes.add(sale.code));
   const allPurchases = leads.flatMap((lead) => purchasesForLead(lead, []));
   const alreadyImported = sales.filter((sale) => allPurchases.some((purchase) => purchase.externalSaleCode === sale.code));
