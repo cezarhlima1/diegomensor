@@ -2299,7 +2299,7 @@
 .pipelineScroller{min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px 0 35px}.pipeline{align-items:start}.pipeline>section{min-height:calc(100dvh - 145px)!important}
 .crm[data-theme="light"] .pipelineTools{border-color:rgba(35,68,84,.09);background:#f8fbfc}.crm[data-theme="light"] .pipelineTools input,.crm[data-theme="light"] .pipelineTools select{border-color:rgba(35,68,84,.12)!important;background:#eef4f6!important;color:#294451!important;color-scheme:light}.crm[data-theme="light"] .pipelineTools form{border-color:rgba(35,68,84,.1)}
 @media(max-width:800px){.pipelineWrap{height:calc(100dvh - 126px)}.pipelineTools{align-items:stretch!important;flex-direction:column;gap:9px;padding:10px 14px!important}.pipelineFilters{overflow-x:auto!important;padding-bottom:1px}.pipelineTools form{padding:0;border:0}.pipelineTools form input{flex:1;width:auto}.pipelineTools form>span{min-width:max-content}.pipelineScroller{padding-top:12px}.pipeline>section{min-height:calc(100dvh - 225px)!important}}
-.pipeline .cleanCard{grid-template-columns:minmax(0,1fr) 34px;gap:10px}.pipeline .cleanCard>a{width:34px;height:34px;border:1px solid;box-shadow:none}.pipeline .cleanCard>a:hover{filter:brightness(1.15);background:inherit}.pipeline .cleanCard svg{width:18px;height:18px}
+.pipeline .cleanCard{grid-template-columns:minmax(0,1fr) 30px;gap:10px}.pipeline .cleanCard>a{width:30px;height:30px;border:1px solid;box-shadow:none}.pipeline .cleanCard>a:hover{filter:brightness(1.15);background:inherit}.pipeline .cleanCard svg{width:15px;height:15px}
 
 /* Detalhe do lead sempre acima da navegação e ocupando toda a área útil. */
 .backdrop:has(.drawer){z-index:1200!important;align-items:center!important;padding:8px!important}

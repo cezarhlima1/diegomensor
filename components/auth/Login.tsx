@@ -41,7 +41,9 @@ export default function Login() {
         .select("is_super_admin")
         .eq("id", data.user.id)
         .single();
-      window.location.assign(profile?.is_super_admin ? "/admin" : "/calculadora");
+      const requestedDestination = new URLSearchParams(window.location.search).get("next");
+      const destination = requestedDestination === "/CRM" ? "/CRM" : profile?.is_super_admin ? "/admin" : "/calculadora";
+      window.location.assign(destination);
     } catch (err) {
       // Ex.: env do Supabase ausente ou falha de rede.
       console.error("Login: falha inesperada ao entrar:", err);

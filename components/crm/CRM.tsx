@@ -83,6 +83,16 @@ const stageColor = (stage: string) => {
   return palette[[...`etapa-${stage}`].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
 };
 const productColor = (product: string) => {
+  const knownProducts: Record<string, string> = {
+    "Precificação para oficinas": "#e58b48",
+    "Produtividade para oficinas": "#42a99b",
+    "Calculadora de precificação": "#8b73d6",
+    "Treinamento OAP": "#d25f80",
+    "Oficina de Alta Performance - OAP": "#d25f80",
+    "Mentoria OAG": "#4f83d7",
+    "Treinamento Presencial": "#78a642",
+  };
+  if (knownProducts[product]) return knownProducts[product];
   const palette = ["#f08a4b", "#af72db", "#3db8b0", "#e05d8d", "#88a83d", "#597ed8", "#d3a23e", "#47a86d", "#c06bc0", "#cf6656", "#718fd2", "#42a5bd"];
   return palette[[...`produto-${product}`].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
 };
@@ -248,8 +258,8 @@ export default function CRM() {
         }
         setDatabaseIssue("");
         setDatabaseStatus("connected");
+        if (!cancelled) setDatabaseReady(true);
       } catch (error) { await registerDatabaseFailure(); console.error("Falha ao conectar CRM ao banco", error); }
-      finally { if (!cancelled) setDatabaseReady(true); }
     };
     connectDatabase();
     return () => { cancelled = true; };
@@ -765,7 +775,7 @@ function Pipeline({
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
                       </div>
                       {lead.phone && (
-                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: stageColor(stage), background: `${stageColor(stage)}18`, borderColor: `${stageColor(stage)}55` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
                           <WhatsAppIcon />
                         </a>
                       )}

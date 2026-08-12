@@ -85,6 +85,7 @@ function redirectParaLogin(request: NextRequest) {
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.search = "";
+  if (request.nextUrl.pathname.startsWith("/CRM")) loginUrl.searchParams.set("next", "/CRM");
   return NextResponse.redirect(loginUrl);
 }
 
