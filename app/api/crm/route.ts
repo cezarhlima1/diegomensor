@@ -12,6 +12,7 @@ type Snapshot = {
   sources?: string[];
   messages?: Array<Record<string, unknown>>;
   goals?: Record<string, number>;
+  stages?: string[];
 };
 
 async function authorized() {
@@ -49,7 +50,7 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   try {
     const db = crmPool();
-    const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult] = await Promise.all([
+    const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult, stagesResult] = await Promise.all([
       db.query("select * from public.crm_leads order by inserted_at"),
       db.query("select * from public.crm_purchases order by closed_at"),
       db.query("select * from public.crm_traffic_campaigns order by campaign_date desc"),
@@ -58,6 +59,7 @@ export async function GET() {
       db.query("select name from public.crm_lead_sources order by created_at"),
       db.query("select * from public.crm_message_templates order by created_at desc"),
       db.query("select month, amount from public.crm_monthly_goals"),
+      db.query("select name from public.crm_pipeline_stages order by position"),
     ]);
     const purchasesByLead = new Map<string, Array<Record<string, unknown>>>();
     for (const row of purchasesResult.rows) {
@@ -78,6 +80,7 @@ export async function GET() {
       sources: sourcesResult.rows.map((row) => row.name),
       messages: messagesResult.rows.map((row) => ({ id: row.id, title: row.title, text: row.body })),
       goals: Object.fromEntries(goalsResult.rows.map((row) => [row.month, Number(row.amount)])),
+      stages: stagesResult.rows.map((row) => row.name),
     });
   } catch (error) {
     console.error("CRM GET failed", error);
@@ -98,6 +101,7 @@ export async function PUT(request: Request) {
   const sources = Array.isArray(snapshot.sources) ? snapshot.sources : [];
   const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
   const goals = snapshot.goals && typeof snapshot.goals === "object" ? snapshot.goals : {};
+  const stages = Array.isArray(snapshot.stages) ? snapshot.stages : [];
   try {
     await withCrmTransaction(async (db) => {
       for (const product of products) {
@@ -123,6 +127,8 @@ export async function PUT(request: Request) {
       for (const message of messages) await db.query("insert into public.crm_message_templates(id,title,body) values($1,$2,$3)", [message.id, message.title, message.text]);
       await db.query("delete from public.crm_monthly_goals");
       for (const [month, amount] of Object.entries(goals)) await db.query("insert into public.crm_monthly_goals(month,amount,updated_at) values($1,$2,now())", [month, Number(amount) || 0]);
+      await db.query("delete from public.crm_pipeline_stages");
+      for (const [position, stage] of stages.entries()) await db.query("insert into public.crm_pipeline_stages(name,position) values($1,$2)", [stage, position]);
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

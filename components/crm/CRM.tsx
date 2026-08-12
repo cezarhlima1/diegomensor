@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 
-type Stage =
-  | "Novo lead"
-  | "Contato feito"
-  | "Em conversação"
-  | "Reunião agendada"
-  | "Proposta"
-  | "Fechado";
+type Stage = string;
 type View = "geral" | "comercial" | "trafego" | "pipeline" | "contatos" | "mensagens";
 type Purchase = { id: string; product: string; value: number; netValue: number; closedAt: string; repurchase: boolean };
 type Lead = {
@@ -76,11 +70,25 @@ const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] 
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
+const dateInputValue = (date?: string) => date ? date.slice(0, 10) : "";
+const dateFromInput = (date: string) => date ? new Date(`${date}T12:00:00`).toISOString() : undefined;
+const tagColor = (tag: string) => {
+  const palette = ["#2f9ed1", "#8b6bd6", "#d28a3f", "#36a879", "#d05f76", "#667fd1", "#b576c7", "#32a6a0", "#c76b3f", "#7a9f35", "#b35c9d"];
+  return palette[[...tag].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
+};
+const stageColor = (stage: string) => {
+  const palette = ["#5aaee8", "#37b6a0", "#8f78dd", "#e5a442", "#df6f7d", "#55b86d", "#d47abe", "#6e92e5", "#d67b4e", "#70a94c", "#a56bd0", "#3ab1c4"];
+  return palette[[...`etapa-${stage}`].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
+};
+const productColor = (product: string) => {
+  const palette = ["#f08a4b", "#af72db", "#3db8b0", "#e05d8d", "#88a83d", "#597ed8", "#d3a23e", "#47a86d", "#c06bc0", "#cf6656", "#718fd2", "#42a5bd"];
+  return palette[[...`produto-${product}`].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
+};
 const hydrateLeadDates = (lead: Lead, createdAt: string): Lead => ({ ...lead, createdAt, conversationAt: lead.conversationAt || (lead.stage !== "Novo lead" ? createdAt : undefined), meetingAt: lead.meetingAt || (["Reunião agendada", "Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), proposalAt: lead.proposalAt || (["Proposta", "Fechado"].includes(lead.stage) ? createdAt : undefined), closedAt: lead.closedAt || (lead.stage === "Fechado" ? createdAt : undefined) });
 
-const stages: Stage[] = [
+const defaultStages: Stage[] = [
   "Novo lead",
-  "Contato feito",
+  "Primeiro contato",
   "Em conversação",
   "Reunião agendada",
   "Proposta",
@@ -128,6 +136,7 @@ export default function CRM() {
   const [, setDatabaseStatus] = useState<"connecting" | "connected" | "offline">("connecting");
   const [, setDatabaseIssue] = useState("");
   const [syncRevision, setSyncRevision] = useState(0);
+  const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
 
   const registerDatabaseFailure = async (response?: Response) => {
     if (!response) { setDatabaseIssue("Falha de rede"); setDatabaseStatus("offline"); return; }
@@ -158,7 +167,7 @@ export default function CRM() {
       if (saved)
         setLeads(
           (JSON.parse(saved) as Lead[]).map((lead) => {
-            const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage;
+            const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage === "Contato feito" ? "Primeiro contato" : lead.stage;
             const createdAt = lead.createdAt || new Date().toISOString();
             const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
             const source = normalizeSource(lead.source);
@@ -228,11 +237,11 @@ export default function CRM() {
         const hasRemoteData = remote.leads?.length || remote.traffic?.length || remote.products?.length || remote.sources?.length || remote.messages?.length || Object.keys(remote.goals || {}).length;
         if (hasRemoteData) {
           if (cancelled) return;
-          setLeads(remote.leads || []); setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
+          setLeads((remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)); setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]); setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
           localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || [])); localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
           window.dispatchEvent(new Event("mensor-crm-database-loaded"));
         } else {
-          const migration = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) });
+          const migration = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) });
           if (!migration.ok) { await registerDatabaseFailure(migration); return; }
         }
         setDatabaseIssue("");
@@ -246,10 +255,10 @@ export default function CRM() {
   useEffect(() => {
     if (!databaseReady) return;
     const timeout = window.setTimeout(() => {
-      fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) }).then(async (response) => { if (response.ok) { setDatabaseIssue(""); setDatabaseStatus("connected"); } else await registerDatabaseFailure(response); }).catch((error) => { void registerDatabaseFailure(); console.error("Falha ao sincronizar CRM", error); });
+      fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) }).then(async (response) => { if (response.ok) { setDatabaseIssue(""); setDatabaseStatus("connected"); } else await registerDatabaseFailure(response); }).catch((error) => { void registerDatabaseFailure(); console.error("Falha ao sincronizar CRM", error); });
     }, 500);
     return () => window.clearTimeout(timeout);
-  }, [databaseReady, leads, traffic, catalogProducts, catalogSources, syncRevision]);
+  }, [databaseReady, leads, traffic, catalogProducts, catalogSources, pipelineStages, syncRevision]);
 
   const reportingLeads = useMemo(() => leads.filter((lead) => inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {
@@ -291,8 +300,8 @@ export default function CRM() {
         if (lead.id !== id) return lead;
         if (stage === "Proposta" || stage === "Fechado") {
           const catalogProduct = catalogProducts.find((item) => item.name === lead.product);
-          const value = catalogProduct?.price || lead.value || productPrice(lead.product) || 0;
-          const netValue = catalogProduct?.netPrice ?? catalogProduct?.price ?? lead.netValue ?? value;
+          const value = lead.value || catalogProduct?.price || productPrice(lead.product) || 0;
+          const netValue = lead.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value;
           const now = new Date().toISOString();
           if (stage === "Fechado" && lead.stage !== "Fechado") {
             const history = purchasesForLead(lead, catalogProducts);
@@ -302,17 +311,27 @@ export default function CRM() {
           return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
         }
         const now = new Date().toISOString();
-        return { ...lead, stage, value: 0, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}) };
+        return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}) };
       }),
     );
   const addLead = (lead: Lead) => {
     setLeads((current) => [lead, ...current]);
     setAdding(false);
   };
-  const updateLead = (id: string, changes: Partial<Lead>) => {
-    setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, ...changes } : lead));
-    setSelected((current) => current?.id === id ? { ...current, ...changes } : current);
+  const applyLeadChanges = (lead: Lead, changes: Partial<Lead>) => {
+    const updatesPurchase = "closedAt" in changes || "value" in changes || "netValue" in changes || "product" in changes;
+    if (!updatesPurchase || !lead.purchases?.length || lead.stage !== "Fechado") return { ...lead, ...changes };
+    const purchases = [...lead.purchases];
+    const index = purchases.length - 1;
+    purchases[index] = { ...purchases[index], closedAt: changes.closedAt || purchases[index].closedAt, value: changes.value ?? purchases[index].value, netValue: changes.netValue ?? purchases[index].netValue, product: changes.product ?? purchases[index].product };
+    return { ...lead, ...changes, purchases };
   };
+  const updateLead = (id: string, changes: Partial<Lead>) => {
+    setLeads((current) => current.map((lead) => lead.id === id ? applyLeadChanges(lead, changes) : lead));
+    setSelected((current) => current?.id === id ? applyLeadChanges(current, changes) : current);
+  };
+  const renameTag = (oldTag: string, newTag: string) => { setLeads((current) => current.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }))); setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) } : lead); };
+  const deleteTag = (tagToDelete: string) => { setLeads((current) => current.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }))); setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) } : lead); };
   const startAscension = (id: string) => {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
@@ -385,22 +404,26 @@ export default function CRM() {
         )}
         {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} save={(record) => saveTraffic(traffic.some((item) => item.id === record.id) ? traffic.map((item) => item.id === record.id ? record : item) : [record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} moveLead={moveLead} select={setSelected} />
+          <Pipeline leads={filtered} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} />}
       </section>
-      {adding && <LeadModal products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} save={addLead} />}
-      {importing && <ImportLeadsModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={(imported) => { setLeads((current) => [...imported, ...current]); setImporting(false); }} />}
+      {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
+      {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={(imported) => { setLeads((current) => [...imported, ...current]); setImporting(false); }} />}
       {selected && (
         <LeadDrawer
           lead={selected}
           products={catalogProducts}
           sources={catalogSources}
+          availableTags={Array.from(new Set(["Desqualificado", ...leads.flatMap((lead) => lead.tags || [])]))}
+          stages={pipelineStages}
           close={() => setSelected(null)}
           update={(changes) => updateLead(selected.id, changes)}
+          renameTag={renameTag}
+          deleteTag={deleteTag}
           remove={() => {
             if (!window.confirm(`Excluir o lead ${selected.name}? Essa ação não poderá ser desfeita.`)) return;
             setLeads((current) => current.filter((lead) => lead.id !== selected.id));
@@ -409,7 +432,7 @@ export default function CRM() {
           move={(stage) => {
             moveLead(selected.id, stage);
             const now = new Date().toISOString();
-            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = catalogProduct?.price || current.value || 0; const netValue = catalogProduct?.netPrice ?? catalogProduct?.price ?? current.netValue ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Contato feito" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
+            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = current.value || catalogProduct?.price || 0; const netValue = current.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -580,18 +603,33 @@ function Dashboard({
 
 function Pipeline({
   leads,
+  stages,
+  setStages,
   moveLead,
   select,
+  search,
 }: {
   leads: Lead[];
+  stages: Stage[];
+  setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
   select: (lead: Lead) => void;
+  search: string;
 }) {
+  const [range, setRange] = useState({ start: "", end: "" });
+  const [archiveFilter, setArchiveFilter] = useState<"Ativos" | "Desqualificados" | "Todos">("Ativos");
+  const [newStage, setNewStage] = useState("");
+  const archived = (lead: Lead) => lead.tags?.includes("Desqualificado");
+  const visible = leads.filter((lead) => (!range.start || (lead.createdAt || "").slice(0,10) >= range.start) && (!range.end || (lead.createdAt || "").slice(0,10) <= range.end) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
+  const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
+  const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipeline}>
+      <div className={styles.pipelineTools}><div><label><span>Data inicial</span><input type="date" value={range.start} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={range.end} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><span>Exibir</span><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Nome da nova etapa" /><button>+ Adicionar etapa</button></form></div>
+      <div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
-          const items = leads.filter((lead) => lead.stage === stage);
+          const items = visible.filter((lead) => lead.stage === stage);
+          const stageIndex = stages.indexOf(stage);
           return (
             <section
               key={stage}
@@ -602,16 +640,18 @@ function Pipeline({
             >
               <header>
                 <div>
-                  <i />
+                  <i style={{ background: stageColor(stage), boxShadow: `0 0 9px ${stageColor(stage)}88` }} />
                   <b>{stage}</b>
                   <span>{items.length}</span>
                 </div>
+                <div className={styles.stageActions}><button onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
               </header>
               <div className={styles.cards}>
                 {items.map((lead) => (
                   <article
                     key={lead.id}
                     draggable
+                    style={{ borderLeft: `3px solid ${stageColor(stage)}` }}
                     onDragStart={(event) =>
                       event.dataTransfer.setData("leadId", lead.id)
                     }
@@ -621,7 +661,8 @@ function Pipeline({
                       <div>
                         <h3>{lead.name}</h3>
                         <p><span>Origem</span>{lead.source}</p>
-                        {lead.product && lead.product !== "Não informado" && <em className={styles.productTag}>{lead.product}</em>}
+                        {lead.product && lead.product !== "Não informado" && <em className={styles.productTag} style={{ color: productColor(lead.product), borderColor: `${productColor(lead.product)}66`, background: `${productColor(lead.product)}18` }}>{lead.product}</em>}
+                        {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
                       </div>
                       {lead.phone && (
                         <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
@@ -681,7 +722,7 @@ function Contacts({
             <b>Origem</b>
             <b>Etapa</b>
             <b>Esteira</b>
-            <b>Próxima ação</b>
+            <b>Etiquetas</b>
           </header>
           {visibleLeads.map((lead) => (
             <button key={lead.id} onClick={() => select(lead)}>
@@ -695,9 +736,9 @@ function Contacts({
                 </span>
               </span>
               <span><i className={styles.sourceTag}>{lead.source}</i></span>
-              <span>{lead.stage}</span>
+              <span><i className={styles.stageTag} style={{ color: stageColor(lead.stage), borderColor: `${stageColor(lead.stage)}55`, background: `${stageColor(lead.stage)}16` }}>{lead.stage}</i></span>
               <strong>{canAscend(lead) ? "Possível ascensão" : hasRepurchase(lead) ? "Recompra" : purchasesForLead(lead, products).length ? "Cliente" : "Novo lead"}</strong>
-              <span>{lead.nextAction}</span>
+              <span>{lead.tags?.slice(0, 2).join(" · ") || "—"}</span>
             </button>
           ))}
           {!visibleLeads.length && <div className={styles.emptyContacts}>Nenhum contato encontrado com essa etiqueta de origem.</div>}
@@ -745,7 +786,7 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   );
 }
 
-function ImportLeadsModal({ existing, products, sources, close, save }: { existing: Lead[]; products: ProductDefinition[]; sources: string[]; close: () => void; save: (leads: Lead[]) => void }) {
+function ImportLeadsModal({ existing, stages, products, sources, close, save }: { existing: Lead[]; stages: Stage[]; products: ProductDefinition[]; sources: string[]; close: () => void; save: (leads: Lead[]) => void }) {
   type PreviewRow = { name: string; company: string; source: string; product: string; stage: string; lead?: Lead; status: "Pronto" | "Duplicado" | "Inválido"; issue?: string };
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [fileName, setFileName] = useState("");
@@ -760,7 +801,7 @@ function ImportLeadsModal({ existing, products, sources, close, save }: { existi
     return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   };
   const numberValue = (value: unknown) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".")) || 0;
-  const downloadTemplate = async () => { const XLSX = await import("xlsx"); const headers = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Temperatura", "Data do lead", "Data da conversa", "Data da reunião", "Data da proposta", "Data do fechamento", "Próxima ação", "Valor bruto personalizado", "Valor líquido personalizado"]]; const sheet = XLSX.utils.aoa_to_sheet(headers); sheet["!cols"] = headers[0].map((header) => ({ wch: Math.max(18, header.length + 3) })); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, sheet, "Leads"); XLSX.writeFile(workbook, "modelo-importacao-leads.xlsx"); };
+  const downloadTemplate = async () => { const XLSX = await import("xlsx"); const headers = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Temperatura", "Data do lead", "Data da conversa", "Data da reunião", "Data da proposta", "Data do fechamento", "Valor bruto personalizado", "Valor líquido personalizado"]]; const sheet = XLSX.utils.aoa_to_sheet(headers); sheet["!cols"] = headers[0].map((header) => ({ wch: Math.max(18, header.length + 3) })); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, sheet, "Leads"); XLSX.writeFile(workbook, "modelo-importacao-leads.xlsx"); };
   const readFile = async (file: File) => {
     setReading(true); setFileName(file.name);
     try {
@@ -774,18 +815,17 @@ function ImportLeadsModal({ existing, products, sources, close, save }: { existi
         const get = (...keys: string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? "";
         const name = String(get("Nome")).trim(); const company = String(get("Empresa", "Oficina")).trim(); const phone = String(get("WhatsApp", "Telefone")).trim(); const email = String(get("E-mail", "Email")).trim().toLowerCase();
         const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || "Cadastro";
-        const productInput = String(get("Produto")).trim(); const catalogProduct = products.find((item) => normalize(item.name) === normalize(productInput)); const product = normalize(productInput) === normalize("Outro valor") ? "Outro valor" : catalogProduct?.name || productInput || "Não informado";
+        const productInput = String(get("Produto")).trim(); const catalogProduct = products.find((item) => normalize(item.name) === normalize(productInput)); const product = catalogProduct?.name || productInput || "Não informado";
         const stageInput = String(get("Etapa")).trim(); const stage = stages.find((item) => normalize(item) === normalize(stageInput)) || "Novo lead";
         const temperatureInput = String(get("Temperatura")).trim(); const temperature: Lead["temperature"] = ["Quente","Morno","Frio"].find((item) => normalize(item) === normalize(temperatureInput)) as Lead["temperature"] || "Morno";
         const createdAt = parseDate(get("Data do lead", "Data lead", "Data")); const conversationAt = parseDate(get("Data da conversa")); const meetingAt = parseDate(get("Data da reunião", "Data da reuniao")); const proposalAt = parseDate(get("Data da proposta")); const closedAt = parseDate(get("Data do fechamento"));
-        const value = product === "Outro valor" ? numberValue(get("Valor bruto personalizado", "Valor bruto")) : catalogProduct?.price || 0; const netValue = product === "Outro valor" ? numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido")) : catalogProduct?.netPrice ?? catalogProduct?.price ?? 0;
+        const customGross = numberValue(get("Valor bruto personalizado", "Valor bruto")); const customNet = numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido")); const value = customGross || catalogProduct?.price || 0; const netValue = customNet || (catalogProduct?.netPrice ?? catalogProduct?.price ?? 0);
         const keys = [email ? `e:${email}` : "", phone ? `p:${phone.replace(/\D/g, "")}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
         let issue = !name ? "Nome não informado" : !createdAt ? "Data do lead inválida" : "";
-        if (!issue && productInput && product === productInput && product !== "Outro valor" && !catalogProduct) issue = "Produto não cadastrado";
+        if (!issue && productInput && product === productInput && !catalogProduct) issue = "Produto não cadastrado";
         if (!issue && stage === "Fechado" && !closedAt) issue = "Fechamento sem data";
-        if (!issue && product === "Outro valor" && (!value || !netValue)) issue = "Bruto/líquido não informado";
         const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: `import-${Date.now()}-${index}`, product, value, netValue, closedAt, repurchase: false }] : undefined;
-        const lead: Lead | undefined = issue ? undefined : { id: `import-${Date.now()}-${index}`, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: String(get("Próxima ação", "Proxima acao")).trim() || "Fazer primeiro contato", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
+        const lead: Lead | undefined = issue ? undefined : { id: `import-${Date.now()}-${index}`, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: "", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
         return { name: name || `Linha ${index + 2}`, company, source, product, stage, lead, status: issue ? "Inválido" : duplicate ? "Duplicado" : "Pronto", issue: issue || (duplicate ? "WhatsApp ou e-mail já cadastrado" : undefined) };
       });
       setRows(parsed);
@@ -797,15 +837,19 @@ function ImportLeadsModal({ existing, products, sources, close, save }: { existi
 }
 
 function LeadModal({
+  existing,
   products,
   sources,
   close,
   save,
+  duplicate,
 }: {
+  existing: Lead[];
   products: ProductDefinition[];
   sources: string[];
   close: () => void;
   save: (lead: Lead) => void;
+  duplicate: (lead: Lead) => void;
 }) {
   const [draft, setDraft] = useState({
     name: "",
@@ -816,8 +860,9 @@ function LeadModal({
     product: products[0]?.name || "",
     customGross: "",
     customNet: "",
+    customDeal: false,
     temperature: "Morno" as Lead["temperature"],
-    nextAction: "Fazer primeiro contato",
+    nextAction: "",
   });
   return (
     <div className={styles.backdrop} onMouseDown={close}>
@@ -826,12 +871,15 @@ function LeadModal({
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault();
+          const email = draft.email.trim().toLowerCase(); const phone = draft.phone.replace(/\D/g, "");
+          const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && lead.phone.replace(/\D/g, "") === phone));
+          if (match) { window.alert("Este WhatsApp ou e-mail já está cadastrado. Vamos abrir o lead existente para você continuar o atendimento."); duplicate(match); return; }
           save({
             ...draft,
             id: String(Date.now()),
             stage: "Novo lead",
-            value: draft.product === "Outro valor" ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
-            netValue: draft.product === "Outro valor" ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
+            value: draft.customDeal ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
+            netValue: draft.customDeal ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
             date: "Hoje",
             createdAt: new Date().toISOString(),
           });
@@ -880,10 +928,10 @@ function LeadModal({
             <span>Produto</span>
             <select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>
               {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
-              <option value="Outro valor">Outro valor</option>
             </select>
           </label>
-          {draft.product === "Outro valor" && <><Input label="Valor bruto negociado" value={draft.customGross} set={(customGross) => setDraft({ ...draft, customGross })} type="number" required /><Input label="Valor líquido negociado" value={draft.customNet} set={(customNet) => setDraft({ ...draft, customNet })} type="number" required /></>}
+          <label className={styles.customDealToggle}><input type="checkbox" checked={draft.customDeal} onChange={(event) => setDraft({ ...draft, customDeal: event.target.checked })} /><span>Negociação com valores personalizados</span></label>
+          {draft.customDeal && <><Input label="Valor bruto negociado" value={draft.customGross} set={(customGross) => setDraft({ ...draft, customGross })} type="number" required /><Input label="Valor líquido negociado" value={draft.customNet} set={(customNet) => setDraft({ ...draft, customNet })} type="number" required /></>}
           <label>
             <span>Temperatura</span>
             <select
@@ -900,11 +948,6 @@ function LeadModal({
               <option>Frio</option>
             </select>
           </label>
-          <Input
-            label="Próxima ação"
-            value={draft.nextAction}
-            set={(nextAction) => setDraft({ ...draft, nextAction })}
-          />
         </div>
         <footer>
           <button type="button" onClick={close}>
@@ -920,29 +963,39 @@ function LeadDrawer({
   lead,
   products,
   sources,
+  availableTags,
+  stages,
   close,
   move,
   update,
+  renameTag,
+  deleteTag,
   remove,
   startAscension,
 }: {
   lead: Lead;
   products: ProductDefinition[];
   sources: string[];
+  availableTags: string[];
+  stages: Stage[];
   close: () => void;
   move: (stage: Stage) => void;
   update: (changes: Partial<Lead>) => void;
+  renameTag: (oldTag: string, newTag: string) => void;
+  deleteTag: (tag: string) => void;
   remove: () => void;
   startAscension: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature, nextAction: lead.nextAction });
+  const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature });
+  const selectedProduct = products.find((item) => item.name === lead.product);
+  const [customDeal, setCustomDeal] = useState(Boolean(selectedProduct && (lead.value !== selectedProduct.price || lead.netValue !== (selectedProduct.netPrice ?? selectedProduct.price))));
   const [newTag, setNewTag] = useState("");
   const [editingTag, setEditingTag] = useState<number | null>(null);
   const [tagDraft, setTagDraft] = useState("");
   const tags = lead.tags || [];
-  const addTag = () => { const tag = newTag.trim(); if (!tag || tags.some((item) => item.toLowerCase() === tag.toLowerCase())) return; update({ tags: [...tags, tag] }); setNewTag(""); };
-  const saveTag = (index: number) => { const tag = tagDraft.trim(); if (!tag) return; update({ tags: tags.map((item, itemIndex) => itemIndex === index ? tag : item) }); setEditingTag(null); setTagDraft(""); };
+  const addTag = () => { const typed = newTag.trim(); if (!typed) return; const existing = availableTags.find((item) => item.toLowerCase() === typed.toLowerCase()); const tag = existing || typed; if (!tags.includes(tag)) update({ tags: [...tags, tag] }); setNewTag(""); };
+  const saveTag = (index: number) => { const tag = tagDraft.trim(); if (!tag) return; renameTag(tags[index], tag); setEditingTag(null); setTagDraft(""); };
   const purchaseHistory = purchasesForLead(lead, products);
   const lastProduct = purchaseHistory.at(-1)?.product;
   const ladder = productLadder(products);
@@ -974,7 +1027,6 @@ function LeadDrawer({
             <Input label="WhatsApp" value={draft.phone} set={(phone) => setDraft({ ...draft, phone })} />
             <Input label="E-mail" value={draft.email} set={(email) => setDraft({ ...draft, email })} type="email" />
             <label><span>Temperatura</span><select value={draft.temperature} onChange={(event) => setDraft({ ...draft, temperature: event.target.value as Lead["temperature"] })}><option>Quente</option><option>Morno</option><option>Frio</option></select></label>
-            <Input label="Próxima ação" value={draft.nextAction} set={(nextAction) => setDraft({ ...draft, nextAction })} />
           </div>
           <button className={styles.saveLeadEdit} type="button" onClick={() => { update(draft); setEditing(false); }}>Salvar alterações</button>
         </section>}
@@ -1006,10 +1058,10 @@ function LeadDrawer({
             <select value={lead.product || "Não informado"} onChange={(event) => { const product = event.target.value; const selectedProduct = products.find((item) => item.name === product); update({ product, value: selectedProduct?.price || 0, netValue: selectedProduct?.netPrice ?? selectedProduct?.price ?? 0 }); }}>
               <option value="Não informado">Não informado</option>
               {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
-              <option value="Outro valor">Outro valor</option>
             </select>
           </label>
-          {lead.product === "Outro valor" && <div className={styles.customDealValues}><label><span>Valor bruto negociado</span><input type="number" min="0" step="0.01" value={lead.value || ""} onChange={(event) => update({ value: Number(event.target.value) || 0 })} /></label><label><span>Valor líquido negociado</span><input type="number" min="0" step="0.01" value={lead.netValue || ""} onChange={(event) => update({ netValue: Number(event.target.value) || 0 })} /></label></div>}
+          {lead.product && lead.product !== "Não informado" && <label className={styles.customDealToggle}><input type="checkbox" checked={customDeal} onChange={(event) => { const enabled = event.target.checked; setCustomDeal(enabled); const product = products.find((item) => item.name === lead.product); if (!enabled && product) update({ value: product.price, netValue: product.netPrice ?? product.price }); }} /><span>Usar valores personalizados nesta negociação</span></label>}
+          {customDeal && <div className={styles.customDealValues}><label><span>Valor bruto negociado</span><input type="number" min="0" step="0.01" value={lead.value || ""} onChange={(event) => update({ value: Number(event.target.value) || 0 })} /></label><label><span>Valor líquido negociado</span><input type="number" min="0" step="0.01" value={lead.netValue || ""} onChange={(event) => update({ netValue: Number(event.target.value) || 0 })} /></label></div>}
           <label>
             <span>Etapa atual</span>
             <select
@@ -1027,18 +1079,19 @@ function LeadDrawer({
           <label><span>Observação do lead</span><textarea value={lead.notes || ""} onChange={(event) => update({ notes: event.target.value })} placeholder="Registre contexto, objeções e próximos detalhes importantes..." rows={4} /></label>
           <div className={styles.leadTags}>
             <span>Etiquetas</span>
-            <div>{tags.map((tag, index) => editingTag === index ? <form key={`${tag}-${index}`} onSubmit={(event) => { event.preventDefault(); saveTag(index); }}><input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} autoFocus /><button type="submit">Salvar</button><button type="button" onClick={() => setEditingTag(null)}>×</button></form> : <span key={`${tag}-${index}`}><button type="button" onClick={() => { setEditingTag(index); setTagDraft(tag); }}>{tag}</button><button type="button" aria-label={`Excluir etiqueta ${tag}`} onClick={() => update({ tags: tags.filter((_, itemIndex) => itemIndex !== index) })}>×</button></span>)}</div>
+            <div>{tags.map((tag, index) => tag === "Desqualificado" ? <span key={tag} style={{ borderColor: "#d05f76", background: "#d05f7622" }}><button type="button" style={{ color: "#d05f76", cursor: "default" }}>Desqualificado</button><button type="button" aria-label="Remover Desqualificado deste lead" onClick={() => update({ tags: tags.filter((item) => item !== tag) })}>×</button></span> : editingTag === index ? <form key={`${tag}-${index}`} style={{ borderColor: tagColor(tag) }} onSubmit={(event) => { event.preventDefault(); saveTag(index); }}><input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} onBlur={() => saveTag(index)} autoFocus /><button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => deleteTag(tag)}>×</button></form> : <span key={`${tag}-${index}`} style={{ borderColor: tagColor(tag), background: `${tagColor(tag)}22` }}><button type="button" style={{ color: tagColor(tag) }} onClick={() => { setEditingTag(index); setTagDraft(tag); }}>{tag}</button><button type="button" aria-label={`Excluir etiqueta ${tag} de todos os cadastros`} onClick={() => deleteTag(tag)}>×</button></span>)}</div>
             <form onSubmit={(event) => { event.preventDefault(); addTag(); }}><input value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder="Nova etiqueta" /><button type="submit">+ Adicionar</button></form>
+            {availableTags.filter((tag) => !tags.includes(tag)).length > 0 && <div className={styles.availableTags}>{availableTags.filter((tag) => !tags.includes(tag)).map((tag) => <button type="button" key={tag} style={{ borderColor: tagColor(tag), color: tagColor(tag) }} onClick={() => update({ tags: [...tags, tag] })}>+ {tag}</button>)}</div>}
           </div>
         </section>
         <section>
           <small>Histórico de datas</small>
           <div className={styles.leadTimeline}>
-            <p><span>Lead gerado</span><b>{formatEventDate(lead.createdAt)}</b></p>
-            <p><span>Conversa iniciada</span><b>{formatEventDate(lead.conversationAt)}</b></p>
-            <p><span>Reunião agendada</span><b>{formatEventDate(lead.meetingAt)}</b></p>
-            <p><span>Proposta enviada</span><b>{formatEventDate(lead.proposalAt)}</b></p>
-            <p><span>Fechamento</span><b>{formatEventDate(lead.closedAt)}</b></p>
+            <label><span>Lead gerado</span><input type="date" value={dateInputValue(lead.createdAt)} onChange={(event) => update({ createdAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Reunião agendada</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Proposta enviada</span><input type="date" value={dateInputValue(lead.proposalAt)} onChange={(event) => update({ proposalAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
         </section>
         {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"} · {formatEventDate(purchase.closedAt)}</small></div><strong><Money value={purchase.value} /></strong></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}

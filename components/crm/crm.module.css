@@ -329,6 +329,8 @@
   overflow-x: auto;
   padding: 24px 0 45px;
 }
+.pipelineTools{display:flex;justify-content:space-between;gap:16px;align-items:end;padding:0 24px 18px}.pipelineTools>div,.pipelineTools form{display:flex;gap:9px;align-items:end}.pipelineTools label{display:grid;gap:5px}.pipelineTools label span{color:#8fa5b1;font-size:9px;font-weight:700}.pipelineTools input,.pipelineTools select{height:39px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#102735;color:#eef7fb;color-scheme:dark}.pipelineTools button{height:39px;padding:0 12px;border:1px solid rgba(105,205,245,.25);border-radius:8px;background:rgba(7,139,212,.12);color:#75d4fa;font-weight:700;cursor:pointer}.stageActions{display:flex!important;gap:3px!important}.stageActions button{width:23px;height:23px;border:1px solid var(--line);border-radius:6px;background:transparent;color:#718692;cursor:pointer}.stageActions button:disabled{opacity:.25;cursor:default}
+@media(max-width:700px){.pipelineTools{align-items:stretch;flex-direction:column;padding-inline:14px}.pipelineTools>div{overflow-x:auto}.pipelineTools form input{min-width:0;flex:1}}
 .pipeline {
   display: grid;
   grid-template-columns: repeat(6, minmax(245px, 1fr));
@@ -425,6 +427,8 @@
   color: #728691;
   font-size: 9px;
 }
+.cardTags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.cardTags span{padding:4px 6px;border:1px solid;border-radius:999px;font-size:7px;font-weight:750}
+.stageTag{display:inline-flex;padding:5px 7px;border:1px solid;border-radius:999px;font-size:8px;font-style:normal;font-weight:750}
 .cards > article > strong {
   display: block;
   margin-top: 13px;
@@ -1642,9 +1646,9 @@
 .drawer {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  width: min(800px, 100%);
-  height: auto;
-  max-height: min(760px, calc(100dvh - 48px));
+  width: min(1040px, 100%);
+  height: calc(100dvh - 32px);
+  max-height: none;
   overflow: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--line);
@@ -1674,6 +1678,7 @@
 .drawer > section:last-child {
   grid-column: 1/-1;
 }
+.leadTimeline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.leadTimeline label{margin:0}.leadTimeline input{width:100%;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#102735;color:#f0f7fa;color-scheme:dark}.customDealToggle{display:flex!important;grid-column:1/-1;flex-direction:row;align-items:center;gap:9px}.customDealToggle input{width:16px!important;height:16px!important}.availableTags{margin-top:2px}.availableTags button{border:1px solid!important;border-radius:999px!important;background:transparent!important;padding:6px 9px!important;font-size:9px!important}
 @media (max-width: 700px) {
   .backdrop:has(.drawer) {
     align-items: end;
@@ -1683,6 +1688,7 @@
     display: block;
     width: 100%;
     max-height: calc(100dvh - 20px);
+    height: calc(100dvh - 20px);
     border-radius: 18px 18px 10px 10px;
   }
   .drawer > header,
@@ -1698,6 +1704,7 @@
   .leadEditGrid {
     grid-template-columns: 1fr;
   }
+  .leadTimeline{grid-template-columns:1fr}
   .leadModal {
     width: 100%;
     max-height: calc(100dvh - 20px);
