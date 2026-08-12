@@ -378,9 +378,10 @@ export default function CRM() {
       </aside>
       <section className={styles.workspace}>
         <header className={styles.topbar}>
-          <div>
+          <div className={styles.pageHeading}>
             <small>Mensor Treinamentos / {navigation.find(([id]) => id === view)?.[1]}</small>
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
+            {view === "geral" && <p>Orgânico × Tráfego</p>}
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
@@ -464,13 +465,17 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const totalSales = organicSales + directSales;
   const goal = goals[goalMonth] || 0;
   const goalProgress = goal ? totalRevenue / goal * 100 : 0;
+  const balanceProgress = goal ? periodBalance / goal * 100 : 0;
+  const balanceRatio = Math.max(0, Math.min(1, balanceProgress / 100));
+  const balanceHue = 354 + balanceRatio * 132;
+  const balanceStyle = { "--balance-hue": balanceHue } as React.CSSProperties;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
-    <section className={styles.overviewHero}><div><h2>Orgânico x Tráfego</h2></div><strong><Money value={periodBalance} /><small>saldo do período</small></strong></section>
     <div className={styles.overviewKpis}>
-      <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail={`${totalSales} vendas totais`} />
+      <article className={styles.balanceCard} style={balanceStyle}><span>Saldo total do período</span><strong><Money value={periodBalance} /></strong><small>{goal ? `${Math.max(0, balanceProgress).toFixed(1)}% da meta` : "Defina a meta do mês"}</small></article>
+      <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail="Faturamento total do período" />
+      <Kpi label="Vendas totais" value={String(totalSales)} detail="Orgânico + tráfego" />
       <Kpi label="Receita líquida" value={<Money value={totalNet} />} detail={<><Money value={Math.max(0, totalRevenue - totalNet)} /> em taxas</>} />
       <Kpi label="Investimento em tráfego" value={<Money value={trafficInvestment} />} detail="Descontado do saldo do período" />
-      <Kpi label="Saldo do período" value={<Money value={periodBalance} />} detail={<><Money value={totalNet} /> líquidos − investimento</>} />
       <Kpi label="Receita orgânica" value={<Money value={organicRevenue} />} detail={<>Líquido <Money value={organicNet} /></>} />
       <Kpi label="Receita do tráfego" value={<Money value={trafficRevenue} />} detail={<>Líquido <Money value={trafficNet} /></>} />
       <Kpi label="Receita de recompra" value={<Money value={repurchaseRevenue} />} detail={`${repurchaseShare.toFixed(1)}% da receita orgânica`} />
