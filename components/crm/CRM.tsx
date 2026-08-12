@@ -559,14 +559,27 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   const [sales, setSales] = useState<ImportedSale[]>([]);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const repairEncoding = (value: string) => {
+    if (!/[ÃÂ]/.test(value)) return value;
+    try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from([...value].map((character) => character.charCodeAt(0)))); } catch { return value; }
+  };
+  const normalize = (value: string) => repairEncoding(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const parseMoney = (value: unknown) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".")) || 0;
   const parseDate = (value: unknown) => { if (typeof value === "number") return new Date(Date.UTC(1899,11,30) + value * 86400000).toISOString(); const text = String(value || "").trim(); const br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/); const date = br ? new Date(Number(br[3]),Number(br[2])-1,Number(br[1]),Number(br[4]||12),Number(br[5]||0),Number(br[6]||0)) : new Date(text); return Number.isNaN(date.getTime()) ? "" : date.toISOString(); };
   const read = async (file: File) => {
     setFileName(file.name); setError("");
     try {
       const XLSX = await import("xlsx");
-      const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const bytes = await file.arrayBuffer();
+      const isCsv = file.name.toLowerCase().endsWith(".csv") || /csv/i.test(file.type);
+      let book;
+      if (isCsv) {
+        let csvText = new TextDecoder("utf-8").decode(bytes);
+        if (csvText.includes("�")) csvText = new TextDecoder("windows-1252").decode(bytes);
+        book = XLSX.read(csvText.replace(/^\uFEFF/, ""), { type: "string", cellDates: true, raw: true });
+      } else {
+        book = XLSX.read(bytes, { type: "array", cellDates: true });
+      }
       const parsed: ImportedSale[] = [];
       let headerFound = false;
       let detectedHeaders: string[] = [];
@@ -601,9 +614,9 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
             const fuzzyKey = Object.keys(keyed).find((header) => aliases.some((alias) => header.includes(alias) || alias.includes(header)));
             return fuzzyKey ? keyed[fuzzyKey] : "";
           };
-          const email = String(get("Email do cliente", "E-mail do cliente", "Email do comprador", "E-mail do comprador", "Customer email", "Buyer email", "Email", "E-mail")).trim().toLowerCase();
+          const email = repairEncoding(String(get("Email do cliente", "E-mail do cliente", "Email do comprador", "E-mail do comprador", "Customer email", "Buyer email", "Email", "E-mail"))).trim().toLowerCase();
           const phone = String(get("Telefone do cliente", "Telefone do comprador", "Customer phone", "Buyer phone", "Telefone", "WhatsApp", "Celular", "Phone")).replace(/\D/g,"");
-          const sale = { code: String(get("Código da venda", "Código venda", "Código da transação", "Código transação", "Código do pedido", "Código pedido", "ID venda", "ID transação", "ID pedido", "Transaction ID", "Sale ID", "Order ID", "Transação", "Pedido", "Código")).trim(), date: parseDate(get("Data de pagamento", "Data do pagamento", "Data da venda", "Data da transação", "Data do pedido", "Payment date", "Sale date", "Transaction date", "Order date", "Data", "Date")), name: String(get("Nome do cliente", "Nome cliente", "Nome do comprador", "Nome comprador", "Customer name", "Buyer name", "Cliente", "Comprador", "Nome")).trim() || email || phone, email, phone, gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor da transação", "Valor do pedido", "Gross value", "Gross amount", "Sale value", "Amount", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido", "Valor líquido da venda", "Net value", "Net amount")) };
+          const sale = { code: repairEncoding(String(get("Código da venda", "Código venda", "Código da transação", "Código transação", "Código do pedido", "Código pedido", "ID venda", "ID transação", "ID pedido", "Transaction ID", "Sale ID", "Order ID", "Transação", "Pedido", "Código"))).trim(), date: parseDate(get("Data de pagamento", "Data do pagamento", "Data da venda", "Data da transação", "Data do pedido", "Payment date", "Sale date", "Transaction date", "Order date", "Data", "Date")), name: repairEncoding(String(get("Nome do cliente", "Nome cliente", "Nome do comprador", "Nome comprador", "Customer name", "Buyer name", "Cliente", "Comprador", "Nome"))).trim() || email || phone, email, phone, gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor da transação", "Valor do pedido", "Gross value", "Gross amount", "Sale value", "Amount", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido", "Valor líquido da venda", "Net value", "Net amount")) };
           if (sale.code && sale.date && sale.name && sale.gross > 0 && sale.net >= 0) parsed.push(sale);
         }
       }
