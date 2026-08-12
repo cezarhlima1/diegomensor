@@ -537,19 +537,38 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
       let headerFound = false;
       for (const sheetName of book.SheetNames) {
         const matrix = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName], { header: 1, defval: "", raw: true });
-        const headerIndex = matrix.findIndex((row) => { const keys = row.map((cell) => normalize(String(cell))); return keys.some((key) => ["codigodavenda", "codigovenda", "idvenda"].includes(key)) && keys.some((key) => ["nomedocliente", "nomecliente", "nome"].includes(key)); });
+        const headerAliases = {
+          code: ["codigodavenda", "codigovenda", "codigodatransacao", "codigotransacao", "codigodopedido", "codigopedido", "idvenda", "idtransacao", "idpedido", "transacao", "pedido", "codigo"],
+          name: ["nomedocliente", "nomecliente", "nomedocomprador", "nomecomprador", "cliente", "comprador", "nome"],
+          email: ["emaildocliente", "emailcliente", "emaildocomprador", "emailcomprador", "email"],
+          phone: ["telefonedocliente", "telefonecliente", "telefonedocomprador", "telefonecomprador", "telefone", "whatsapp", "celular"],
+          date: ["datadepagamento", "datadopagamento", "datadavenda", "datadatransacao", "datadopedido", "data"],
+          gross: ["valorbruto", "valordavenda", "valordatransacao", "valordopedido", "valor"],
+        };
+        const hasAlias = (keys: string[], aliases: string[]) => keys.some((key) => aliases.includes(key) || aliases.some((alias) => key.includes(alias)));
+        const headerIndex = matrix.findIndex((row) => {
+          const keys = row.map((cell) => normalize(String(cell))).filter(Boolean);
+          const identity = hasAlias(keys, headerAliases.name) || hasAlias(keys, headerAliases.email) || hasAlias(keys, headerAliases.phone);
+          return hasAlias(keys, headerAliases.code) && identity && hasAlias(keys, headerAliases.date) && hasAlias(keys, headerAliases.gross);
+        });
         if (headerIndex < 0) continue;
         headerFound = true;
         const headers = matrix[headerIndex].map((cell) => normalize(String(cell)));
         for (const values of matrix.slice(headerIndex + 1)) {
           if (!values.some((value) => String(value ?? "").trim())) continue;
           const keyed = Object.fromEntries(headers.map((key, index) => [key, values[index] ?? ""]));
-          const get = (...keys:string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? "";
-          const sale = { code: String(get("Código da venda", "Código venda", "ID venda")).trim(), date: parseDate(get("Data de pagamento", "Data da venda", "Data")), name: String(get("Nome do cliente", "Nome cliente", "Nome")).trim(), email: String(get("Email do cliente", "E-mail do cliente", "Email", "E-mail")).trim().toLowerCase(), phone: String(get("Telefone", "WhatsApp", "Celular")).replace(/\D/g,""), gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido")) };
+          const get = (...keys:string[]) => {
+            const aliases = keys.map(normalize);
+            const exact = aliases.map((key) => keyed[key]).find((value) => String(value ?? "").trim());
+            if (exact !== undefined) return exact;
+            const fuzzyKey = Object.keys(keyed).find((header) => aliases.some((alias) => header.includes(alias) || alias.includes(header)));
+            return fuzzyKey ? keyed[fuzzyKey] : "";
+          };
+          const sale = { code: String(get("Código da venda", "Código venda", "Código da transação", "Código transação", "Código do pedido", "Código pedido", "ID venda", "ID transação", "ID pedido", "Transação", "Pedido", "Código")).trim(), date: parseDate(get("Data de pagamento", "Data do pagamento", "Data da venda", "Data da transação", "Data do pedido", "Data")), name: String(get("Nome do cliente", "Nome cliente", "Nome do comprador", "Nome comprador", "Cliente", "Comprador", "Nome")).trim(), email: String(get("Email do cliente", "E-mail do cliente", "Email do comprador", "E-mail do comprador", "Email", "E-mail")).trim().toLowerCase(), phone: String(get("Telefone do cliente", "Telefone do comprador", "Telefone", "WhatsApp", "Celular")).replace(/\D/g,""), gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor da transação", "Valor do pedido", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido", "Valor líquido da venda")) };
           if (sale.code && sale.date && sale.name && sale.gross > 0 && sale.net >= 0) parsed.push(sale);
         }
       }
-      if (!headerFound) throw new Error("Não encontrei a linha com os títulos Código da venda e Nome do cliente.");
+      if (!headerFound) throw new Error("Não consegui identificar o cabeçalho. A planilha precisa ter código/pedido, data, cliente (ou e-mail/telefone) e valor da venda.");
       if (!parsed.length) throw new Error("Encontrei as colunas, mas nenhuma venda tinha código, nome, data e valor bruto válidos.");
       setSales(parsed);
     } catch (reason) {
