@@ -66,7 +66,7 @@ const normalizeSource = (source: string) => legacySources[source] || (leadSource
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog].sort((a, b) => a.price - b.price);
-const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
+const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases !== undefined ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
@@ -319,6 +319,7 @@ export default function CRM() {
     setAdding(false);
   };
   const applyLeadChanges = (lead: Lead, changes: Partial<Lead>) => {
+    if ("purchases" in changes) return { ...lead, ...changes };
     const updatesPurchase = "closedAt" in changes || "value" in changes || "netValue" in changes || "product" in changes;
     if (!updatesPurchase || !lead.purchases?.length || lead.stage !== "Fechado") return { ...lead, ...changes };
     const purchases = [...lead.purchases];
@@ -625,8 +626,8 @@ function Pipeline({
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div><label><span>Data inicial</span><input type="date" value={range.start} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={range.end} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><span>Exibir</span><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Nome da nova etapa" /><button>+ Adicionar etapa</button></form></div>
-      <div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><label><small>De</small><input type="date" value={range.start} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Até</small><input type="date" value={range.end} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Status</small><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = visible.filter((lead) => lead.stage === stage);
           const stageIndex = stages.indexOf(stage);
@@ -665,7 +666,7 @@ function Pipeline({
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
                       </div>
                       {lead.phone && (
-                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: stageColor(stage), background: `${stageColor(stage)}18`, borderColor: `${stageColor(stage)}55` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
                           <WhatsAppIcon />
                         </a>
                       )}
@@ -676,7 +677,7 @@ function Pipeline({
             </section>
           );
         })}
-      </div>
+      </div></div>
     </div>
   );
 }
@@ -1001,6 +1002,19 @@ function LeadDrawer({
   const ladder = productLadder(products);
   const lastProductIndex = ladder.findIndex((product) => product.name === lastProduct);
   const nextProduct = ladder[lastProductIndex + 1];
+  const editPurchaseDate = (purchaseId: string, date: string) => {
+    const closedAt = dateFromInput(date);
+    if (!closedAt) return;
+    const purchases = purchaseHistory.map((purchase) => purchase.id === purchaseId ? { ...purchase, closedAt } : purchase);
+    const isLatest = purchaseHistory.at(-1)?.id === purchaseId;
+    update({ purchases, ...(isLatest ? { closedAt } : {}) });
+  };
+  const removePurchase = (purchaseId: string) => {
+    if (!window.confirm("Excluir esta compra do histórico? Os valores também deixarão de aparecer nos dashboards.")) return;
+    const purchases = purchaseHistory.filter((purchase) => purchase.id !== purchaseId);
+    const latest = purchases.at(-1);
+    update({ purchases, ...(purchaseHistory.at(-1)?.id === purchaseId ? { closedAt: latest?.closedAt } : {}) });
+  };
   return (
     <div className={styles.backdrop} onMouseDown={close}>
       <aside
@@ -1094,7 +1108,7 @@ function LeadDrawer({
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
         </section>
-        {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"} · {formatEventDate(purchase.closedAt)}</small></div><strong><Money value={purchase.value} /></strong></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}
+        {purchaseHistory.length > 0 && <section><small>Esteira de produtos</small><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><strong><Money value={purchase.value} /></strong><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</section>}
       </aside>
     </div>
   );
