@@ -26,16 +26,20 @@ export default function DiagnosticoForm() {
     setAnswers((old) => ({ ...old, [id]: value }));
     if (errors[id]) setErrors((old) => ({ ...old, [id]: "" }));
   }
-  function validate() {
+  function validateAll() {
     const next: Record<string, string> = {};
-    current.questions.forEach((q) => { if (!q.optional && !answers[q.id]?.trim()) next[q.id] = "Responda este campo para continuar."; });
+    allQuestions.forEach((q) => { if (!q.optional && !answers[q.id]?.trim()) next[q.id] = "Responda este campo para concluir."; });
     setErrors(next);
-    if (Object.keys(next)[0]) document.getElementById(`diag-${Object.keys(next)[0]}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const firstId = Object.keys(next)[0];
+    if (firstId) {
+      setStep(sections.findIndex((section) => section.questions.some((q) => q.id === firstId)));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     return !Object.keys(next).length;
   }
   async function advance() {
-    if (!validate()) return;
     if (step < sections.length - 1) { setStep((s) => s + 1); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (!validateAll()) return;
     setSubmitting(true);
     try {
       const response = await fetch("/api/diagnostico-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(answers) });
@@ -49,7 +53,7 @@ export default function DiagnosticoForm() {
   if (screen === "done") return <Success name={answers.nome} />;
   return <main className={styles.page}>
     <header className={styles.top}><Brand /><div className={styles.save}><span>✓</span> Progresso salvo automaticamente</div></header>
-    <nav className={styles.progress} aria-label="Progresso"><div className={styles.progressMeta}><b>{progress}% concluído</b><span>Etapa {step + 1} de {sections.length}</span></div><div className={styles.track}><i style={{ width: `${progress}%` }} /></div><div className={styles.dots}>{sections.map((section, index) => <button type="button" key={section.title} onClick={() => index < step && setStep(index)} className={index === step ? styles.active : index < step ? styles.past : ""} aria-label={`Etapa ${index + 1}: ${section.title}`}><span>{index < step ? "✓" : index + 1}</span><em>{section.title}</em></button>)}</div></nav>
+    <nav className={styles.progress} aria-label="Progresso"><div className={styles.progressMeta}><b>{progress}% concluído</b><span>Etapa {step + 1} de {sections.length}</span></div><div className={styles.track}><i style={{ width: `${progress}%` }} /></div><div className={styles.dots}>{sections.map((section, index) => <button type="button" key={section.title} onClick={() => { setStep(index); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={index === step ? styles.active : index < step ? styles.past : ""} aria-label={`Etapa ${index + 1}: ${section.title}`}><span>{index < step ? "✓" : index + 1}</span><em>{section.title}</em></button>)}</div></nav>
     <section className={styles.shell}>
       <div className={styles.sectionHead}><span>{current.icon}</span><div><p>Diagnóstico inicial</p><h1>{current.title}</h1><small>{current.subtitle}</small></div></div>
       <div className={styles.fields}>{current.questions.map((q, i) => <Field key={q.id} question={q} index={i + 1} value={answers[q.id] || ""} error={errors[q.id]} update={update} />)}</div>
@@ -72,6 +76,6 @@ function Field({ question: q, index, value, error, update }: { question: Questio
   </fieldset>;
 }
 
-function Brand() { return <div className={styles.brand}><b>DM</b><span><strong>Diego Mensor</strong><small>Mentor de donos de oficina</small></span></div>; }
-function Intro({ start, hasDraft }: { start: () => void; hasDraft: boolean }) { return <main className={styles.intro}><div className={styles.glow} /><section><Brand /><div className={styles.kicker}><span>●</span> Primeiro passo da mentoria</div><h1>Bem-vindo à sua <em>nova fase como dono.</em></h1><p className={styles.lead}>Antes da nossa primeira sessão, quero conhecer a realidade da sua oficina — sem julgamento, sem resposta certa e sem precisar parecer melhor do que está.</p><div className={styles.message}><b>Por que esse diagnóstico importa?</b><p>Suas respostas vão me permitir chegar ao nosso encontro já entendendo seus números, operação, equipe e objetivos. Assim, usamos nosso tempo para construir soluções.</p></div><div className={styles.meta}><span><b>8</b> etapas curtas</span><span><b>~20</b> minutos</span><span><b>100%</b> confidencial</span></div><button className={styles.start} onClick={start}>{hasDraft ? "Continuar de onde parei" : "Começar meu diagnóstico"}<span>→</span></button><small className={styles.calm}>Reserve um momento tranquilo. Seu progresso fica salvo neste dispositivo.</small></section></main>; }
-function Success({ name }: { name?: string }) { return <main className={styles.success}><section><Brand /><div className={styles.successIcon}>✓</div><p>Diagnóstico concluído</p><h1>Excelente, {name?.split(" ")[0] || ""}.</h1><p>Suas respostas chegaram até nós. Agora o Diego poderá preparar sua primeira sessão com clareza sobre a realidade da sua oficina e o caminho que vocês vão construir juntos.</p><div><span>Próximo passo</span><b>Separe seus números e documentos atuais para a primeira sessão.</b></div></section></main>; }
+function Brand() { return <div className={styles.brand}><span><strong>Mentoria OAG</strong><small>Diego Mensor</small></span></div>; }
+function Intro({ start, hasDraft }: { start: () => void; hasDraft: boolean }) { return <main className={styles.intro}><div className={styles.glow} /><section><Brand /><div className={styles.kicker}><span>●</span> Primeiro passo da mentoria</div><h1>Bem-vindo à sua <em>nova fase como dono.</em></h1><div className={styles.introCopy}><p className={styles.lead}>Antes da nossa primeira sessão, quero conhecer a realidade da sua oficina — sem julgamento, sem resposta certa e sem precisar parecer melhor do que está.</p><div className={styles.message}><b>Por que esse diagnóstico importa?</b><p>Suas respostas vão me permitir chegar ao nosso encontro já entendendo seus números, operação, equipe e objetivos. Assim, usamos nosso tempo para construir soluções.</p></div></div><div className={styles.meta}><span><b>100%</b> confidencial</span></div><button className={styles.start} onClick={start}>{hasDraft ? "Continuar de onde parei" : "Começar meu diagnóstico"}<span>→</span></button><small className={styles.calm}>Reserve um momento tranquilo e responda com calma.</small></section></main>; }
+function Success({ name }: { name?: string }) { return <main className={styles.success}><section><Brand /><div className={styles.successIcon}>✓</div><p>Diagnóstico concluído</p><h1>Excelente, {name?.split(" ")[0] || ""}.</h1><p>Suas respostas chegaram até nós. Agora o Diego poderá preparar sua primeira sessão com clareza sobre a realidade da sua oficina e o caminho que vocês vão construir juntos.</p><div><b>Próximo passo é a nossa reunião de diagnóstico.</b></div></section></main>; }

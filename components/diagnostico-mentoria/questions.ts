@@ -11,7 +11,7 @@ const area = (id: string, label: string, hint?: string): Question => ({ id, labe
 export const sections: Section[] = [
   { icon: "01", title: "Raio-X da oficina", subtitle: "Vamos começar conhecendo sua estrutura e quem faz a operação acontecer.", questions: [
     text("nome", "Seu nome completo", "Como você gosta de ser chamado?"), text("oficina", "Nome da oficina"), text("cidade", "Cidade e estado", "Ex.: Caxias do Sul / RS"), text("tempoOficina", "Há quanto tempo a oficina existe?"), text("tempoFrente", "Há quanto tempo você está à frente da oficina?"),
-    radio("tipo", "Qual é o tipo de oficina?", ["Mecânica geral", "Especializada", "Funilaria e pintura", "Elétrica", "Centro automotivo", "Outra"]),
+    { id: "tipo", label: "Qual é o tipo de oficina?", type: "checkbox", options: ["Mecânica geral", "Especializada", "Funilaria e pintura", "Elétrica", "Centro automotivo", "Outra"] },
     { id: "veiculosMes", label: "Quantos veículos, em média, passam pela oficina por mês?", type: "number", placeholder: "Ex.: 80" },
     { id: "pessoas", label: "Quantas pessoas trabalham na operação, incluindo você?", type: "number", placeholder: "Ex.: 6" },
     area("equipeFuncoes", "Liste cada pessoa da equipe e a função que ela exerce hoje.", "Ex.: João — mecânico · Maria — recepção e financeiro"),
@@ -48,7 +48,7 @@ export const sections: Section[] = [
   { icon: "05", title: "O dono", subtitle: "Esta parte é sobre sua rotina, suas decisões e o espaço que a oficina ocupa na sua vida.", questions: [
     area("funcaoDono", "Qual é sua função REAL dentro da oficina no dia a dia?", "Não o cargo: conte o que você realmente faz."), { id: "horasDia", label: "Quantas horas por dia você trabalha, em média?", type: "number", placeholder: "Ex.: 10" },
     radio("tempoOperacional", "Quanto do seu tempo ainda está no operacional?", ["Até 20%", "20–40%", "40–60%", "60–80%", "Mais de 80%"]), area("delegarAtividades", "O que você continua fazendo e sabe que já deveria ter delegado?"),
-    radio("impedeDelegar", "O que mais te impede de delegar hoje?", ["Não tenho para quem delegar", "Não confio que façam corretamente", "Não tenho processos", "Não tenho tempo para ensinar", "Tenho dificuldade de cobrar", "Prefiro fazer eu mesmo", "Nunca parei para organizar isso", "Outro"]),
+    { id: "impedeDelegar", label: "O que mais te impede de delegar hoje?", type: "checkbox", options: ["Não tenho para quem delegar", "Não confio que façam corretamente", "Não tenho processos", "Não tenho tempo para ensinar", "Tenho dificuldade de cobrar", "Prefiro fazer eu mesmo", "Nunca parei para organizar isso", "Outro"] },
     area("desgastante", "Qual é a parte mais desgastante de ser dono da sua oficina?"), area("decisaoAdiada", "Qual decisão você sabe que precisa tomar, mas vem adiando?"), area("mudarDono", "O que VOCÊ precisa mudar para a oficina chegar ao próximo nível?"),
     { id: "notaDono", label: "Quanto você se sente DONO da empresa, em vez de funcionário dela?", type: "scale" }, area("porqueNota", "Por que você deu essa nota?"),
   ]},
