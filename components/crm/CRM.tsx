@@ -110,6 +110,17 @@ const initialLeads: Lead[] = [];
 const leadsStorageKey = "mensor-crm-v2";
 const trafficStorageKey = "mensor-crm-traffic-v2";
 const goalsStorageKey = "mensor-crm-goals-v2";
+const reconciliationBackupKey = "mensor-crm-backup-before-reconciliation-v1";
+
+const mergeLeadsWithoutLoss = (remote: Lead[], local: Lead[]) => {
+  const phoneKey = (value: string) => value.replace(/\D/g, "");
+  const merged = [...remote];
+  for (const localLead of local) {
+    const matchIndex = merged.findIndex((remoteLead) => remoteLead.id === localLead.id || Boolean(localLead.email && remoteLead.email && localLead.email.trim().toLowerCase() === remoteLead.email.trim().toLowerCase()) || Boolean(localLead.phone && remoteLead.phone && phoneKey(localLead.phone) === phoneKey(remoteLead.phone)));
+    if (matchIndex < 0) merged.push(localLead);
+  }
+  return merged;
+};
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -195,6 +206,14 @@ export default function CRM() {
     if (loaded) localStorage.setItem(leadsStorageKey, JSON.stringify(leads));
   }, [leads, loaded]);
   useEffect(() => {
+    const syncOtherTab = (event: StorageEvent) => {
+      if (event.key !== leadsStorageKey || !event.newValue) return;
+      try { setLeads(JSON.parse(event.newValue) as Lead[]); } catch {}
+    };
+    window.addEventListener("storage", syncOtherTab);
+    return () => window.removeEventListener("storage", syncOtherTab);
+  }, []);
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(trafficStorageKey);
       const recoveryDone = localStorage.getItem("mensor-crm-traffic-recovery-v1");
@@ -249,7 +268,12 @@ export default function CRM() {
         const hasRemoteData = remote.leads?.length || remote.traffic?.length || remote.products?.length || remote.sources?.length || remote.messages?.length || Object.keys(remote.goals || {}).length;
         if (hasRemoteData) {
           if (cancelled) return;
-          setLeads((remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)); setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]); setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
+          const remoteLeads = (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead);
+          const localLeads = (() => { try { return JSON.parse(localStorage.getItem(leadsStorageKey) || "[]") as Lead[]; } catch { return []; } })();
+          if (localLeads.length) localStorage.setItem(reconciliationBackupKey, JSON.stringify({ savedAt: new Date().toISOString(), leads: localLeads }));
+          const reconciledLeads = mergeLeadsWithoutLoss(remoteLeads, localLeads);
+          setLeads(reconciledLeads); localStorage.setItem(leadsStorageKey, JSON.stringify(reconciledLeads));
+          setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]); setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
           localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || [])); localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
           window.dispatchEvent(new Event("mensor-crm-database-loaded"));
         } else {
@@ -280,7 +304,6 @@ export default function CRM() {
     const proposals = metricLeads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
     total: reportingLeads.length,
-      conversations: metricLeads.filter((lead) => inRange(lead.conversationAt, dateRange.start, dateRange.end)).length,
       meetings: metricLeads.filter((lead) => inRange(lead.meetingAt, dateRange.start, dateRange.end)).length,
       proposals: proposals.length,
       closed: won.length,
@@ -650,7 +673,6 @@ function Dashboard({
   allLeads: Lead[];
   stats: {
     total: number;
-    conversations: number;
     meetings: number;
     proposals: number;
     closed: number;
@@ -674,7 +696,6 @@ function Dashboard({
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const funnelSteps = [
     { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
-    { label: "Conversas iniciadas", count: leads.filter((lead) => inRange(lead.conversationAt, start, end)).length, detail: "Primeiro contato realizado" },
     { label: "Reuniões agendadas", count: leads.filter((lead) => inRange(lead.meetingAt, start, end)).length, detail: "Reuniões marcadas" },
     { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
     { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
@@ -686,11 +707,6 @@ function Dashboard({
           label="Leads gerados no mês"
           value={String(stats.total)}
           detail={`${stats.hot} leads quentes`}
-        />
-        <Kpi
-          label="Primeiros contatos"
-          value={String(stats.conversations)}
-          detail="Pela data do primeiro contato"
         />
         <Kpi
           label="Reuniões agendadas"
