@@ -279,7 +279,8 @@ export default function CRM() {
     const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end));
     const proposals = metricLeads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
-      total: reportingLeads.length,
+    total: reportingLeads.length,
+      conversations: metricLeads.filter((lead) => inRange(lead.conversationAt, dateRange.start, dateRange.end)).length,
       meetings: metricLeads.filter((lead) => inRange(lead.meetingAt, dateRange.start, dateRange.end)).length,
       proposals: proposals.length,
       closed: won.length,
@@ -321,10 +322,10 @@ export default function CRM() {
             const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: lead.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 };
             return { ...lead, stage, value, netValue, closedAt: now, purchases: [...history, purchase] };
           }
-          return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: now } : { closedAt: now }) };
+          return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: lead.proposalAt || now } : { closedAt: lead.closedAt || now }) };
         }
         const now = new Date().toISOString();
-        return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}) };
+        return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: lead.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: lead.meetingAt || now } : {}) };
       }),
     );
   const addLead = (lead: Lead) => {
@@ -471,7 +472,7 @@ export default function CRM() {
           move={(stage) => {
             moveLead(selected.id, stage);
             const now = new Date().toISOString();
-            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = current.value || catalogProduct?.price || 0; const netValue = current.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: now } : {}), ...(stage === "Proposta" ? { proposalAt: now } : {}), ...(stage === "Fechado" ? { closedAt: now } : {}) }; });
+            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = current.value || catalogProduct?.price || 0; const netValue = current.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: current.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: current.meetingAt || now } : {}), ...(stage === "Proposta" ? { proposalAt: current.proposalAt || now } : {}), ...(stage === "Fechado" ? { closedAt: current.closedAt || now } : {}) }; });
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -545,23 +546,26 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
       const book = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
       const parsed: ImportedSale[] = [];
       let headerFound = false;
+      let detectedHeaders: string[] = [];
       for (const sheetName of book.SheetNames) {
-        const matrix = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName], { header: 1, defval: "", raw: true });
+        const rawMatrix = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName], { header: 1, defval: "", raw: true });
+        const matrix = rawMatrix.map((row) => row.length === 1 && typeof row[0] === "string" && /[;\t]/.test(row[0]) ? row[0].split(row[0].includes("\t") ? "\t" : ";") : row);
         const headerAliases = {
-          code: ["codigodavenda", "codigovenda", "codigodatransacao", "codigotransacao", "codigodopedido", "codigopedido", "idvenda", "idtransacao", "idpedido", "transacao", "pedido", "codigo"],
-          name: ["nomedocliente", "nomecliente", "nomedocomprador", "nomecomprador", "cliente", "comprador", "nome"],
-          email: ["emaildocliente", "emailcliente", "emaildocomprador", "emailcomprador", "email"],
-          phone: ["telefonedocliente", "telefonecliente", "telefonedocomprador", "telefonecomprador", "telefone", "whatsapp", "celular"],
-          date: ["datadepagamento", "datadopagamento", "datadavenda", "datadatransacao", "datadopedido", "data"],
-          gross: ["valorbruto", "valordavenda", "valordatransacao", "valordopedido", "valor"],
+          code: ["codigodavenda", "codigovenda", "codigodatransacao", "codigotransacao", "codigodopedido", "codigopedido", "idvenda", "idtransacao", "idpedido", "transactionid", "saleid", "orderid", "transacao", "pedido", "codigo"],
+          name: ["nomedocliente", "nomecliente", "nomedocomprador", "nomecomprador", "customername", "buyername", "cliente", "comprador", "nome"],
+          email: ["emaildocliente", "emailcliente", "emaildocomprador", "emailcomprador", "customeremail", "buyeremail", "email"],
+          phone: ["telefonedocliente", "telefonecliente", "telefonedocomprador", "telefonecomprador", "customerphone", "buyerphone", "telefone", "whatsapp", "celular", "phone"],
+          date: ["datadepagamento", "datadopagamento", "datadavenda", "datadatransacao", "datadopedido", "paymentdate", "saledate", "transactiondate", "orderdate", "data", "date"],
+          gross: ["valorbruto", "valordavenda", "valordatransacao", "valordopedido", "grossvalue", "grossamount", "salevalue", "amount", "valor"],
         };
         const hasAlias = (keys: string[], aliases: string[]) => keys.some((key) => aliases.includes(key) || aliases.some((alias) => key.includes(alias)));
         const headerIndex = matrix.findIndex((row) => {
           const keys = row.map((cell) => normalize(String(cell))).filter(Boolean);
           const identity = hasAlias(keys, headerAliases.name) || hasAlias(keys, headerAliases.email) || hasAlias(keys, headerAliases.phone);
-          return hasAlias(keys, headerAliases.code) && identity && hasAlias(keys, headerAliases.date) && hasAlias(keys, headerAliases.gross);
+          const score = [hasAlias(keys, headerAliases.code), identity, hasAlias(keys, headerAliases.date), hasAlias(keys, headerAliases.gross)].filter(Boolean).length;
+          return score >= 3 && hasAlias(keys, headerAliases.code);
         });
-        if (headerIndex < 0) continue;
+        if (headerIndex < 0) { const candidate = matrix.find((row) => row.filter((cell) => String(cell).trim()).length >= 3); if (candidate && candidate.length > detectedHeaders.length) detectedHeaders = candidate.map(String).filter((cell) => cell.trim()).slice(0,8); continue; }
         headerFound = true;
         const headers = matrix[headerIndex].map((cell) => normalize(String(cell)));
         for (const values of matrix.slice(headerIndex + 1)) {
@@ -574,11 +578,13 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
             const fuzzyKey = Object.keys(keyed).find((header) => aliases.some((alias) => header.includes(alias) || alias.includes(header)));
             return fuzzyKey ? keyed[fuzzyKey] : "";
           };
-          const sale = { code: String(get("Código da venda", "Código venda", "Código da transação", "Código transação", "Código do pedido", "Código pedido", "ID venda", "ID transação", "ID pedido", "Transação", "Pedido", "Código")).trim(), date: parseDate(get("Data de pagamento", "Data do pagamento", "Data da venda", "Data da transação", "Data do pedido", "Data")), name: String(get("Nome do cliente", "Nome cliente", "Nome do comprador", "Nome comprador", "Cliente", "Comprador", "Nome")).trim(), email: String(get("Email do cliente", "E-mail do cliente", "Email do comprador", "E-mail do comprador", "Email", "E-mail")).trim().toLowerCase(), phone: String(get("Telefone do cliente", "Telefone do comprador", "Telefone", "WhatsApp", "Celular")).replace(/\D/g,""), gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor da transação", "Valor do pedido", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido", "Valor líquido da venda")) };
+          const email = String(get("Email do cliente", "E-mail do cliente", "Email do comprador", "E-mail do comprador", "Customer email", "Buyer email", "Email", "E-mail")).trim().toLowerCase();
+          const phone = String(get("Telefone do cliente", "Telefone do comprador", "Customer phone", "Buyer phone", "Telefone", "WhatsApp", "Celular", "Phone")).replace(/\D/g,"");
+          const sale = { code: String(get("Código da venda", "Código venda", "Código da transação", "Código transação", "Código do pedido", "Código pedido", "ID venda", "ID transação", "ID pedido", "Transaction ID", "Sale ID", "Order ID", "Transação", "Pedido", "Código")).trim(), date: parseDate(get("Data de pagamento", "Data do pagamento", "Data da venda", "Data da transação", "Data do pedido", "Payment date", "Sale date", "Transaction date", "Order date", "Data", "Date")), name: String(get("Nome do cliente", "Nome cliente", "Nome do comprador", "Nome comprador", "Customer name", "Buyer name", "Cliente", "Comprador", "Nome")).trim() || email || phone, email, phone, gross: parseMoney(get("Valor Bruto", "Valor da venda", "Valor da transação", "Valor do pedido", "Gross value", "Gross amount", "Sale value", "Amount", "Valor")), net: parseMoney(get("Valor Líquido", "Valor Liquido", "Valor recebido", "Valor líquido da venda", "Net value", "Net amount")) };
           if (sale.code && sale.date && sale.name && sale.gross > 0 && sale.net >= 0) parsed.push(sale);
         }
       }
-      if (!headerFound) throw new Error("Não consegui identificar o cabeçalho. A planilha precisa ter código/pedido, data, cliente (ou e-mail/telefone) e valor da venda.");
+      if (!headerFound) throw new Error(`Não consegui identificar o cabeçalho.${detectedHeaders.length ? ` Encontrei: ${detectedHeaders.join(" | ")}.` : " O arquivo não apresentou títulos legíveis."}`);
       if (!parsed.length) throw new Error("Encontrei as colunas, mas nenhuma venda tinha código, nome, data e valor bruto válidos.");
       setSales(parsed);
     } catch (reason) {
@@ -644,6 +650,7 @@ function Dashboard({
   allLeads: Lead[];
   stats: {
     total: number;
+    conversations: number;
     meetings: number;
     proposals: number;
     closed: number;
@@ -679,6 +686,11 @@ function Dashboard({
           label="Leads gerados no mês"
           value={String(stats.total)}
           detail={`${stats.hot} leads quentes`}
+        />
+        <Kpi
+          label="Primeiros contatos"
+          value={String(stats.conversations)}
+          detail="Pela data do primeiro contato"
         />
         <Kpi
           label="Reuniões agendadas"
