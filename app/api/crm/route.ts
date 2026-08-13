@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { PoolClient } from "pg";
 import { crmPool, withCrmTransaction } from "@/lib/crm-db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -43,6 +44,25 @@ async function authorized() {
 function databaseError(error: unknown, fallback: string) {
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : undefined;
   return NextResponse.json({ error: fallback, ...(code ? { code } : {}) }, { status: 503 });
+}
+
+async function purchaseColumns(db: PoolClient) {
+  const result = await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='crm_purchases' and column_name in ('purchase_origin','purchase_source')");
+  const columns = new Set(result.rows.map((row) => String(row.column_name)));
+  return { origin: columns.has("purchase_origin"), source: columns.has("purchase_source") };
+}
+async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, purchase: Record<string, unknown>, columns: { origin: boolean; source: boolean }) {
+  const campaign = purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId;
+  const base = [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase)];
+  if (columns.origin && columns.source) {
+    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,purchase_source,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,purchase_source=excluded.purchase_source,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, campaign ? "campaign" : "pipeline", campaign ? "Tráfego" : purchase.source || lead.source || "Cadastro", purchase.externalSaleCode || null, purchase.campaignId || null]);
+    return;
+  }
+  if (columns.origin) {
+    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, campaign ? "campaign" : "pipeline", purchase.externalSaleCode || null, purchase.campaignId || null]);
+    return;
+  }
+  await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, purchase.externalSaleCode || null, purchase.campaignId || null]);
 }
 
 export async function GET() {
@@ -118,9 +138,10 @@ export async function PATCH(request: Request) {
     const lead = body.record;
     try {
       await withCrmTransaction(async (db) => {
+        const columns = await purchaseColumns(db);
         await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
-          await db.query("insert into public.crm_purchases(id,lead_id,product,purchase_source,gross_value,net_value,closed_at,is_repurchase,purchase_origin,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,purchase_source=excluded.purchase_source,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [purchase.id, lead.id, purchase.product, purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId ? "Tráfego" : purchase.source || lead.source || "Cadastro", Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase), purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId ? "campaign" : "pipeline", purchase.externalSaleCode || null, purchase.campaignId || null]);
+          await upsertPurchase(db, lead, purchase, columns);
         }
       });
       return NextResponse.json({ ok: true });
@@ -184,6 +205,7 @@ export async function PUT(request: Request) {
   const stages = Array.isArray(snapshot.stages) ? snapshot.stages : [];
   try {
     await withCrmTransaction(async (db) => {
+      const columns = await purchaseColumns(db);
       for (const [position, product] of products.entries()) {
         await db.query("insert into public.crm_products(name,gross_price,net_price,position,active,updated_at) values($1,$2,$3,$4,true,now()) on conflict(name) do update set gross_price=excluded.gross_price,net_price=excluded.net_price,position=excluded.position,active=true,updated_at=now()", [product.name, Number(product.price) || 0, Number(product.netPrice ?? product.price) || 0, position]);
       }
@@ -193,7 +215,7 @@ export async function PUT(request: Request) {
       }
       for (const source of sources) await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
       for (const lead of leads) await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
-      for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_purchases(id,lead_id,product,purchase_source,gross_value,net_value,closed_at,is_repurchase,purchase_origin,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,purchase_source=excluded.purchase_source,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [purchase.id, lead.id, purchase.product, purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId ? "Tráfego" : purchase.source || lead.source || "Cadastro", Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase), purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId ? "campaign" : "pipeline", purchase.externalSaleCode || null, purchase.campaignId || null]);
+      for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
       for (const item of traffic) { const campaignDate = /^\d{4}-\d{2}-\d{2}/.test(String(item.date || "")) ? item.date : `${item.month}-01`; await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, campaignDate, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]); }
       // Campanhas são removidas apenas pelo DELETE explícito. Um snapshot
       // atrasado de outra aba nunca pode apagar uma campanha recém-criada.

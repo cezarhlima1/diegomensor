@@ -441,18 +441,20 @@ export default function CRM() {
     const metricLeads = leads;
     const open = metricLeads.filter((lead) => lead.stage === "Proposta" && inRange(lead.proposalAt, dateRange.start, dateRange.end));
     const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, dateRange.start, dateRange.end));
+    const closedLeads = metricLeads.filter((lead) => purchasesForLead(lead, catalogProducts).some((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, dateRange.start, dateRange.end)));
     const proposals = metricLeads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
     total: reportingLeads.length,
       meetings: metricLeads.filter((lead) => inRange(lead.meetingAt, dateRange.start, dateRange.end)).length,
       proposals: proposals.length,
-      closed: won.length,
+      closed: closedLeads.length,
+      sales: won.length,
       openValue: open.reduce((sum, lead) => sum + lead.value, 0),
       wonValue: won.reduce((sum, purchase) => sum + purchase.value, 0),
       netWonValue: won.reduce((sum, purchase) => sum + purchase.netValue, 0),
-      conversion: reportingLeads.length ? (won.length / reportingLeads.length) * 100 : 0,
+      conversion: reportingLeads.length ? (closedLeads.length / reportingLeads.length) * 100 : 0,
       proposalConversion: proposals.length
-        ? (won.length / proposals.length) * 100
+        ? (closedLeads.length / proposals.length) * 100
         : 0,
       proposalValue: proposals.reduce((sum, lead) => sum + lead.value, 0),
       valueConversion: proposals.reduce((sum, lead) => sum + lead.value, 0)
@@ -922,6 +924,7 @@ function Dashboard({
     meetings: number;
     proposals: number;
     closed: number;
+    sales: number;
     openValue: number;
     wonValue: number;
     netWonValue: number;
@@ -944,7 +947,7 @@ function Dashboard({
     { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
     { label: "Reuniões agendadas", count: leads.filter((lead) => inRange(lead.meetingAt, start, end)).length, detail: "Reuniões marcadas" },
     { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
-    { label: "Fechamentos", count: stats.closed, detail: currency.format(stats.wonValue) },
+    { label: "Clientes fechados", count: stats.closed, detail: `${stats.sales} vendas · ${currency.format(stats.wonValue)}` },
   ];
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
@@ -965,9 +968,9 @@ function Dashboard({
           detail={`${currency.format(stats.openValue)} em aberto`}
         />
         <Kpi
-          label="Fechamentos"
+          label="Clientes fechados"
           value={String(stats.closed)}
-          detail={`${currency.format(stats.wonValue)} recebidos`}
+          detail={`${stats.sales} vendas · ${currency.format(stats.wonValue)} recebidos`}
         />
       </div>
       <FinancialSummary stats={stats} />
@@ -1401,8 +1404,6 @@ function LeadDrawer({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature });
-  const selectedProduct = products.find((item) => item.name === lead.product);
-  const [customDeal, setCustomDeal] = useState(Boolean(selectedProduct && (lead.value !== selectedProduct.price || lead.netValue !== (selectedProduct.netPrice ?? selectedProduct.price))));
   const [newTag, setNewTag] = useState("");
   const [editingTag, setEditingTag] = useState<number | null>(null);
   const [tagDraft, setTagDraft] = useState("");
@@ -1470,7 +1471,7 @@ function LeadDrawer({
           </div>
           <button className={styles.saveLeadEdit} type="button" onClick={() => { update({ ...draft, phone: draft.phone.trim(), email: draft.email.trim().toLowerCase() }); setEditing(false); }}>Salvar alterações</button>
         </section>}
-        <section>
+        <section className={styles.leadContactSection}>
           <small>Dados de contato</small>
           <p>
             <span>WhatsApp</span>
@@ -1491,17 +1492,15 @@ function LeadDrawer({
             </select>
           </label>
         </section>
-        <section>
-          <small>Oportunidade</small>
+        <section className={styles.leadOpportunitySection}>
+          <small>Oportunidade atual</small>
           <label>
-            <span>Produto</span>
-            <select value={lead.product || "Não informado"} onChange={(event) => { const product = event.target.value; const selectedProduct = products.find((item) => item.name === product); update({ product, value: selectedProduct?.price || 0, netValue: selectedProduct?.netPrice ?? selectedProduct?.price ?? 0 }); }}>
+            <span>Produto vigente</span>
+            <select value={lead.product || "Não informado"} onChange={(event) => update({ product: event.target.value })}>
               <option value="Não informado">Não informado</option>
               {products.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
             </select>
           </label>
-          {lead.product && lead.product !== "Não informado" && <label className={styles.customDealToggle}><input type="checkbox" checked={customDeal} onChange={(event) => { const enabled = event.target.checked; setCustomDeal(enabled); const product = products.find((item) => item.name === lead.product); if (!enabled && product) update({ value: product.price, netValue: product.netPrice ?? product.price }); }} /><span>Usar valores personalizados nesta negociação</span></label>}
-          {customDeal && <div className={styles.customDealValues}><label><span>Valor bruto negociado</span><AccountingInput value={lead.value} set={(value) => update({ value: Number(value) || 0 })} /></label><label><span>Valor líquido negociado</span><AccountingInput value={lead.netValue || 0} set={(value) => update({ netValue: Number(value) || 0 })} /></label></div>}
           <label>
             <span>Etapa atual</span>
             <select
@@ -1515,17 +1514,19 @@ function LeadDrawer({
           </label>
         </section>
         <section className={styles.leadNotesSection}>
-          <small>Observação e etiquetas</small>
-          <label><span>Observação do lead</span><textarea value={lead.notes || ""} onChange={(event) => update({ notes: event.target.value })} placeholder="Registre contexto, objeções e próximos detalhes importantes..." rows={4} /></label>
+          <small>Acompanhamento</small>
+          <div className={styles.leadFollowupGrid}>
+          <label><span>Observações</span><textarea value={lead.notes || ""} onChange={(event) => update({ notes: event.target.value })} placeholder="Registre contexto, objeções e próximos detalhes importantes..." rows={4} /></label>
           <div className={styles.leadTags}>
             <span>Etiquetas</span>
             <div>{tags.map((tag, index) => tag === "Desqualificado" ? <span key={tag} style={{ borderColor: "#d05f76", background: "#d05f7622" }}><button type="button" style={{ color: "#d05f76", cursor: "default" }}>Desqualificado</button><button type="button" aria-label="Remover Desqualificado deste lead" onClick={() => update({ tags: tags.filter((item) => item !== tag) })}>×</button></span> : editingTag === index ? <form key={`${tag}-${index}`} style={{ borderColor: tagColor(tag) }} onSubmit={(event) => { event.preventDefault(); saveTag(index); }}><input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} onBlur={() => saveTag(index)} autoFocus /><button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => deleteTag(tag)}>×</button></form> : <span key={`${tag}-${index}`} style={{ borderColor: tagColor(tag), background: `${tagColor(tag)}22` }}><button type="button" style={{ color: tagColor(tag) }} onClick={() => { setEditingTag(index); setTagDraft(tag); }}>{tag}</button><button type="button" aria-label={`Excluir etiqueta ${tag} de todos os cadastros`} onClick={() => deleteTag(tag)}>×</button></span>)}</div>
             <form onSubmit={(event) => { event.preventDefault(); addTag(); }}><input value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder="Nova etiqueta" /><button type="submit">+ Adicionar</button></form>
             {availableTags.filter((tag) => !tags.includes(tag)).length > 0 && <div className={styles.availableTags}>{availableTags.filter((tag) => !tags.includes(tag)).map((tag) => <button type="button" key={tag} style={{ borderColor: tagColor(tag), color: tagColor(tag) }} onClick={() => update({ tags: [...tags, tag] })}>+ {tag}</button>)}</div>}
           </div>
+          </div>
         </section>
-        <section>
-          <small>Histórico de datas</small>
+        <section className={styles.leadDatesSection}>
+          <small>Jornada comercial</small>
           <div className={styles.leadTimeline}>
             <label><span>Lead gerado</span><input type="date" value={dateInputValue(lead.createdAt)} onChange={(event) => update({ createdAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
@@ -1534,7 +1535,7 @@ function LeadDrawer({
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
         </section>
-        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={styles.closingForm} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor bruto</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor líquido</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><button type="submit">Salvar fechamento</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{isCampaignPurchase(purchase) ? "Compra da campanha" : purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><strong><Money value={purchase.value} /></strong><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
+        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={styles.closingForm} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor bruto</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor líquido</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><button type="submit">Salvar fechamento</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{isCampaignPurchase(purchase) ? "Compra da campanha" : purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Bruto <b><Money value={purchase.value} /></b></span><span>Líquido <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
       </aside>
     </div>
   );
@@ -1625,7 +1626,7 @@ function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start
   const origins = originNames.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = closings.filter((item) => item.source === source).map((item) => item.purchase); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
-  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
+  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Vendas</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
 }
 function FinancialSummary({
   stats,
