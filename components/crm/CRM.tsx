@@ -365,8 +365,8 @@ export default function CRM() {
         const history = existing ? purchasesForLead(existing, catalogProducts) : [];
         if (history.some((purchase) => purchase.externalSaleCode === sale.code)) continue;
         const purchase: Purchase = { id: `gateway-${sale.code}`, externalSaleCode: sale.code, campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0 };
-        const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: campaign.product, stage: "Fechado", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: sale.date.slice(0,10).split("-").reverse().join("/"), createdAt: sale.date };
-        const updated: Lead = { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, product: campaign.product, stage: "Fechado", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases: [...history, purchase] };
+        const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: sale.date.slice(0,10).split("-").reverse().join("/"), createdAt: sale.date };
+        const updated: Lead = { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases: [...history, purchase] };
         if (index >= 0) next[index] = updated; else { next.unshift(updated); index = 0; }
       }
       return next;
@@ -510,15 +510,17 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const goalMonth = start.slice(0, 7);
   const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
-  const organicClosings = leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego").flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => inRange(purchase.closedAt, start, end));
+  const isTrafficLead = (lead: Lead) => lead.source === "Tráfego" || lead.tags?.some((tag) => tag.trim().toLowerCase() === "tráfego" || tag.trim().toLowerCase() === "trafego");
+  const organicClosings = leads.filter((lead) => !isTrafficLead(lead)).flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end));
+  const manualTrafficClosings = leads.filter(isTrafficLead).flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end));
   const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
   const organicNet = organicClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
   const repurchaseRevenue = organicClosings.filter((purchase) => purchase.repurchase).reduce((sum, purchase) => sum + purchase.value, 0);
   const repurchaseShare = organicRevenue ? repurchaseRevenue / organicRevenue * 100 : 0;
-  const trafficRevenue = periodTraffic.reduce((sum, item) => sum + item.revenue, 0);
-  const trafficNet = periodTraffic.reduce((sum, item) => sum + (item.netRevenue ?? netForValue(item.revenue, item.product, products)), 0);
+  const trafficRevenue = periodTraffic.reduce((sum, item) => sum + item.revenue, 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.value, 0);
+  const trafficNet = periodTraffic.reduce((sum, item) => sum + (item.netRevenue ?? netForValue(item.revenue, item.product, products)), 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
   const trafficInvestment = periodTraffic.reduce((sum, item) => sum + item.investment, 0);
-  const directSales = periodTraffic.reduce((sum, item) => sum + item.sales, 0);
+  const directSales = periodTraffic.reduce((sum, item) => sum + item.sales, 0) + manualTrafficClosings.length;
   const organicSales = organicClosings.length;
   const totalRevenue = organicRevenue + trafficRevenue;
   const totalNet = organicNet + trafficNet;
