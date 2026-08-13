@@ -5,7 +5,7 @@ import styles from "./crm.module.css";
 
 type Stage = string;
 type View = "geral" | "comercial" | "trafego" | "pipeline" | "contatos" | "mensagens";
-type Purchase = { id: string; product: string; value: number; netValue: number; closedAt: string; repurchase: boolean; externalSaleCode?: string; campaignId?: string };
+type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string };
 type Lead = {
   id: string;
   name: string;
@@ -68,7 +68,11 @@ const normalizeSource = (source: string) => legacySources[source] || (leadSource
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog];
-const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases !== undefined ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, product: lead.product || "Não informado", value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
+const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases !== undefined ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, origin: "pipeline", product: lead.product || "Não informado", source: lead.source, value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
+// O banco remove o campaignId quando uma campanha é excluída, mas preserva a
+// compra. O código externo mantém a origem importada identificável.
+const isCampaignPurchase = (purchase: Purchase) => purchase.origin === "campaign" || Boolean(purchase.campaignId || purchase.externalSaleCode);
+const purchasesForCampaign = (leads: Lead[], campaignId: string, catalog: ProductDefinition[]) => leads.flatMap((lead) => purchasesForLead(lead, catalog)).filter((purchase) => purchase.campaignId === campaignId);
 const inMonth = (date: string | undefined, month: string) => Boolean(date?.startsWith(month));
 const inRange = (date: string | undefined, start: string, end: string) => Boolean(date && date.slice(0, 10) >= start && date.slice(0, 10) <= end);
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
@@ -122,6 +126,42 @@ const uniqueId = () => crypto.randomUUID();
 const phoneKey = (value: string) => {
   const digits = value.replace(/\D/g, "");
   return digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+};
+const leadIdentityMatch = (left: Lead, right: Lead) => {
+  const leftEmail = left.email.trim().toLowerCase();
+  const rightEmail = right.email.trim().toLowerCase();
+  const leftPhone = phoneKey(left.phone);
+  const rightPhone = phoneKey(right.phone);
+  return Boolean((leftEmail && rightEmail && leftEmail === rightEmail) || (leftPhone && rightPhone && leftPhone === rightPhone));
+};
+const mergeLeadData = (current: Lead, incoming: Lead): Lead => {
+  const purchases = [...purchasesForLead(current, [])];
+  for (const purchase of purchasesForLead(incoming, [])) {
+    const index = purchases.findIndex((item) => item.id === purchase.id
+      || Boolean(item.externalSaleCode && purchase.externalSaleCode && item.externalSaleCode === purchase.externalSaleCode)
+      || (item.product === purchase.product && Math.abs(item.value - purchase.value) < .005 && item.closedAt.slice(0, 10) === purchase.closedAt.slice(0, 10)));
+    if (index >= 0) purchases[index] = { ...purchases[index], ...purchase };
+    else purchases.push({ ...purchase, repurchase: purchases.length > 0 || purchase.repurchase });
+  }
+  return {
+    ...current,
+    name: current.name || incoming.name,
+    company: current.company || incoming.company,
+    phone: current.phone || incoming.phone,
+    email: current.email || incoming.email,
+    notes: [current.notes, incoming.notes].filter(Boolean).filter((item, index, all) => all.indexOf(item) === index).join("\n"),
+    tags: Array.from(new Set([...(current.tags || []), ...(incoming.tags || [])])),
+    purchases,
+  };
+};
+const mergeLeadCollections = (current: Lead[], incoming: Lead[]) => {
+  const merged = [...current];
+  for (const lead of incoming) {
+    const index = merged.findIndex((item) => item.id === lead.id || leadIdentityMatch(item, lead));
+    if (index >= 0) merged[index] = mergeLeadData(merged[index], lead);
+    else merged.unshift(lead);
+  }
+  return merged;
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -221,6 +261,10 @@ export default function CRM() {
       if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao excluir campanha"); }
       skipNextSnapshotSync.current = true;
       setTraffic((current) => current.filter((item) => item.id !== id));
+      setLeads((current) => current.map((lead) => ({
+        ...lead,
+        purchases: lead.purchases?.map((purchase) => purchase.campaignId === id ? { ...purchase, origin: "campaign" as const, campaignId: undefined } : purchase),
+      })));
       setDatabaseIssue("");
       setDatabaseStatus("connected");
     };
@@ -312,7 +356,7 @@ export default function CRM() {
         const remote = await response.json();
         if (cancelled) return;
         skipNextSnapshotSync.current = true;
-        const remoteLeads = (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead);
+        const remoteLeads = mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
         setLeads(remoteLeads);
         setTraffic(remote.traffic || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
@@ -367,7 +411,7 @@ export default function CRM() {
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
         skipNextSnapshotSync.current = true;
-        setLeads((remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
+        setLeads(mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)));
         setTraffic(remote.traffic || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
         setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
@@ -392,11 +436,11 @@ export default function CRM() {
     };
   }, [databaseReady, databaseStatus]);
 
-  const reportingLeads = useMemo(() => leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego" && inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
+  const reportingLeads = useMemo(() => leads.filter((lead) => inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {
-    const metricLeads = leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego");
+    const metricLeads = leads;
     const open = metricLeads.filter((lead) => lead.stage === "Proposta" && inRange(lead.proposalAt, dateRange.start, dateRange.end));
-    const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, dateRange.start, dateRange.end));
+    const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, dateRange.start, dateRange.end));
     const proposals = metricLeads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
     total: reportingLeads.length,
@@ -446,33 +490,44 @@ export default function CRM() {
   };
   const addLead = async (lead: Lead) => {
     await saveLead(lead);
-    setLeads((current) => [lead, ...current]);
+    setLeads((current) => mergeLeadCollections(current, [lead]));
     setAdding(false);
   };
   const importCampaignSales = async (campaign: TrafficRecord, sales: ImportedSale[]) => {
     const uniqueSales = Array.from(new Map(sales.map((sale) => [sale.code.trim(), sale])).values());
     const next = [...leads];
-    const knownCodes = new Set(next.flatMap((lead) => purchasesForLead(lead, catalogProducts)).map((purchase) => purchase.externalSaleCode).filter(Boolean));
     for (const sale of uniqueSales) {
-      if (knownCodes.has(sale.code)) continue;
+      const codedLeadIndex = next.findIndex((lead) => purchasesForLead(lead, catalogProducts).some((purchase) => purchase.externalSaleCode === sale.code));
+      if (codedLeadIndex >= 0) {
+        const codedHistory = purchasesForLead(next[codedLeadIndex], catalogProducts);
+        const codedPurchaseIndex = codedHistory.findIndex((purchase) => purchase.externalSaleCode === sale.code);
+        const codedPurchase = codedHistory[codedPurchaseIndex];
+        if (codedPurchase.campaignId) continue;
+        const purchases = codedHistory.map((purchase, purchaseIndex) => purchaseIndex === codedPurchaseIndex
+          ? { ...purchase, origin: "campaign" as const, source: "Tráfego", campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date }
+          : purchase);
+        next[codedLeadIndex] = { ...next[codedLeadIndex], purchases };
+        continue;
+      }
       let index = next.findIndex((lead) => (sale.email && lead.email.trim().toLowerCase() === sale.email) || (sale.phone && phoneKey(lead.phone) === phoneKey(sale.phone)));
       const existing = index >= 0 ? next[index] : undefined;
       const history = existing ? purchasesForLead(existing, catalogProducts) : [];
       if (history.some((purchase) => purchase.externalSaleCode === sale.code)) continue;
-      const matchingPurchaseIndex = history.findIndex((purchase) => !purchase.campaignId
+      const matchingPurchaseIndex = history.findIndex((purchase) => !isCampaignPurchase(purchase)
         && purchase.product === campaign.product
         && Math.abs(purchase.value - sale.gross) < .005
         && purchase.closedAt.slice(0, 10) === sale.date.slice(0, 10));
       const purchase: Purchase = matchingPurchaseIndex >= 0
-        ? { ...history[matchingPurchaseIndex], externalSaleCode: sale.code, campaignId: campaign.id, netValue: sale.net }
-        : { id: `gateway-${sale.code}`, externalSaleCode: sale.code, campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0 };
+        ? { ...history[matchingPurchaseIndex], origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, netValue: sale.net }
+        : { id: `gateway-${sale.code}`, origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0 };
       const purchases = matchingPurchaseIndex >= 0
         ? history.map((item, purchaseIndex) => purchaseIndex === matchingPurchaseIndex ? purchase : item)
         : [...history, purchase];
       const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: sale.date.slice(0,10).split("-").reverse().join("/"), createdAt: sale.date };
-      const updated: Lead = { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases };
+      const updated: Lead = existing
+        ? { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, purchases }
+        : { ...base, product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases };
       if (index >= 0) next[index] = updated; else { next.unshift(updated); index = 0; }
-      knownCodes.add(sale.code);
     }
     const campaignPurchases = next.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => purchase.campaignId === campaign.id);
     const updatedCampaign = { ...campaign, sales: campaignPurchases.length, revenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.value,0), netRevenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.netValue,0) };
@@ -486,7 +541,8 @@ export default function CRM() {
     const updatesPurchase = "closedAt" in changes || "value" in changes || "netValue" in changes || "product" in changes;
     if (!updatesPurchase || !lead.purchases?.length || lead.stage !== "Fechado") return { ...lead, ...changes };
     const purchases = [...lead.purchases];
-    const index = purchases.length - 1;
+    const index = purchases.findLastIndex((purchase) => !isCampaignPurchase(purchase));
+    if (index < 0) return { ...lead, ...changes };
     purchases[index] = { ...purchases[index], closedAt: changes.closedAt || purchases[index].closedAt, value: changes.value ?? purchases[index].value, netValue: changes.netValue ?? purchases[index].netValue, product: changes.product ?? purchases[index].product };
     return { ...lead, ...changes, purchases };
   };
@@ -589,7 +645,7 @@ export default function CRM() {
         </header>
         {view === "geral" && <ExecutiveOverview leads={leads} products={catalogProducts} start={dateRange.start} end={dateRange.end} traffic={traffic} />}
         {view === "comercial" && (
-          <Dashboard leads={leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego")} allLeads={leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego")} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} />
+          <Dashboard leads={leads} allLeads={leads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} />
         )}
         {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} />}
         {view === "pipeline" && (
@@ -601,7 +657,7 @@ export default function CRM() {
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
-      {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={async (imported) => { await persistLeadsAndTraffic([...imported, ...leads], traffic); setImporting(false); }} />}
+      {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={async (imported) => { await persistLeadsAndTraffic(mergeLeadCollections(leads, imported), traffic); setImporting(false); }} />}
       {selected && (
         <LeadDrawer
           lead={selected}
@@ -636,25 +692,41 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const [goals, setGoals] = useState<Record<string, number>>({});
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const goalMonth = start.slice(0, 7);
+  const endGoalMonth = end.slice(0, 7);
+  const goalMonths: string[] = [];
+  const goalCursor = new Date(`${goalMonth}-01T12:00:00`);
+  while (`${goalCursor.getFullYear()}-${String(goalCursor.getMonth() + 1).padStart(2, "0")}` <= endGoalMonth) {
+    goalMonths.push(`${goalCursor.getFullYear()}-${String(goalCursor.getMonth() + 1).padStart(2, "0")}`);
+    goalCursor.setMonth(goalCursor.getMonth() + 1);
+  }
   const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
-  const isTrafficLead = (lead: Lead) => lead.source === "Tráfego" || lead.tags?.some((tag) => tag.trim().toLowerCase() === "tráfego" || tag.trim().toLowerCase() === "trafego");
-  const organicClosings = leads.filter((lead) => !isTrafficLead(lead)).flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end));
-  const manualTrafficClosings = leads.filter(isTrafficLead).flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end));
+  const pipelineClosings = leads.flatMap((lead) => purchasesForLead(lead, products).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source, traffic: (purchase.source || lead.source) === "Tráfego" || (!purchase.source && lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))) })));
+  const organicClosings = pipelineClosings.filter((item) => !item.traffic).map((item) => item.purchase);
+  const manualTrafficClosings = pipelineClosings.filter((item) => item.traffic).map((item) => item.purchase);
   const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
   const organicNet = organicClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
-  const repurchaseRevenue = organicClosings.filter((purchase) => purchase.repurchase).reduce((sum, purchase) => sum + purchase.value, 0);
-  const repurchaseShare = organicRevenue ? repurchaseRevenue / organicRevenue * 100 : 0;
-  const trafficRevenue = periodTraffic.reduce((sum, item) => sum + item.revenue, 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.value, 0);
-  const trafficNet = periodTraffic.reduce((sum, item) => sum + (item.netRevenue ?? netForValue(item.revenue, item.product, products)), 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
+  const campaignValues = traffic.map((item) => {
+    const allPurchases = purchasesForCampaign(leads, item.id, products);
+    const purchases = allPurchases.filter((purchase) => inRange(purchase.closedAt, start, end));
+    if (allPurchases.length) return { sales: purchases.length, gross: purchases.reduce((sum, purchase) => sum + purchase.value, 0), net: purchases.reduce((sum, purchase) => sum + purchase.netValue, 0) };
+    if (!inRange(item.date || `${item.month}-01`, start, end)) return { sales: 0, gross: 0, net: 0 };
+    return { sales: item.sales, gross: item.revenue, net: item.netRevenue ?? netForValue(item.revenue, item.product, products) };
+  });
+  const trafficRevenue = campaignValues.reduce((sum, item) => sum + item.gross, 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.value, 0);
+  const trafficNet = campaignValues.reduce((sum, item) => sum + item.net, 0) + manualTrafficClosings.reduce((sum, purchase) => sum + purchase.netValue, 0);
   const trafficInvestment = periodTraffic.reduce((sum, item) => sum + item.investment, 0);
-  const directSales = periodTraffic.reduce((sum, item) => sum + item.sales, 0) + manualTrafficClosings.length;
+  const campaignSales = campaignValues.reduce((sum, item) => sum + item.sales, 0);
+  const directSales = campaignSales + manualTrafficClosings.length;
   const organicSales = organicClosings.length;
   const totalRevenue = organicRevenue + trafficRevenue;
   const totalNet = organicNet + trafficNet;
+  const repurchases = [...organicClosings, ...manualTrafficClosings].filter((purchase) => purchase.repurchase);
+  const repurchaseRevenue = repurchases.reduce((sum, purchase) => sum + purchase.value, 0);
+  const repurchaseShare = totalRevenue ? repurchaseRevenue / totalRevenue * 100 : 0;
   const periodBalance = totalNet - trafficInvestment;
   const totalSales = organicSales + directSales;
-  const goal = goals[goalMonth] || 0;
+  const goal = goalMonths.reduce((sum, month) => sum + (goals[month] || 0), 0);
   const goalProgress = goal ? totalRevenue / goal * 100 : 0;
   const balanceProgress = goalProgress;
   const balanceRatio = Math.max(0, Math.min(1, balanceProgress / 100));
@@ -664,14 +736,14 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
     <div className={styles.overviewKpis}>
       <article className={styles.balanceCard} style={balanceStyle}><span>Saldo total do período</span><strong><Money value={periodBalance} /></strong><small>{goal ? `${Math.max(0, balanceProgress).toFixed(1)}% da meta de faturamento` : "Defina a meta do mês"}</small></article>
       <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail="Faturamento total do período" />
-      <Kpi label="Vendas totais" value={String(totalSales)} detail="Orgânico + tráfego" />
+      <Kpi label="Vendas totais" value={String(totalSales)} detail={`${organicSales} orgânicas + ${campaignSales} campanhas + ${manualTrafficClosings.length} novos fechamentos`} />
       <Kpi label="Receita líquida" value={<Money value={totalNet} />} detail={<><Money value={Math.max(0, totalRevenue - totalNet)} /> em taxas</>} />
       <Kpi label="Investimento em tráfego" value={<Money value={trafficInvestment} />} detail="Descontado do saldo do período" />
       <Kpi label="Receita orgânica" value={<Money value={organicRevenue} />} detail={<>Líquido <Money value={organicNet} /></>} />
       <Kpi label="Receita do tráfego" value={<Money value={trafficRevenue} />} detail={<>Líquido <Money value={trafficNet} /></>} />
-      <Kpi label="Receita de recompra" value={<Money value={repurchaseRevenue} />} detail={`${repurchaseShare.toFixed(1)}% da receita orgânica`} />
-      <Kpi label="Participação da base" value={`${repurchaseShare.toFixed(1)}%`} detail={`${organicClosings.filter((purchase) => purchase.repurchase).length} recompras no período`} />
-      <article className={styles.overviewGoal}><label>Meta do mês</label><div><AccountingInput value={goal} set={(value) => updateGoal(goalMonth, Number(value) || 0)} /></div><span>{goal ? `${goalProgress.toFixed(1)}% atingido` : "Preencha a meta do mês"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
+      <Kpi label="Receita de recompra" value={<Money value={repurchaseRevenue} />} detail={`${repurchaseShare.toFixed(1)}% da receita total`} />
+      <Kpi label="Participação da base" value={`${repurchaseShare.toFixed(1)}%`} detail={`${repurchases.length} recompras no período`} />
+      <article className={styles.overviewGoal}><label>{goalMonths.length === 1 ? "Meta do mês" : "Meta do período"}</label><div>{goalMonths.length === 1 ? <AccountingInput value={goal} set={(value) => updateGoal(goalMonth, Number(value) || 0)} /> : <strong><Money value={goal} /></strong>}</div><span>{goal ? `${goalProgress.toFixed(1)}% atingido${goalMonths.length > 1 ? ` · ${goalMonths.length} metas mensais` : ""}` : "Preencha as metas mensais"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
     </div>
     <section className={`${styles.panel} ${styles.channelComposition}`}><header><h3>Composição da receita</h3></header><div><article><span>Orgânico</span><strong><Money value={organicRevenue} /></strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong><Money value={trafficRevenue} /></strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
     <UnifiedRevenueAnalysis leads={leads} traffic={traffic} products={products} start={start} end={end} goals={goals} setGoal={updateGoal} />
@@ -679,8 +751,14 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
 }
 
 function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, setGoal }: { leads: Lead[]; traffic: TrafficRecord[]; products: ProductDefinition[]; start: string; end: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
-  const trafficLeads = traffic.flatMap((item) => { const units = Math.max(item.sales, item.revenue ? 1 : 0); const date = item.date || `${item.month}-01`; return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, temperature: "Quente", nextAction: "Venda direta", date, createdAt: date, conversationAt: date, meetingAt: date, proposalAt: date, closedAt: date })); });
-  const consolidated = [...leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego"), ...trafficLeads];
+  const trafficLeads = traffic.flatMap((item) => {
+    const linked = purchasesForCampaign(leads, item.id, products);
+    if (linked.length) return linked.map((purchase, index): Lead => ({ id: `traffic-${item.id}-${purchase.id}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: purchase.product, stage: "Fechado", value: purchase.value, netValue: purchase.netValue, temperature: "Quente", nextAction: "Venda direta", date: purchase.closedAt, closedAt: purchase.closedAt, purchases: [{ ...purchase, id: `report-${item.id}-${index}`, origin: "pipeline", campaignId: undefined, externalSaleCode: undefined }] }));
+    const units = Math.max(item.sales, item.revenue ? 1 : 0);
+    const date = item.date || `${item.month}-01`;
+    return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, netValue: units ? (item.netRevenue ?? netForValue(item.revenue, item.product, products)) / units : 0, temperature: "Quente", nextAction: "Venda direta", date, closedAt: date }));
+  });
+  const consolidated = [...leads, ...trafficLeads];
   const sources = Array.from(new Set([...leadSources, "Tráfego"]));
   return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={setGoal} /></div>;
 }
@@ -776,7 +854,7 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   };
   const codes = new Set<string>(); const duplicateCodes = sales.filter((sale) => codes.has(sale.code) || !codes.add(sale.code));
   const allPurchases = leads.flatMap((lead) => purchasesForLead(lead, []));
-  const alreadyImported = sales.filter((sale) => allPurchases.some((purchase) => purchase.externalSaleCode === sale.code));
+  const alreadyImported = sales.filter((sale) => allPurchases.some((purchase) => purchase.externalSaleCode === sale.code && Boolean(purchase.campaignId)));
   const conflicts = sales.filter((sale) => { const emailLead = sale.email && leads.find((lead) => lead.email.toLowerCase() === sale.email); const phoneLead = sale.phone && leads.find((lead) => lead.phone.replace(/\D/g,"") === sale.phone); return emailLead && phoneLead && emailLead.id !== phoneLead.id; });
   const valid = sales.filter((sale) => !alreadyImported.includes(sale) && !duplicateCodes.includes(sale) && !conflicts.includes(sale));
   const gross = valid.reduce((sum,sale) => sum + sale.gross,0); const net = valid.reduce((sum,sale) => sum + sale.net,0);
@@ -788,7 +866,7 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
 }
 
 const leadsForCampaign = (leads: Lead[], campaignId: string, products: ProductDefinition[]) => leads.flatMap((lead) => {
-  const purchases = purchasesForLead(lead, products).filter((purchase) => purchase.campaignId === campaignId);
+  const purchases = purchasesForCampaign([lead], campaignId, products);
   return purchases.length ? [{ lead, purchases }] : [];
 });
 
@@ -805,28 +883,26 @@ function TrafficDashboard({ records, month, products, leads, save, remove, impor
   const openNew = () => { setDraft({ ...emptyDraft, date: defaultDate, product: products[0]?.name || "" }); setEditing("new"); };
   const openEditData = (record: TrafficRecord) => { setDraft({ date: record.date || `${record.month}-01`, status: record.status || "Em andamento", campaign: record.campaign, product: record.product, investment: String(record.investment), sales: String(record.sales), revenue: String(record.revenue), netRevenue: String(record.netRevenue ?? netForValue(record.revenue, record.product, products)) }); setEditing(record); };
   records.sort((a, b) => safeCampaignDate(b.date, b.month).localeCompare(safeCampaignDate(a.date, a.month)));
-  const totals = records.reduce((sum,item) => ({ investment: sum.investment+item.investment, sales: sum.sales+item.sales, revenue: sum.revenue+item.revenue, net: sum.net+(item.netRevenue ?? netForValue(item.revenue,item.product,products)) }), { investment:0,sales:0,revenue:0,net:0 });
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (saving) return; const base = typeof editing === "object" && editing ? editing : null; const record = { id: base?.id || uniqueId(), month: draft.date.slice(0, 7), date: draft.date, status: draft.status, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment)||0, sales: Number(draft.sales)||0, revenue: Number(draft.revenue)||0, netRevenue: Number(draft.netRevenue)||0, clicks: base?.clicks||0, pageViews: base?.pageViews||0, checkouts: base?.checkouts||0 }; setSaving(true); setSaveError(""); try { await save(record); setEditing(null); } catch { setSaveError("Não foi possível salvar no banco. Tente novamente."); } finally { setSaving(false); } };
+  const totals = records.reduce((sum,item) => {
+    const linked = purchasesForCampaign(leads, item.id, products);
+    const sales = linked.length || item.sales;
+    const revenue = linked.length ? linked.reduce((value, purchase) => value + purchase.value, 0) : item.revenue;
+    const net = linked.length ? linked.reduce((value, purchase) => value + purchase.netValue, 0) : item.netRevenue ?? netForValue(item.revenue,item.product,products);
+    return { investment: sum.investment + item.investment, sales: sum.sales + sales, revenue: sum.revenue + revenue, net: sum.net + net };
+  }, { investment:0,sales:0,revenue:0,net:0 });
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    const investment = Number(draft.investment) || 0; const sales = Number(draft.sales) || 0; const revenue = Number(draft.revenue) || 0; const netRevenue = Number(draft.netRevenue) || 0;
+    if (investment < 0 || sales < 0 || !Number.isInteger(sales) || revenue < 0 || netRevenue < 0 || netRevenue > revenue) { setSaveError("Revise os valores: vendas deve ser um número inteiro, não são aceitos negativos e o líquido não pode superar o bruto."); return; }
+    const base = typeof editing === "object" && editing ? editing : null;
+    const record = { id: base?.id || uniqueId(), month: draft.date.slice(0, 7), date: draft.date, status: draft.status, campaign: draft.campaign.trim(), product: draft.product, investment, sales, revenue, netRevenue, clicks: base?.clicks||0, pageViews: base?.pageViews||0, checkouts: base?.checkouts||0 };
+    setSaving(true); setSaveError("");
+    try { await save(record); setEditing(null); } catch { setSaveError("Não foi possível salvar no banco. Tente novamente."); } finally { setSaving(false); }
+  };
   const cpa = totals.sales ? totals.investment/totals.sales : 0; const roas = totals.investment ? totals.revenue/totals.investment : 0;
   if (importingCampaign) return <CampaignSalesImport campaign={importingCampaign} leads={leads} close={() => setImportingCampaign(null)} edit={() => { const campaign = importingCampaign; setImportingCampaign(null); openEditData(campaign); }} confirm={async (sales) => { await importSales(importingCampaign, sales); setImportingCampaign(null); }} />;
-  return <div className={`${styles.content} ${styles.trafficDashboard}`}><header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas do mês</h2><p>Atualize diariamente os totais acumulados de cada campanha.</p></div><button onClick={openNew}>+ Adicionar campanha</button></header><div className={styles.trafficKpis}><Kpi label="Investimento total" value={currency.format(totals.investment)} detail={`${records.length} campanhas`} /><Kpi label="Faturamento bruto" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas`} /><Kpi label="Faturamento líquido" value={currency.format(totals.net)} detail={`${currency.format(Math.max(0,totals.revenue-totals.net))} em taxas`} /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`CPA ${currency.format(cpa)}`} /></div><section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Dashboard por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => { const net = item.netRevenue ?? netForValue(item.revenue,item.product,products); const campaignDate = item.date || `${item.month}-01`; const fees = Math.max(0,item.revenue-net); const itemCpa = item.sales ? item.investment/item.sales : 0; const netPerSale = item.sales ? net/item.sales : 0; const itemRoas = item.investment ? item.revenue/item.investment : 0; const campaignLeads = leadsForCampaign(leads, item.id, products); const expanded = expandedCampaignId === item.id; return <article className={styles.campaignDashboard} key={item.id}><header className={styles.campaignDashboardHeader}><div><span>Campanha</span><b>{item.campaign}</b><small>{item.product}</small><em className={item.status === "Fechada" ? styles.campaignClosed : styles.campaignRunning}>{item.status || "Em andamento"}</em></div><time dateTime={campaignDate}><small>Data da campanha</small><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${campaignDate}T12:00:00`))}</strong></time><div className={styles.campaignActions}><button onClick={() => setImportingCampaign(item)}>Importar planilha</button><button onClick={() => setExpandedCampaignId(expanded ? null : item.id)}>{expanded ? "Ocultar leads" : `Leads (${campaignLeads.length})`}</button><button onClick={() => openEditData(item)}>Editar</button><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></div></header><div className={styles.campaignMetrics}><span><small>Investimento</small><strong>{currency.format(item.investment)}</strong></span><span><small>Vendas</small><strong>{item.sales}</strong></span><span><small>Faturamento bruto</small><strong>{currency.format(item.revenue)}</strong></span><span><small>Faturamento líquido</small><strong>{currency.format(net)}</strong></span><span><small>Líquido por produto</small><strong>{currency.format(netPerSale)}</strong></span><span><small>Taxas</small><strong>{currency.format(fees)}</strong></span><span><small>CPA</small><strong>{currency.format(itemCpa)}</strong></span><span><small>ROAS</small><strong className={itemRoas < 1 ? styles.negativeMetric : undefined}>{itemRoas.toFixed(2)}x</strong></span></div>{expanded && <div className={styles.campaignLeadList}><header><b>Leads importados</b><span>{campaignLeads.length} vinculados a esta campanha</span></header>{campaignLeads.map(({ lead, purchases }) => { const latest = purchases.at(-1)!; const total = purchases.reduce((sum, purchase) => sum + purchase.value, 0); return <div key={lead.id}><span><b>{lead.name}</b><small>{lead.email || lead.phone || "Sem contato"}</small></span><span><small>Data da venda</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(latest.closedAt))}</b></span><span><small>Etapa atual</small><b>{lead.stage}</b></span><strong>{currency.format(total)}{purchases.length > 1 && <small>{purchases.length} compras</small>}</strong></div>})}{!campaignLeads.length && <p>Nenhum lead importado nesta campanha.</p>}</div>}</article>})}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>{editing && <div className={styles.backdrop} onMouseDown={() => setEditing(null)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Campanha mensal</span><h2>{editing === "new" ? "Adicionar campanha" : "Editar campanha"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({...draft,campaign})} required /><Input label="Data da campanha" value={draft.date} set={(date) => setDraft({...draft,date})} type="date" required /><label><span>Status da campanha</span><select value={draft.status} onChange={(event) => setDraft({...draft,status:event.target.value as "Em andamento" | "Fechada"})}><option>Em andamento</option><option>Fechada</option></select></label><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({...draft,product:event.target.value})}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><Input label="Investimento total" value={draft.investment} set={(investment) => setDraft({...draft,investment})} type="number" /><Input label="Quantidade de vendas" value={draft.sales} set={(sales) => setDraft({...draft,sales})} type="number" /><Input label="Faturamento bruto" value={draft.revenue} set={(revenue) => setDraft({...draft,revenue})} type="number" /><Input label="Faturamento líquido" value={draft.netRevenue} set={(netRevenue) => setDraft({...draft,netRevenue})} type="number" /><div className={styles.autoMetrics}><span>CPA <b>{currency.format(Number(draft.sales) ? Number(draft.investment)/Number(draft.sales) : 0)}</b></span><span>Líquido por produto <b>{currency.format(Number(draft.sales) ? Number(draft.netRevenue)/Number(draft.sales) : 0)}</b></span><span>ROAS <b className={(Number(draft.investment) ? Number(draft.revenue)/Number(draft.investment) : 0) < 1 ? styles.negativeMetric : undefined}>{Number(draft.investment) ? (Number(draft.revenue)/Number(draft.investment)).toFixed(2) : "0.00"}x</b></span></div></div>{saveError && <p className={styles.reconcileError}>{saveError}</p>}<footer><button type="button" onClick={() => setEditing(null)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar campanha"}</button></footer></form></div>}</div>;
-}
-
-function LegacyTrafficDashboard({ records, month, products, save, remove }: { records: TrafficRecord[]; month: string; products: ProductDefinition[]; save: (record: TrafficRecord) => void; remove: (id: string) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState<{ campaign: string; product: string; investment: string; clicks: string; pageViews: string; checkouts: string; sales: string; revenue: string }>({ campaign: "", product: products[0]?.name || "", investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" });
-  const totals = records.reduce((sum, item) => ({ investment: sum.investment + item.investment, clicks: sum.clicks + item.clicks, pageViews: sum.pageViews + item.pageViews, checkouts: sum.checkouts + item.checkouts, sales: sum.sales + item.sales, revenue: sum.revenue + item.revenue }), { investment: 0, clicks: 0, pageViews: 0, checkouts: 0, sales: 0, revenue: 0 });
-  const cpa = totals.sales ? totals.investment / totals.sales : 0;
-  const roas = totals.investment ? totals.revenue / totals.investment : 0;
-  const conversion = totals.pageViews ? totals.sales / totals.pageViews * 100 : 0;
-  const netRevenue = records.reduce((sum, item) => sum + netForValue(item.revenue, item.product, products), 0);
-  const submit = (event: React.FormEvent) => { event.preventDefault(); save({ id: String(Date.now()), month, date: new Date().toISOString().slice(0, 10), campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment) || 0, clicks: Number(draft.clicks) || 0, pageViews: Number(draft.pageViews) || 0, checkouts: Number(draft.checkouts) || 0, sales: Number(draft.sales) || 0, revenue: Number(draft.revenue) || 0 }); setAdding(false); setDraft({ campaign: "", product: products[0]?.name || "", investment: "", clicks: "", pageViews: "", checkouts: "", sales: "", revenue: "" }); };
-  return <div className={`${styles.content} ${styles.trafficDashboard}`}>
-    <header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas e gateway</h2><p>Cadastre os resultados consolidados sem misturar essas vendas com a pipeline comercial.</p></div><button onClick={() => setAdding(true)}>+ Adicionar campanha</button></header>
-    <div className={styles.trafficKpis}><Kpi label="Investimento" value={currency.format(totals.investment)} detail={`${totals.clicks} cliques`} /><Kpi label="Faturamento bruto" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas aprovadas`} /><Kpi label="Faturamento líquido" value={currency.format(netRevenue)} detail={`${currency.format(Math.max(0, totals.revenue - netRevenue))} em taxas`} /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`CPA ${currency.format(cpa)} · ${conversion.toFixed(2)}% conversão`} /></div>
-    <section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Resultados por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => <article key={item.id}><div><b>{item.campaign}</b><small>{item.product}</small></div><span><small>Investimento</small>{currency.format(item.investment)}</span><span><small>Vendas</small>{item.sales}</span><span><small>Receita</small>{currency.format(item.revenue)}</span><span><small>ROAS</small>{item.investment ? (item.revenue / item.investment).toFixed(2) : "0.00"}x</span><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></article>)}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>
-    {adding && <div className={styles.backdrop} onMouseDown={() => setAdding(false)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Tráfego pago</span><h2>Adicionar campanha</h2></div><button type="button" onClick={() => setAdding(false)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({ ...draft, campaign })} required /><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({ ...draft, product: event.target.value })}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label>{([['investment','Investimento'],['clicks','Cliques'],['pageViews','Visualizações da página'],['checkouts','Checkouts iniciados'],['sales','Compras aprovadas'],['revenue','Faturamento']] as const).map(([key,label]) => <Input key={key} label={label} value={draft[key]} set={(value) => setDraft({ ...draft, [key]: value })} type="number" />)}</div><footer><button type="button" onClick={() => setAdding(false)}>Cancelar</button><button type="submit">Salvar campanha</button></footer></form></div>}
-  </div>;
+  return <div className={`${styles.content} ${styles.trafficDashboard}`}><header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas do mês</h2><p>Atualize diariamente os totais acumulados de cada campanha.</p></div><button onClick={openNew}>+ Adicionar campanha</button></header><div className={styles.trafficKpis}><Kpi label="Investimento total" value={currency.format(totals.investment)} detail={`${records.length} campanhas`} /><Kpi label="Faturamento bruto" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas`} /><Kpi label="Faturamento líquido" value={currency.format(totals.net)} detail={`${currency.format(Math.max(0,totals.revenue-totals.net))} em taxas`} /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`CPA ${currency.format(cpa)}`} /></div><section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Dashboard por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => { const linked = purchasesForCampaign(leads, item.id, products); const itemSales = linked.length || item.sales; const itemRevenue = linked.length ? linked.reduce((sum, purchase) => sum + purchase.value, 0) : item.revenue; const net = linked.length ? linked.reduce((sum, purchase) => sum + purchase.netValue, 0) : item.netRevenue ?? netForValue(item.revenue,item.product,products); const campaignDate = item.date || `${item.month}-01`; const fees = Math.max(0,itemRevenue-net); const itemCpa = itemSales ? item.investment/itemSales : 0; const netPerSale = itemSales ? net/itemSales : 0; const itemRoas = item.investment ? itemRevenue/item.investment : 0; const campaignLeads = leadsForCampaign(leads, item.id, products); const expanded = expandedCampaignId === item.id; return <article className={styles.campaignDashboard} key={item.id}><header className={styles.campaignDashboardHeader}><div><span>Campanha</span><b>{item.campaign}</b><small>{item.product}</small><em className={item.status === "Fechada" ? styles.campaignClosed : styles.campaignRunning}>{item.status || "Em andamento"}</em></div><time dateTime={campaignDate}><small>Data da campanha</small><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${campaignDate}T12:00:00`))}</strong></time><div className={styles.campaignActions}><button onClick={() => setImportingCampaign(item)}>Importar planilha</button><button onClick={() => setExpandedCampaignId(expanded ? null : item.id)}>{expanded ? "Ocultar leads" : `Leads (${campaignLeads.length})`}</button><button onClick={() => openEditData(item)}>Editar</button><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></div></header><div className={styles.campaignMetrics}><span><small>Investimento</small><strong>{currency.format(item.investment)}</strong></span><span><small>Vendas</small><strong>{itemSales}</strong></span><span><small>Faturamento bruto</small><strong>{currency.format(itemRevenue)}</strong></span><span><small>Faturamento líquido</small><strong>{currency.format(net)}</strong></span><span><small>Líquido por produto</small><strong>{currency.format(netPerSale)}</strong></span><span><small>Taxas</small><strong>{currency.format(fees)}</strong></span><span><small>CPA</small><strong>{currency.format(itemCpa)}</strong></span><span><small>ROAS</small><strong className={itemRoas < 1 ? styles.negativeMetric : undefined}>{itemRoas.toFixed(2)}x</strong></span></div>{expanded && <div className={styles.campaignLeadList}><header><b>Leads importados</b><span>{campaignLeads.length} vinculados a esta campanha</span></header>{campaignLeads.map(({ lead, purchases }) => { const latest = purchases.at(-1)!; const total = purchases.reduce((sum, purchase) => sum + purchase.value, 0); return <div key={lead.id}><span><b>{lead.name}</b><small>{lead.email || lead.phone || "Sem contato"}</small></span><span><small>Data da venda</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(latest.closedAt))}</b></span><span><small>Etapa atual</small><b>{lead.stage}</b></span><strong>{currency.format(total)}{purchases.length > 1 && <small>{purchases.length} compras</small>}</strong></div>})}{!campaignLeads.length && <p>Nenhum lead importado nesta campanha.</p>}</div>}</article>})}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>{editing && <div className={styles.backdrop} onMouseDown={() => setEditing(null)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Campanha mensal</span><h2>{editing === "new" ? "Adicionar campanha" : "Editar campanha"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({...draft,campaign})} required /><Input label="Data da campanha" value={draft.date} set={(date) => setDraft({...draft,date})} type="date" required /><label><span>Status da campanha</span><select value={draft.status} onChange={(event) => setDraft({...draft,status:event.target.value as "Em andamento" | "Fechada"})}><option>Em andamento</option><option>Fechada</option></select></label><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({...draft,product:event.target.value})}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><Input label="Investimento total" value={draft.investment} set={(investment) => setDraft({...draft,investment})} type="number" /><Input label="Quantidade de vendas" value={draft.sales} set={(sales) => setDraft({...draft,sales})} type="number" /><Input label="Faturamento bruto" value={draft.revenue} set={(revenue) => setDraft({...draft,revenue})} type="number" /><Input label="Faturamento líquido" value={draft.netRevenue} set={(netRevenue) => setDraft({...draft,netRevenue})} type="number" /><div className={styles.autoMetrics}><span>CPA <b>{currency.format(Number(draft.sales) ? Number(draft.investment)/Number(draft.sales) : 0)}</b></span><span>Líquido por produto <b>{currency.format(Number(draft.sales) ? Number(draft.netRevenue)/Number(draft.sales) : 0)}</b></span><span>ROAS <b className={(Number(draft.investment) ? Number(draft.revenue)/Number(draft.investment) : 0) < 1 ? styles.negativeMetric : undefined}>{Number(draft.investment) ? (Number(draft.revenue)/Number(draft.investment)).toFixed(2) : "0.00"}x</b></span></div></div>{saveError && <p className={styles.reconcileError}>{saveError}</p>}<footer><button type="button" onClick={() => setEditing(null)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar campanha"}</button></footer></form></div>}</div>;
 }
 
 function Dashboard({
@@ -1080,7 +1156,7 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   const editProduct = (product: ProductDefinition) => { setProductDraft({ name: product.name, gross: String(product.price), net: String(product.netPrice ?? product.price) }); setEditingProduct(product); };
   const editSource = (source: string) => { setSourceDraft(source); setEditingSource(source); };
   const moveProduct = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= products.length) return; const next = [...products]; [next[index], next[target]] = [next[target], next[index]]; saveProducts(next.map((product, position) => ({ ...product, position }))); };
-  const submitProduct = async (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const price = Number(productDraft.gross)||0; const netPrice = Number(productDraft.net)||0; if (editingProduct === "new") saveProducts([...products,{ name, price, netPrice, priceHistory: [] }]); else if (editingProduct) { const changed = editingProduct.price !== price || (editingProduct.netPrice ?? editingProduct.price) !== netPrice; const priceHistory = changed ? [...(editingProduct.priceHistory || []), { id: uniqueId(), changedAt: new Date().toISOString(), previousPrice: editingProduct.price, previousNetPrice: editingProduct.netPrice ?? editingProduct.price, price, netPrice }] : editingProduct.priceHistory || []; await renameProduct(editingProduct.name,{ name, price, netPrice, priceHistory }); } setEditingProduct(null); };
+  const submitProduct = async (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const price = Number(productDraft.gross)||0; const netPrice = Number(productDraft.net)||0; if (price < 0 || netPrice < 0 || netPrice > price) { window.alert("O valor líquido do produto deve estar entre zero e o valor bruto."); return; } if (editingProduct === "new") saveProducts([...products,{ name, price, netPrice, priceHistory: [] }]); else if (editingProduct) { const changed = editingProduct.price !== price || (editingProduct.netPrice ?? editingProduct.price) !== netPrice; const priceHistory = changed ? [...(editingProduct.priceHistory || []), { id: uniqueId(), changedAt: new Date().toISOString(), previousPrice: editingProduct.price, previousNetPrice: editingProduct.netPrice ?? editingProduct.price, price, netPrice }] : editingProduct.priceHistory || []; await renameProduct(editingProduct.name,{ name, price, netPrice, priceHistory }); } setEditingProduct(null); };
   const submitSource = async (event: React.FormEvent) => { event.preventDefault(); const name = sourceDraft.trim(); if (!name) return; if (editingSource === "new") saveSources([...sources,name]); else if (editingSource) await renameSource(editingSource,name); setEditingSource(null); };
   const editTemplate = (template: { id: string; title: string; text: string }) => { setTitle(template.title); setMessage(template.text); setEditingMessage(template.id); setAddingMessage(true); };
   return (
@@ -1101,7 +1177,7 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
 }
 
 function ImportLeadsModal({ existing, stages, products, sources, close, save }: { existing: Lead[]; stages: Stage[]; products: ProductDefinition[]; sources: string[]; close: () => void; save: (leads: Lead[]) => Promise<void> }) {
-  type PreviewRow = { name: string; company: string; source: string; product: string; stage: string; lead?: Lead; status: "Pronto" | "Duplicado" | "Inválido"; issue?: string };
+  type PreviewRow = { name: string; company: string; source: string; product: string; stage: string; lead?: Lead; status: "Pronto" | "Atualizar" | "Inválido"; issue?: string };
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [reading, setReading] = useState(false);
@@ -1142,16 +1218,16 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
         if (!issue && productInput && product === productInput && !catalogProduct) issue = "Produto não cadastrado";
         if (!issue && stage === "Fechado" && !closedAt) issue = "Fechamento sem data";
         const leadId = uniqueId();
-        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: uniqueId(), product, value, netValue, closedAt, repurchase: false }] : undefined;
+        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: `pipeline-${uniqueId()}`, origin: "pipeline", product, source, value, netValue, closedAt, repurchase: false }] : undefined;
         const lead: Lead | undefined = issue ? undefined : { id: leadId, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: "", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
-        return { name: name || `Linha ${index + 2}`, company, source, product, stage, lead, status: issue ? "Inválido" : duplicate ? "Duplicado" : "Pronto", issue: issue || (duplicate ? "WhatsApp ou e-mail já cadastrado" : undefined) };
+        return { name: name || `Linha ${index + 2}`, company, source, product, stage, lead, status: issue ? "Inválido" : duplicate ? "Atualizar" : "Pronto", issue: issue || (duplicate ? "Será acrescentado ao cadastro existente" : undefined) };
       });
       setRows(parsed);
     } catch { setRows([{ name: "Arquivo não reconhecido", company: "", source: "", product: "", stage: "", status: "Inválido", issue: "Use o modelo em XLSX ou CSV" }]); }
     finally { setReading(false); }
   };
-  const ready = rows.filter((row) => row.status === "Pronto" && row.lead).map((row) => row.lead as Lead);
-  return <div className={styles.backdrop} onMouseDown={close}><section className={`${styles.modal} ${styles.importModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Importação de contatos</span><h2>Subir leads por planilha</h2></div><button onClick={close}>×</button></header><div className={styles.importIntro}><p>Use o modelo para manter produtos, etapas e datas coerentes com as dashboards.</p><button onClick={downloadTemplate}>↓ Baixar planilha-modelo</button></div><label className={styles.fileDrop}><input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0])} /><span>{reading ? "Lendo planilha..." : fileName || "Selecionar arquivo XLSX ou CSV"}</span><small>Clique para escolher a planilha</small></label>{rows.length > 0 && <><div className={styles.importSummary}><span><b>{ready.length}</b> prontos</span><span><b>{rows.filter((row) => row.status === "Duplicado").length}</b> duplicados</span><span><b>{rows.filter((row) => row.status === "Inválido").length}</b> inválidos</span></div><div className={styles.importPreview}><header><b>Lead</b><b>Origem / produto</b><b>Etapa</b><b>Status</b></header>{rows.slice(0,10).map((row,index) => <article key={`${row.name}-${index}`}><span><b>{row.name}</b><small>{row.company}</small></span><span><b>{row.source}</b><small>{row.product}</small></span><span>{row.stage}</span><em className={row.status === "Pronto" ? styles.importReady : row.status === "Duplicado" ? styles.importDuplicate : styles.importInvalid}>{row.status}<small>{row.issue}</small></em></article>)}</div>{rows.length > 10 && <small className={styles.previewLimit}>Exibindo 10 de {rows.length} linhas.</small>}</>}{saveError && <p className={styles.reconcileError}>{saveError}</p>}<footer><button onClick={close} disabled={saving}>Cancelar</button><button disabled={!ready.length || saving} onClick={async () => { setSaving(true); setSaveError(""); try { await save(ready); } catch { setSaveError("Não foi possível salvar a importação no banco. Tente novamente."); } finally { setSaving(false); } }}>{saving ? "Salvando…" : `Importar ${ready.length} leads`}</button></footer></section></div>;
+  const ready = rows.filter((row) => row.status !== "Inválido" && row.lead).map((row) => row.lead as Lead);
+  return <div className={styles.backdrop} onMouseDown={close}><section className={`${styles.modal} ${styles.importModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Importação de contatos</span><h2>Subir leads por planilha</h2></div><button onClick={close}>×</button></header><div className={styles.importIntro}><p>Use o modelo para manter produtos, etapas e datas coerentes com as dashboards.</p><button onClick={downloadTemplate}>↓ Baixar planilha-modelo</button></div><label className={styles.fileDrop}><input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0])} /><span>{reading ? "Lendo planilha..." : fileName || "Selecionar arquivo XLSX ou CSV"}</span><small>Clique para escolher a planilha</small></label>{rows.length > 0 && <><div className={styles.importSummary}><span><b>{rows.filter((row) => row.status === "Pronto").length}</b> novos</span><span><b>{rows.filter((row) => row.status === "Atualizar").length}</b> atualizações</span><span><b>{rows.filter((row) => row.status === "Inválido").length}</b> inválidos</span></div><div className={styles.importPreview}><header><b>Lead</b><b>Origem / produto</b><b>Etapa</b><b>Status</b></header>{rows.slice(0,10).map((row,index) => <article key={`${row.name}-${index}`}><span><b>{row.name}</b><small>{row.company}</small></span><span><b>{row.source}</b><small>{row.product}</small></span><span>{row.stage}</span><em className={row.status === "Pronto" ? styles.importReady : row.status === "Atualizar" ? styles.importDuplicate : styles.importInvalid}>{row.status}<small>{row.issue}</small></em></article>)}</div>{rows.length > 10 && <small className={styles.previewLimit}>Exibindo 10 de {rows.length} linhas.</small>}</>}{saveError && <p className={styles.reconcileError}>{saveError}</p>}<footer><button onClick={close} disabled={saving}>Cancelar</button><button disabled={!ready.length || saving} onClick={async () => { setSaving(true); setSaveError(""); try { await save(ready); } catch { setSaveError("Não foi possível salvar a importação no banco. Tente novamente."); } finally { setSaving(false); } }}>{saving ? "Salvando…" : `Processar ${ready.length} registros`}</button></footer></section></div>;
 }
 
 function LeadModal({
@@ -1193,7 +1269,14 @@ function LeadModal({
           event.preventDefault();
           const email = draft.email.trim().toLowerCase(); const phone = phoneKey(draft.phone);
           const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
-          if (match) { window.alert("Este WhatsApp ou e-mail já está cadastrado. Vamos abrir o lead existente para você continuar o atendimento."); duplicate(match); return; }
+          if (match) {
+            const updated = mergeLeadData(match, { ...match, name: match.name || draft.name.trim(), company: match.company || draft.company.trim(), phone: match.phone || draft.phone.trim(), email: match.email || email });
+            setSaving(true); setSaveError("");
+            try { await save(updated); window.alert("Contato já cadastrado. As novas informações foram acrescentadas ao lead existente."); duplicate(updated); }
+            catch { setSaveError("Não foi possível atualizar o contato existente. Tente novamente."); }
+            finally { setSaving(false); }
+            return;
+          }
           setSaving(true); setSaveError("");
           try {
             await save({
@@ -1352,7 +1435,9 @@ function LeadDrawer({
     event.preventDefault();
     const closedAt = dateFromInput(closingDraft.date);
     if (!closedAt || !closingDraft.product) return;
-    const purchase: Purchase = { id: uniqueId(), product: closingDraft.product, value: Number(closingDraft.gross) || 0, netValue: Number(closingDraft.net) || 0, closedAt, repurchase: purchaseHistory.length > 0 };
+    const value = Number(closingDraft.gross) || 0; const netValue = Number(closingDraft.net) || 0;
+    if (value < 0 || netValue < 0 || netValue > value) { window.alert("O valor líquido deve estar entre zero e o valor bruto."); return; }
+    const purchase: Purchase = { id: `pipeline-${uniqueId()}`, origin: "pipeline", product: closingDraft.product, source: lead.source, value, netValue, closedAt, repurchase: purchaseHistory.length > 0 };
     update({ stage: "Fechado", product: purchase.product, value: purchase.value, netValue: purchase.netValue, closedAt, purchases: [...purchaseHistory, purchase] });
     setAddingClosing(false);
   };
@@ -1383,7 +1468,7 @@ function LeadDrawer({
             <Input label="E-mail" value={draft.email} set={(email) => setDraft({ ...draft, email })} type="email" />
             <label><span>Temperatura</span><select value={draft.temperature} onChange={(event) => setDraft({ ...draft, temperature: event.target.value as Lead["temperature"] })}><option>Quente</option><option>Morno</option><option>Frio</option></select></label>
           </div>
-          <button className={styles.saveLeadEdit} type="button" onClick={() => { update(draft); setEditing(false); }}>Salvar alterações</button>
+          <button className={styles.saveLeadEdit} type="button" onClick={() => { update({ ...draft, phone: draft.phone.trim(), email: draft.email.trim().toLowerCase() }); setEditing(false); }}>Salvar alterações</button>
         </section>}
         <section>
           <small>Dados de contato</small>
@@ -1449,7 +1534,7 @@ function LeadDrawer({
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
         </section>
-        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={styles.closingForm} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor bruto</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor líquido</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><button type="submit">Salvar fechamento</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><strong><Money value={purchase.value} /></strong><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
+        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={styles.closingForm} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor bruto</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor líquido</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><button type="submit">Salvar fechamento</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{isCampaignPurchase(purchase) ? "Compra da campanha" : purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><strong><Money value={purchase.value} /></strong><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
       </aside>
     </div>
   );
@@ -1495,16 +1580,22 @@ function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; c
 }
 function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[]; endMonth: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const [year, month] = endMonth.split("-").map(Number);
-  const start = new Date(2026, 6, 1);
   const end = new Date(year, month - 1, 1);
-  const firstMonth = end < start ? end : start;
+  const availableMonths = [
+    endMonth,
+    ...leads.map((lead) => lead.createdAt?.slice(0, 7) || ""),
+    ...leads.flatMap((lead) => purchasesForLead(lead, []).map((purchase) => purchase.closedAt.slice(0, 7))),
+    ...Object.keys(goals),
+  ].filter((key) => /^\d{4}-\d{2}$/.test(key) && key <= endMonth).sort();
+  const [firstYear, firstMonthNumber] = (availableMonths[0] || endMonth).split("-").map(Number);
+  const firstMonth = new Date(firstYear, firstMonthNumber - 1, 1);
   const monthCount = Math.max(1, (end.getFullYear() - firstMonth.getFullYear()) * 12 + end.getMonth() - firstMonth.getMonth() + 1);
   const months = Array.from({ length: monthCount }, (_, index) => {
     const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const items = leads.filter((lead) => (lead.createdAt || "").slice(0, 7) === key);
-    const purchases = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => !purchase.campaignId));
-    const trafficLeads = items.filter((lead) => lead.id.startsWith("traffic-")).length;
+    const purchases = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => !isCampaignPurchase(purchase)));
+    const trafficLeads = items.filter((lead) => lead.source === "Tráfego" || lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))).length;
     return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, organicLeads: items.length - trafficLeads, trafficLeads, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.value, 0), goal: goals[key] || 0 };
   });
   const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
@@ -1522,15 +1613,16 @@ function PeriodFilter({ start, end, setRange }: { start: string; end: string; se
 }
 function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado"), ...leads.flatMap((lead) => purchasesForLead(lead, products).map((purchase) => purchase.product))])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !isCampaignPurchase(purchase) && purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong><Money value={total} /><small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido <Money value={item.net} /></small></div><strong><Money value={item.value} /></strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const originNames = Array.from(new Set([...sources, ...leads.map((lead) => lead.source).filter(Boolean)]));
-  const origins = originNames.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.flatMap((lead) => purchasesForLead(lead, [])).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const closings = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source })));
+  const originNames = Array.from(new Set([...sources, ...leads.map((lead) => lead.source).filter(Boolean), ...closings.map((item) => item.source).filter(Boolean)]));
+  const origins = originNames.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = closings.filter((item) => item.source === source).map((item) => item.purchase); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
