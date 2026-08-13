@@ -74,6 +74,16 @@ const inRange = (date: string | undefined, start: string, end: string) => Boolea
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
 const dateInputValue = (date?: string) => date ? date.slice(0, 10) : "";
 const dateFromInput = (date: string) => date ? new Date(`${date}T12:00:00`).toISOString() : undefined;
+const safeCampaignDate = (date?: string, month?: string) => {
+  const candidate = String(date || (month ? `${month}-01` : "")).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : "";
+};
+const formatCampaignDate = (date?: string, month?: string) => {
+  const candidate = safeCampaignDate(date, month);
+  if (!candidate) return "Data não informada";
+  const parsed = new Date(`${candidate}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? "Data não informada" : new Intl.DateTimeFormat("pt-BR").format(parsed);
+};
 const tagColor = (tag: string) => {
   const palette = ["#2f9ed1", "#8b6bd6", "#d28a3f", "#36a879", "#d05f76", "#667fd1", "#b576c7", "#32a6a0", "#c76b3f", "#7a9f35", "#b35c9d"];
   return palette[[...tag].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length];
@@ -630,7 +640,7 @@ function TrafficDashboard({ records, month, products, leads, save, remove, impor
   const openNew = () => { setDraft({ ...emptyDraft, date: defaultDate, product: products[0]?.name || "" }); setEditing("new"); };
   const openEditData = (record: TrafficRecord) => { setDraft({ date: record.date || `${record.month}-01`, status: record.status || "Em andamento", campaign: record.campaign, product: record.product, investment: String(record.investment), sales: String(record.sales), revenue: String(record.revenue), netRevenue: String(record.netRevenue ?? netForValue(record.revenue, record.product, products)) }); setEditing(record); };
   const openEdit = (record: TrafficRecord) => openEditData(record);
-  records.sort((a, b) => (b.date || `${b.month}-01`).localeCompare(a.date || `${a.month}-01`));
+  records.sort((a, b) => safeCampaignDate(b.date, b.month).localeCompare(safeCampaignDate(a.date, a.month)));
   const totals = records.reduce((sum,item) => ({ investment: sum.investment+item.investment, sales: sum.sales+item.sales, revenue: sum.revenue+item.revenue, net: sum.net+(item.netRevenue ?? netForValue(item.revenue,item.product,products)) }), { investment:0,sales:0,revenue:0,net:0 });
   const submit = (event: React.FormEvent) => { event.preventDefault(); const base = typeof editing === "object" && editing ? editing : null; save({ id: base?.id || String(Date.now()), month: draft.date.slice(0, 7), date: draft.date, status: draft.status, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment)||0, sales: Number(draft.sales)||0, revenue: Number(draft.revenue)||0, netRevenue: Number(draft.netRevenue)||0, clicks: base?.clicks||0, pageViews: base?.pageViews||0, checkouts: base?.checkouts||0 }); setEditing(null); };
   const cpa = totals.sales ? totals.investment/totals.sales : 0; const roas = totals.investment ? totals.revenue/totals.investment : 0;
