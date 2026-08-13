@@ -107,7 +107,7 @@ const defaultStages: Stage[] = [
   "Fechado",
 ];
 const initialLeads: Lead[] = [];
-const leadsStorageKey = "mensor-crm-v2";
+const leadsStorageKey = "mensor-crm-v3";
 const trafficStorageKey = "mensor-crm-traffic-v2";
 const goalsStorageKey = "mensor-crm-goals-v2";
 const reconciliationBackupKey = "mensor-crm-backup-before-reconciliation-v1";
