@@ -163,6 +163,7 @@ export default function CRM() {
   const syncRequest = useRef(0);
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
   const skipNextSnapshotSync = useRef(false);
+  const leadSaveTimers = useRef<Map<string, number>>(new Map());
   const [syncRevision, setSyncRevision] = useState(0);
   const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
 
@@ -254,6 +255,25 @@ export default function CRM() {
     };
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
+  };
+  const scheduleLeadSave = (lead: Lead) => {
+    setDatabaseStatus("saving");
+    setDatabaseIssue("");
+    const existing = leadSaveTimers.current.get(lead.id);
+    if (existing) window.clearTimeout(existing);
+    const timer = window.setTimeout(() => {
+      leadSaveTimers.current.delete(lead.id);
+      void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
+    }, 600);
+    leadSaveTimers.current.set(lead.id, timer);
+  };
+  const flushLeadSave = (id: string) => {
+    const timer = leadSaveTimers.current.get(id);
+    if (!timer) return;
+    window.clearTimeout(timer);
+    leadSaveTimers.current.delete(id);
+    const lead = leads.find((item) => item.id === id);
+    if (lead) void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
   };
   const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
     const persist = async () => {
@@ -471,7 +491,7 @@ export default function CRM() {
     const updated = applyLeadChanges(lead, changes);
     setLeads((current) => current.map((item) => item.id === id ? updated : item));
     setSelected((current) => current?.id === id ? updated : current);
-    void saveLead(updated).catch((error) => console.error("Falha ao salvar lead", error));
+    scheduleLeadSave(updated);
   };
   const renameTag = async (oldTag: string, newTag: string) => {
     const nextLeads = leads.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }));
@@ -584,7 +604,7 @@ export default function CRM() {
           sources={catalogSources}
           availableTags={Array.from(new Set(["Desqualificado", ...leads.flatMap((lead) => lead.tags || [])]))}
           stages={pipelineStages}
-          close={() => setSelected(null)}
+          close={() => { flushLeadSave(selected.id); setSelected(null); }}
           update={(changes) => updateLead(selected.id, changes)}
           renameTag={renameTag}
           deleteTag={deleteTag}
