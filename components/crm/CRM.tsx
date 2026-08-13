@@ -157,6 +157,7 @@ export default function CRM() {
   const [databaseIssue, setDatabaseIssue] = useState("");
   const syncRequest = useRef(0);
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
+  const skipNextSnapshotSync = useRef(false);
   const [syncRevision, setSyncRevision] = useState(0);
   const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
 
@@ -199,6 +200,7 @@ export default function CRM() {
     const persist = async () => {
       const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "traffic", record }) });
       if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar campanha"); }
+      skipNextSnapshotSync.current = true;
       setTraffic((current) => current.some((item) => item.id === record.id) ? current.map((item) => item.id === record.id ? record : item) : [record, ...current]);
       setDatabaseIssue("");
       setDatabaseStatus("connected");
@@ -212,6 +214,7 @@ export default function CRM() {
     const persist = async () => {
       const response = await fetch("/api/crm", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "traffic", id }) });
       if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao excluir campanha"); }
+      skipNextSnapshotSync.current = true;
       setTraffic((current) => current.filter((item) => item.id !== id));
       setDatabaseIssue("");
       setDatabaseStatus("connected");
@@ -239,6 +242,7 @@ export default function CRM() {
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
         if (cancelled) return;
+        skipNextSnapshotSync.current = true;
         const remoteLeads = (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead);
         setLeads(remoteLeads);
         setTraffic(remote.traffic || []);
@@ -258,6 +262,10 @@ export default function CRM() {
   }, [loaded, catalogLoaded, databaseReady]);
   useEffect(() => {
     if (!databaseReady) return;
+    if (skipNextSnapshotSync.current) {
+      skipNextSnapshotSync.current = false;
+      return;
+    }
     setDatabaseStatus("saving");
     setDatabaseIssue("");
     const timeout = window.setTimeout(() => {
@@ -289,6 +297,7 @@ export default function CRM() {
         const response = await fetch("/api/crm", { cache: "no-store" });
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
+        skipNextSnapshotSync.current = true;
         setLeads((remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
         setTraffic(remote.traffic || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
@@ -463,9 +472,6 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
-            <span className={`${styles.saveStatus} ${databaseStatus === "offline" ? styles.saveError : ""}`} title={databaseIssue || undefined}>
-              {databaseStatus === "saving" ? "Salvando no banco…" : databaseStatus === "connected" ? "Salvo no banco" : databaseStatus === "offline" ? "Erro ao salvar" : "Conectando…"}
-            </span>
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>

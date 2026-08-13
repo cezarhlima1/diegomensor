@@ -2323,4 +2323,3 @@
 /* A meta contábil permanece inteira mesmo nos cards mais estreitos. */
 .overviewGoal>div{min-width:0}
 .overviewGoal input{box-sizing:border-box;width:min(100%,160px);min-width:0;font-size:clamp(20px,1.65vw,25px)}
-.saveStatus{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#75cfa9;font-size:8px;font-weight:750}.saveStatus:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor}.saveError{color:#ef737b}@media(max-width:700px){.saveStatus{position:fixed;right:10px;bottom:10px;z-index:50;padding:7px 9px;border:1px solid rgba(117,207,169,.2);border-radius:8px;background:#0b202d}}
