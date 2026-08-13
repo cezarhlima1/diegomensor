@@ -357,9 +357,12 @@ export default function CRM() {
   };
   const importCampaignSales = (campaign: TrafficRecord, sales: ImportedSale[]) => {
     const phoneKey = (value: string) => value.replace(/\D/g, "");
+    const uniqueSales = Array.from(new Map(sales.map((sale) => [sale.code.trim(), sale])).values());
     setLeads((current) => {
       const next = [...current];
-      for (const sale of sales) {
+      const knownCodes = new Set(next.flatMap((lead) => purchasesForLead(lead, catalogProducts)).map((purchase) => purchase.externalSaleCode).filter(Boolean));
+      for (const sale of uniqueSales) {
+        if (knownCodes.has(sale.code)) continue;
         let index = next.findIndex((lead) => (sale.email && lead.email.trim().toLowerCase() === sale.email) || (sale.phone && phoneKey(lead.phone) === phoneKey(sale.phone)));
         const existing = index >= 0 ? next[index] : undefined;
         const history = existing ? purchasesForLead(existing, catalogProducts) : [];
@@ -368,16 +371,12 @@ export default function CRM() {
         const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: sale.date.slice(0,10).split("-").reverse().join("/"), createdAt: sale.date };
         const updated: Lead = { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, product: campaign.product, stage: "Novo lead", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases: [...history, purchase] };
         if (index >= 0) next[index] = updated; else { next.unshift(updated); index = 0; }
+        knownCodes.add(sale.code);
       }
+      const campaignPurchases = next.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => purchase.campaignId === campaign.id);
+      saveTraffic(traffic.map((item) => item.id === campaign.id ? { ...item, sales: campaignPurchases.length, revenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.value,0), netRevenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.netValue,0) } : item));
       return next;
     });
-    const previous = leads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => purchase.campaignId === campaign.id);
-    const newCodes = new Set(sales.map((sale) => sale.code));
-    const retained = previous.filter((purchase) => !purchase.externalSaleCode || !newCodes.has(purchase.externalSaleCode));
-    const salesCount = retained.length + sales.length;
-    const gross = retained.reduce((sum,purchase) => sum + purchase.value,0) + sales.reduce((sum,sale) => sum + sale.gross,0);
-    const net = retained.reduce((sum,purchase) => sum + purchase.netValue,0) + sales.reduce((sum,sale) => sum + sale.net,0);
-    saveTraffic(traffic.map((item) => item.id === campaign.id ? { ...item, sales: salesCount, revenue: gross, netRevenue: net } : item));
   };
   const applyLeadChanges = (lead: Lead, changes: Partial<Lead>) => {
     if ("purchases" in changes) return { ...lead, ...changes };
@@ -561,6 +560,7 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   const [sales, setSales] = useState<ImportedSale[]>([]);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
+  const [acceptSheetValues, setAcceptSheetValues] = useState(false);
   const repairEncoding = (value: string) => {
     if (!/[ÃÂ]/.test(value)) return value;
     try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from([...value].map((character) => character.charCodeAt(0)))); } catch { return value; }
@@ -569,7 +569,7 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   const parseMoney = (value: unknown) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".")) || 0;
   const parseDate = (value: unknown) => { if (typeof value === "number") return new Date(Date.UTC(1899,11,30) + value * 86400000).toISOString(); const text = String(value || "").trim(); const br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/); const date = br ? new Date(Number(br[3]),Number(br[2])-1,Number(br[1]),Number(br[4]||12),Number(br[5]||0),Number(br[6]||0)) : new Date(text); return Number.isNaN(date.getTime()) ? "" : date.toISOString(); };
   const read = async (file: File) => {
-    setFileName(file.name); setError("");
+    setFileName(file.name); setError(""); setAcceptSheetValues(false);
     try {
       const XLSX = await import("xlsx");
       const bytes = await file.arrayBuffer();
@@ -625,6 +625,19 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
       if (!headerFound) throw new Error(`Não consegui identificar o cabeçalho.${detectedHeaders.length ? ` Encontrei: ${detectedHeaders.join(" | ")}.` : " O arquivo não apresentou títulos legíveis."}`);
       if (!parsed.length) throw new Error("Encontrei as colunas, mas nenhuma venda tinha código, nome, data e valor bruto válidos.");
       setSales(parsed);
+      const uniqueParsed = Array.from(new Map(parsed.map((sale) => [sale.code, sale])).values());
+      const sheetGross = uniqueParsed.reduce((sum, sale) => sum + sale.gross, 0);
+      const sheetNet = uniqueParsed.reduce((sum, sale) => sum + sale.net, 0);
+      const campaignGross = Number(campaign.revenue) || 0;
+      const campaignNet = Number(campaign.netRevenue) || 0;
+      if (!campaignGross && !campaignNet) {
+        setError(`Planilha: bruto ${currency.format(sheetGross)} · líquido ${currency.format(sheetNet)}. Não há valor calculado informado na campanha.`);
+        if (window.confirm(`A campanha não possui valores calculados.\n\nPlanilha: bruto ${currency.format(sheetGross)} · líquido ${currency.format(sheetNet)}\n\nDeseja considerar o valor da planilha?`)) setAcceptSheetValues(true);
+      }
+      else if (Math.abs(sheetGross - campaignGross) >= .005 || Math.abs(sheetNet - campaignNet) >= .005) {
+        setError(`Divergência — Planilha: bruto ${currency.format(sheetGross)}, líquido ${currency.format(sheetNet)} · Calculado: bruto ${currency.format(campaignGross)}, líquido ${currency.format(campaignNet)}.`);
+        if (window.confirm(`Os valores não conferem.\n\nPlanilha: bruto ${currency.format(sheetGross)} · líquido ${currency.format(sheetNet)}\nCalculado: bruto ${currency.format(campaignGross)} · líquido ${currency.format(campaignNet)}\n\nDeseja considerar o valor da planilha?`)) setAcceptSheetValues(true);
+      }
     } catch (reason) {
       setSales([]);
       setError(reason instanceof Error && reason.message ? reason.message : "Não foi possível abrir a planilha. Tente exportar novamente em XLSX ou CSV.");
@@ -636,6 +649,10 @@ function CampaignSalesImport({ campaign, leads, close, edit, confirm }: { campai
   const conflicts = sales.filter((sale) => { const emailLead = sale.email && leads.find((lead) => lead.email.toLowerCase() === sale.email); const phoneLead = sale.phone && leads.find((lead) => lead.phone.replace(/\D/g,"") === sale.phone); return emailLead && phoneLead && emailLead.id !== phoneLead.id; });
   const valid = sales.filter((sale) => !alreadyImported.includes(sale) && !duplicateCodes.includes(sale) && !conflicts.includes(sale));
   const gross = valid.reduce((sum,sale) => sum + sale.gross,0); const net = valid.reduce((sum,sale) => sum + sale.net,0);
+  const fileTotals = Array.from(new Map(sales.map((sale) => [sale.code, sale])).values()).reduce((sum,sale) => ({ gross: sum.gross + sale.gross, net: sum.net + sale.net }), { gross: 0, net: 0 });
+  const valuesMatch = (campaign.revenue > 0 || Number(campaign.netRevenue) > 0) && Math.abs(fileTotals.gross - campaign.revenue) < .005 && Math.abs(fileTotals.net - Number(campaign.netRevenue || 0)) < .005;
+  const valuesApproved = valuesMatch || acceptSheetValues;
+  void valuesApproved;
   return <div className={styles.backdrop} onMouseDown={close}><section className={`${styles.modal} ${styles.reconcileModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Conciliação da campanha</span><h2>Importar vendas confirmadas</h2><p>{campaign.campaign} · {campaign.product}</p></div><button onClick={close}>×</button></header><div className={styles.reconcileBody}><button className={styles.editCampaignLink} onClick={edit}>Editar dados da campanha</button><label className={styles.fileDrop}><input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => event.target.files?.[0] && read(event.target.files[0])} /><span>{fileName || "Selecionar planilha de vendas"}</span><small>XLSX, XLS ou CSV</small></label>{error && <p className={styles.reconcileError}>{error}</p>}{sales.length > 0 && <><div className={styles.reconcileTotals}><article><span>Vendas válidas</span><b>{valid.length}</b></article><article><span>Bruto conciliado</span><b>{currency.format(gross)}</b><small>Antes: {currency.format(campaign.revenue)}</small></article><article><span>Líquido conciliado</span><b>{currency.format(net)}</b><small>Antes: {currency.format(campaign.netRevenue || 0)}</small></article><article><span>Ignoradas</span><b>{sales.length-valid.length}</b><small>Duplicadas ou conflitantes</small></article></div><div className={styles.reconcilePreview}>{sales.slice(0,8).map((sale) => <article key={sale.code}><div><b>{sale.name}</b><small>{sale.email || sale.phone}</small></div><span>{new Intl.DateTimeFormat("pt-BR").format(new Date(sale.date))}</span><strong>{currency.format(sale.gross)}</strong><em className={conflicts.includes(sale) ? styles.importInvalid : alreadyImported.includes(sale)||duplicateCodes.includes(sale) ? styles.importDuplicate : styles.importReady}>{conflicts.includes(sale) ? "Conflito" : alreadyImported.includes(sale)||duplicateCodes.includes(sale) ? "Duplicada" : "Pronta"}</em></article>)}</div></>}</div><footer><button onClick={close}>Cancelar</button><button disabled={!valid.length || Boolean(conflicts.length)} onClick={() => confirm(valid)}>Confirmar {valid.length} vendas</button></footer></section></div>;
 }
 
