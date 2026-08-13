@@ -107,20 +107,7 @@ const defaultStages: Stage[] = [
   "Fechado",
 ];
 const initialLeads: Lead[] = [];
-const leadsStorageKey = "mensor-crm-v3";
-const trafficStorageKey = "mensor-crm-traffic-v2";
 const goalsStorageKey = "mensor-crm-goals-v2";
-const reconciliationBackupKey = "mensor-crm-backup-before-reconciliation-v1";
-
-const mergeLeadsWithoutLoss = (remote: Lead[], local: Lead[]) => {
-  const phoneKey = (value: string) => value.replace(/\D/g, "");
-  const merged = [...remote];
-  for (const localLead of local) {
-    const matchIndex = merged.findIndex((remoteLead) => remoteLead.id === localLead.id || Boolean(localLead.email && remoteLead.email && localLead.email.trim().toLowerCase() === remoteLead.email.trim().toLowerCase()) || Boolean(localLead.phone && remoteLead.phone && phoneKey(localLead.phone) === phoneKey(remoteLead.phone)));
-    if (matchIndex < 0) merged.push(localLead);
-  }
-  return merged;
-};
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -185,70 +172,18 @@ export default function CRM() {
   const toggleTheme = () => setTheme((current) => { const next = current === "dark" ? "light" : "dark"; localStorage.setItem("mensor-crm-theme", next); return next; });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(leadsStorageKey);
-      if (saved)
-        setLeads(
-          (JSON.parse(saved) as Lead[]).map((lead) => {
-            const stage = (lead.stage as string) === "Diagnóstico" ? "Em conversação" as Stage : lead.stage === "Contato feito" ? "Primeiro contato" : lead.stage;
-            const createdAt = lead.createdAt || new Date().toISOString();
-            const product = lead.product === "Mentoria" ? "Mentoria OAG" : lead.product || "Não informado";
-            const source = normalizeSource(lead.source);
-            const migrated = hydrateLeadDates({ ...lead, stage, product, source }, createdAt);
-            if (stage === "Fechado" && !migrated.purchases?.length) return { ...migrated, purchases: purchasesForLead(migrated, [...products]) };
-            return stage === "Proposta" ? migrated : { ...migrated, value: 0 };
-          }),
-        );
-    } catch {}
     setLoaded(true);
+    localStorage.removeItem("mensor-crm-v2");
+    localStorage.removeItem("mensor-crm-v3");
+    localStorage.removeItem("mensor-crm-traffic-v1");
+    localStorage.removeItem("mensor-crm-traffic-v2");
+    localStorage.removeItem("mensor-crm-products-v1");
+    localStorage.removeItem("mensor-crm-sources-v1");
   }, []);
-  useEffect(() => {
-    if (loaded) localStorage.setItem(leadsStorageKey, JSON.stringify(leads));
-  }, [leads, loaded]);
-  useEffect(() => {
-    const syncOtherTab = (event: StorageEvent) => {
-      if (event.key !== leadsStorageKey || !event.newValue) return;
-      try { setLeads(JSON.parse(event.newValue) as Lead[]); } catch {}
-    };
-    window.addEventListener("storage", syncOtherTab);
-    return () => window.removeEventListener("storage", syncOtherTab);
-  }, []);
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(trafficStorageKey);
-      const recoveryDone = localStorage.getItem("mensor-crm-traffic-recovery-v1");
-      const currentRecords = saved ? JSON.parse(saved) as TrafficRecord[] : [];
-      if (!recoveryDone && currentRecords.length === 0) {
-        const legacy = localStorage.getItem("mensor-crm-traffic-v1");
-        const recoveredRecords = legacy ? JSON.parse(legacy) as TrafficRecord[] : [];
-        if (recoveredRecords.length) {
-          setTraffic(recoveredRecords);
-          localStorage.setItem(trafficStorageKey, JSON.stringify(recoveredRecords));
-        }
-        localStorage.setItem("mensor-crm-traffic-recovery-v1", "done");
-        return;
-      }
-      setTraffic(currentRecords);
-    } catch {}
-  }, []);
-  const saveTraffic = (next: TrafficRecord[]) => { setTraffic(next); localStorage.setItem(trafficStorageKey, JSON.stringify(next)); };
-  useEffect(() => { try { const savedProducts = localStorage.getItem("mensor-crm-products-v1"); const savedSources = localStorage.getItem("mensor-crm-sources-v1"); if (savedProducts) setCatalogProducts((JSON.parse(savedProducts) as ProductDefinition[]).map((item) => ({ ...item, netPrice: item.netPrice ?? item.price }))); if (savedSources) setCatalogSources(JSON.parse(savedSources)); } catch {} finally { setCatalogLoaded(true); } }, []);
-  useEffect(() => {
-    if (!loaded || !catalogLoaded) return;
-    const historicalCorrectionPending = !localStorage.getItem("mensor-crm-purchase-snapshot-v1");
-    setLeads((current) => current.map((lead) => {
-      const product = catalogProducts.find((item) => item.name === lead.product);
-      const purchases = historicalCorrectionPending ? lead.purchases?.map((purchase) => {
-        const purchaseProduct = catalogProducts.find((item) => item.name === purchase.product);
-        return purchaseProduct ? { ...purchase, value: purchaseProduct.price, netValue: purchaseProduct.netPrice ?? purchaseProduct.price } : purchase;
-      }) : lead.purchases;
-      const value = product && (historicalCorrectionPending || lead.stage !== "Fechado") ? product.price : lead.value;
-      return { ...lead, value, purchases };
-    }));
-    if (historicalCorrectionPending) localStorage.setItem("mensor-crm-purchase-snapshot-v1", new Date().toISOString());
-  }, [catalogProducts, loaded, catalogLoaded]);
-  const saveProducts = (next: ProductDefinition[]) => { setCatalogProducts(next); localStorage.setItem("mensor-crm-products-v1", JSON.stringify(next)); };
-  const saveSources = (next: string[]) => { setCatalogSources(next); localStorage.setItem("mensor-crm-sources-v1", JSON.stringify(next)); };
+  const saveTraffic = (next: TrafficRecord[]) => setTraffic(next);
+  useEffect(() => { setCatalogLoaded(true); }, []);
+  const saveProducts = (next: ProductDefinition[]) => setCatalogProducts(next);
+  const saveSources = (next: string[]) => setCatalogSources(next);
   const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
   const renameSource = (oldName: string, name: string) => { saveSources(catalogSources.map((item) => item === oldName ? name : item)); setLeads((current) => current.map((lead) => lead.source === oldName ? { ...lead, source: name } : lead)); };
 
@@ -265,21 +200,16 @@ export default function CRM() {
         const response = await fetch("/api/crm", { cache: "no-store" });
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
-        const hasRemoteData = remote.leads?.length || remote.traffic?.length || remote.products?.length || remote.sources?.length || remote.messages?.length || Object.keys(remote.goals || {}).length;
-        if (hasRemoteData) {
-          if (cancelled) return;
-          const remoteLeads = (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead);
-          const localLeads = (() => { try { return JSON.parse(localStorage.getItem(leadsStorageKey) || "[]") as Lead[]; } catch { return []; } })();
-          if (localLeads.length) localStorage.setItem(reconciliationBackupKey, JSON.stringify({ savedAt: new Date().toISOString(), leads: localLeads }));
-          const reconciledLeads = mergeLeadsWithoutLoss(remoteLeads, localLeads);
-          setLeads(reconciledLeads); localStorage.setItem(leadsStorageKey, JSON.stringify(reconciledLeads));
-          setTraffic(remote.traffic || []); setCatalogProducts(remote.products?.length ? remote.products : [...products]); setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]); setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
-          localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || [])); localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
-          window.dispatchEvent(new Event("mensor-crm-database-loaded"));
-        } else {
-          const migration = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") }) });
-          if (!migration.ok) { await registerDatabaseFailure(migration); return; }
-        }
+        if (cancelled) return;
+        const remoteLeads = (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead);
+        setLeads(remoteLeads);
+        setTraffic(remote.traffic || []);
+        setCatalogProducts(remote.products?.length ? remote.products : [...products]);
+        setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
+        setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
+        localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || []));
+        localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
+        window.dispatchEvent(new Event("mensor-crm-database-loaded"));
         setDatabaseIssue("");
         setDatabaseStatus("connected");
         if (!cancelled) setDatabaseReady(true);
@@ -295,6 +225,40 @@ export default function CRM() {
     }, 500);
     return () => window.clearTimeout(timeout);
   }, [databaseReady, leads, traffic, catalogProducts, catalogSources, pipelineStages, syncRevision]);
+  useEffect(() => {
+    if (!databaseReady) return;
+    let refreshing = false;
+    const refreshFromDatabase = async () => {
+      if (refreshing || document.visibilityState === "hidden") return;
+      refreshing = true;
+      try {
+        const response = await fetch("/api/crm", { cache: "no-store" });
+        if (!response.ok) { await registerDatabaseFailure(response); return; }
+        const remote = await response.json();
+        setLeads((remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
+        setTraffic(remote.traffic || []);
+        setCatalogProducts(remote.products?.length ? remote.products : [...products]);
+        setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
+        setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
+        localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(remote.messages || []));
+        localStorage.setItem(goalsStorageKey, JSON.stringify(remote.goals || {}));
+        window.dispatchEvent(new Event("mensor-crm-database-loaded"));
+        setDatabaseIssue("");
+        setDatabaseStatus("connected");
+      } catch (error) {
+        await registerDatabaseFailure();
+        console.error("Falha ao atualizar CRM pelo banco", error);
+      } finally {
+        refreshing = false;
+      }
+    };
+    window.addEventListener("focus", refreshFromDatabase);
+    document.addEventListener("visibilitychange", refreshFromDatabase);
+    return () => {
+      window.removeEventListener("focus", refreshFromDatabase);
+      document.removeEventListener("visibilitychange", refreshFromDatabase);
+    };
+  }, [databaseReady]);
 
   const reportingLeads = useMemo(() => leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego" && inRange(lead.createdAt, dateRange.start, dateRange.end)), [leads, dateRange]);
   const stats = useMemo(() => {

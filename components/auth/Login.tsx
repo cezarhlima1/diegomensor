@@ -10,7 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  * e os server components vejam os cookies novos). Erro => mensagem pt-BR
  * inline, propositalmente genérica (não revela qual campo errou).
  */
-export default function Login() {
+export default function Login({ area = "calculadora" }: { area?: "calculadora" | "crm" }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [senhaVisivel, setSenhaVisivel] = useState(false);
@@ -41,8 +41,7 @@ export default function Login() {
         .select("is_super_admin")
         .eq("id", data.user.id)
         .single();
-      const requestedDestination = new URLSearchParams(window.location.search).get("next");
-      const destination = requestedDestination === "/CRM" ? "/CRM" : profile?.is_super_admin ? "/admin" : "/calculadora";
+      const destination = area === "crm" ? "/CRM" : profile?.is_super_admin ? "/admin" : "/calculadora";
       window.location.assign(destination);
     } catch (err) {
       // Ex.: env do Supabase ausente ou falha de rede.
@@ -54,10 +53,10 @@ export default function Login() {
 
   return (
     <div className="calc-card cta-reveal">
-      <p className="calc-card-kicker">Área do cliente</p>
-      <h1 className="calc-card-title">Entrar</h1>
+      <p className="calc-card-kicker">{area === "crm" ? "Mensor Treinamentos" : "Área do cliente"}</p>
+      <h1 className="calc-card-title">{area === "crm" ? "Acesso ao CRM" : "Entrar"}</h1>
       <p className="calc-card-sub">
-        Acesse a calculadora de precificação da sua oficina.
+        {area === "crm" ? "Entre com seu acesso administrativo para gerenciar o comercial." : "Acesse a calculadora de precificação da sua oficina."}
       </p>
 
       <form onSubmit={entrar} className="grid gap-4 mt-6" noValidate>

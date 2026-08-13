@@ -50,7 +50,7 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   try {
     const db = crmPool();
-    const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult, stagesResult] = await Promise.all([
+    const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult, stagesResult, stateResult] = await Promise.all([
       db.query("select * from public.crm_leads order by inserted_at"),
       db.query("select * from public.crm_purchases order by closed_at"),
       db.query("select * from public.crm_traffic_campaigns order by campaign_date desc"),
@@ -60,6 +60,7 @@ export async function GET() {
       db.query("select * from public.crm_message_templates order by created_at desc"),
       db.query("select month, amount from public.crm_monthly_goals"),
       db.query("select name from public.crm_pipeline_stages order by position"),
+      db.query("select key,value from public.crm_state"),
     ]);
     const purchasesByLead = new Map<string, Array<Record<string, unknown>>>();
     for (const row of purchasesResult.rows) {
@@ -81,6 +82,7 @@ export async function GET() {
       messages: messagesResult.rows.map((row) => ({ id: row.id, title: row.title, text: row.body })),
       goals: Object.fromEntries(goalsResult.rows.map((row) => [row.month, Number(row.amount)])),
       stages: stagesResult.rows.map((row) => row.name),
+      state: Object.fromEntries(stateResult.rows.map((row) => [row.key, row.value])),
     });
   } catch (error) {
     console.error("CRM GET failed", error);

@@ -45,6 +45,22 @@ export async function middleware(request: NextRequest) {
     return redirectParaLogin(request);
   }
 
+  const ehRotaCrm = request.nextUrl.pathname.startsWith("/CRM");
+  if (ehRotaCrm) {
+    const emailsPermitidos = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com")
+      .replace(/["']/g, "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+    if (!user.email || !emailsPermitidos.includes(user.email.trim().toLowerCase())) {
+      const destino = request.nextUrl.clone();
+      destino.pathname = "/login-crm";
+      destino.search = "";
+      return NextResponse.redirect(destino);
+    }
+    return response;
+  }
+
   const { data: profile, error: erroProfile } = await supabase
     .from("profiles")
     .select("is_super_admin, license_expiry_at")
@@ -83,9 +99,8 @@ export async function middleware(request: NextRequest) {
 
 function redirectParaLogin(request: NextRequest) {
   const loginUrl = request.nextUrl.clone();
-  loginUrl.pathname = "/login";
+  loginUrl.pathname = request.nextUrl.pathname.startsWith("/CRM") ? "/login-crm" : "/login";
   loginUrl.search = "";
-  if (request.nextUrl.pathname.startsWith("/CRM")) loginUrl.searchParams.set("next", "/CRM");
   return NextResponse.redirect(loginUrl);
 }
 
