@@ -467,7 +467,7 @@ export default function CRM() {
         )}
         {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={(record) => saveTraffic(traffic.some((item) => item.id === record.id) ? traffic.map((item) => item.id === record.id ? record : item) : [record, ...traffic])} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} importSales={importCampaignSales} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
+          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -754,6 +754,7 @@ function Dashboard({
 
 function Pipeline({
   leads,
+  products,
   stages,
   setStages,
   moveLead,
@@ -761,6 +762,7 @@ function Pipeline({
   search,
 }: {
   leads: Lead[];
+  products: ProductDefinition[];
   stages: Stage[];
   setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
@@ -769,17 +771,19 @@ function Pipeline({
 }) {
   const [range, setRange] = useState({ start: "", end: "" });
   const [archiveFilter, setArchiveFilter] = useState<"Ativos" | "Desqualificados" | "Todos">("Ativos");
+  const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
   const archived = (lead: Lead) => lead.tags?.includes("Desqualificado");
-  const visible = leads.filter((lead) => (!range.start || (lead.createdAt || "").slice(0,10) >= range.start) && (!range.end || (lead.createdAt || "").slice(0,10) <= range.end) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
+  const visible = leads.filter((lead) => (!range.start || (lead.createdAt || "").slice(0,10) >= range.start) && (!range.end || (lead.createdAt || "").slice(0,10) <= range.end) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
+  const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><label><small>De</small><input type="date" value={range.start} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Até</small><input type="date" value={range.end} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Status</small><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><label><small>De</small><input type="date" value={range.start} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Até</small><input type="date" value={range.end} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Status</small><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
-          const items = visible.filter((lead) => lead.stage === stage);
+          const items = visible.filter((lead) => visibleStage(lead) === stage);
           const stageIndex = stages.indexOf(stage);
           return (
             <section
@@ -844,13 +848,14 @@ function Contacts({
   select: (lead: Lead) => void;
 }) {
   const [sourceFilter, setSourceFilter] = useState("Todos");
+  const [productFilter, setProductFilter] = useState("Todos");
   const [ascensionFilter, setAscensionFilter] = useState("Todos");
   const [contactRange, setContactRange] = useState({ start: "", end: "" });
   const sourceTags = sources;
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
   const inContactRange = (lead: Lead) => (!contactRange.start || Boolean(lead.createdAt && lead.createdAt.slice(0, 10) >= contactRange.start)) && (!contactRange.end || Boolean(lead.createdAt && lead.createdAt.slice(0, 10) <= contactRange.end));
-  const visibleLeads = leads.filter((lead) => inContactRange(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
+  const visibleLeads = leads.filter((lead) => inContactRange(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
@@ -861,7 +866,7 @@ function Contacts({
         />
         <div className={styles.contactFilters}>
           <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use período e etiquetas somente quando quiser refinar a visualização ou exportação.</small></div>
-          <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
+          <div className={styles.contactFilterFields}><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Produto</span><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
           <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(inContactRange).length}</b></button>
