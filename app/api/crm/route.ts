@@ -90,6 +90,23 @@ export async function GET() {
   }
 }
 
+export async function PATCH(request: Request) {
+  const auth = await authorized();
+  if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
+  let body: { entity?: string; record?: Record<string, unknown> };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  if (body.entity !== "traffic" || !body.record?.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  const item = body.record;
+  try {
+    const db = crmPool();
+    await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, item.date || `${item.month}-01`, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("CRM campaign PATCH failed", error);
+    return databaseError(error, "database-write-failed");
+  }
+}
+
 export async function PUT(request: Request) {
   const auth = await authorized();
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
