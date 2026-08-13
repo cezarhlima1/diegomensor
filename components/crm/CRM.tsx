@@ -242,6 +242,19 @@ export default function CRM() {
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
   };
+  const saveLead = async (lead: Lead) => {
+    setDatabaseStatus("saving");
+    setDatabaseIssue("");
+    const persist = async () => {
+      const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "lead", record: lead }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar lead"); }
+      skipNextSnapshotSync.current = true;
+      setDatabaseIssue("");
+      setDatabaseStatus("connected");
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    await syncQueue.current;
+  };
   const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
     const persist = async () => {
       const response = await fetch("/api/crm", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, id }) });
@@ -408,11 +421,15 @@ export default function CRM() {
     }
     return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: lead.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: lead.meetingAt || now } : {}) };
   };
-  const moveLead = (id: string, stage: Stage, now = new Date().toISOString(), purchaseId = uniqueId()) =>
-    setLeads((current) =>
-      current.map((lead) => lead.id === id ? transitionLead(lead, stage, now, purchaseId) : lead),
-    );
-  const addLead = (lead: Lead) => {
+  const moveLead = (id: string, stage: Stage, now = new Date().toISOString(), purchaseId = uniqueId()) => {
+    const lead = leads.find((item) => item.id === id);
+    if (!lead) return;
+    const updated = transitionLead(lead, stage, now, purchaseId);
+    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    void saveLead(updated).catch((error) => console.error("Falha ao salvar movimentação do lead", error));
+  };
+  const addLead = async (lead: Lead) => {
+    await saveLead(lead);
     setLeads((current) => [lead, ...current]);
     setAdding(false);
   };
@@ -449,11 +466,33 @@ export default function CRM() {
     return { ...lead, ...changes, purchases };
   };
   const updateLead = (id: string, changes: Partial<Lead>) => {
-    setLeads((current) => current.map((lead) => lead.id === id ? applyLeadChanges(lead, changes) : lead));
-    setSelected((current) => current?.id === id ? applyLeadChanges(current, changes) : current);
+    const lead = leads.find((item) => item.id === id);
+    if (!lead) return;
+    const updated = applyLeadChanges(lead, changes);
+    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    setSelected((current) => current?.id === id ? updated : current);
+    void saveLead(updated).catch((error) => console.error("Falha ao salvar lead", error));
   };
-  const renameTag = (oldTag: string, newTag: string) => { setLeads((current) => current.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }))); setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) } : lead); };
-  const deleteTag = (tagToDelete: string) => { setLeads((current) => current.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }))); setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) } : lead); };
+  const renameTag = async (oldTag: string, newTag: string) => {
+    const nextLeads = leads.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }));
+    try {
+      await persistLeadsAndTraffic(nextLeads, traffic);
+      setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) } : lead);
+    } catch (error) {
+      console.error("Falha ao renomear etiqueta", error);
+      window.alert("Não foi possível salvar a etiqueta no banco. Tente novamente.");
+    }
+  };
+  const deleteTag = async (tagToDelete: string) => {
+    const nextLeads = leads.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }));
+    try {
+      await persistLeadsAndTraffic(nextLeads, traffic);
+      setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) } : lead);
+    } catch (error) {
+      console.error("Falha ao excluir etiqueta", error);
+      window.alert("Não foi possível excluir a etiqueta no banco. Tente novamente.");
+    }
+  };
   const startAscension = (id: string) => {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
@@ -506,6 +545,8 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
+            {databaseStatus === "saving" && <small style={{ opacity: 0.6 }}>Salvando…</small>}
+            {databaseStatus === "offline" && <small className={styles.reconcileError} title={databaseIssue}>⚠ Falha ao salvar{databaseIssue ? `: ${databaseIssue}` : ""}</small>}
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>
@@ -1095,7 +1136,7 @@ function LeadModal({
   products: ProductDefinition[];
   sources: string[];
   close: () => void;
-  save: (lead: Lead) => void;
+  save: (lead: Lead) => Promise<void>;
   duplicate: (lead: Lead) => void;
 }) {
   const [draft, setDraft] = useState({
@@ -1111,25 +1152,34 @@ function LeadModal({
     temperature: "Morno" as Lead["temperature"],
     nextAction: "",
   });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   return (
     <div className={styles.backdrop} onMouseDown={close}>
       <form
         className={`${styles.modal} ${styles.leadModal}`}
         onMouseDown={(event) => event.stopPropagation()}
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const email = draft.email.trim().toLowerCase(); const phone = phoneKey(draft.phone);
           const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
           if (match) { window.alert("Este WhatsApp ou e-mail já está cadastrado. Vamos abrir o lead existente para você continuar o atendimento."); duplicate(match); return; }
-          save({
-            ...draft,
-            id: uniqueId(),
-            stage: "Novo lead",
-            value: draft.customDeal ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
-            netValue: draft.customDeal ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
-            date: "Hoje",
-            createdAt: new Date().toISOString(),
-          });
+          setSaving(true); setSaveError("");
+          try {
+            await save({
+              ...draft,
+              id: uniqueId(),
+              stage: "Novo lead",
+              value: draft.customDeal ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
+              netValue: draft.customDeal ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
+              date: "Hoje",
+              createdAt: new Date().toISOString(),
+            });
+          } catch {
+            setSaveError("Não foi possível salvar o contato no banco. Tente novamente.");
+          } finally {
+            setSaving(false);
+          }
         }}
       >
         <header>
@@ -1196,11 +1246,12 @@ function LeadModal({
             </select>
           </label>
         </div>
+        {saveError && <p className={styles.reconcileError}>{saveError}</p>}
         <footer>
-          <button type="button" onClick={close}>
+          <button type="button" onClick={close} disabled={saving}>
             Cancelar
           </button>
-          <button type="submit">Salvar oportunidade</button>
+          <button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar oportunidade"}</button>
         </footer>
       </form>
     </div>
