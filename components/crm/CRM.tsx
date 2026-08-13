@@ -194,11 +194,30 @@ export default function CRM() {
   }, []);
   const saveTraffic = (next: TrafficRecord[]) => setTraffic(next);
   const saveCampaign = async (record: TrafficRecord) => {
-    const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "traffic", record }) });
-    if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar campanha"); }
-    setTraffic((current) => current.some((item) => item.id === record.id) ? current.map((item) => item.id === record.id ? record : item) : [record, ...current]);
+    setDatabaseStatus("saving");
     setDatabaseIssue("");
-    setDatabaseStatus("connected");
+    const persist = async () => {
+      const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "traffic", record }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar campanha"); }
+      setTraffic((current) => current.some((item) => item.id === record.id) ? current.map((item) => item.id === record.id ? record : item) : [record, ...current]);
+      setDatabaseIssue("");
+      setDatabaseStatus("connected");
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    await syncQueue.current;
+  };
+  const removeCampaign = async (id: string) => {
+    setDatabaseStatus("saving");
+    setDatabaseIssue("");
+    const persist = async () => {
+      const response = await fetch("/api/crm", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "traffic", id }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao excluir campanha"); }
+      setTraffic((current) => current.filter((item) => item.id !== id));
+      setDatabaseIssue("");
+      setDatabaseStatus("connected");
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    await syncQueue.current;
   };
   useEffect(() => { setCatalogLoaded(true); }, []);
   const saveProducts = (next: ProductDefinition[]) => setCatalogProducts(next);
@@ -466,7 +485,7 @@ export default function CRM() {
         {view === "comercial" && (
           <Dashboard leads={leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego")} allLeads={leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego")} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} />
         )}
-        {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={saveCampaign} remove={(id) => saveTraffic(traffic.filter((item) => item.id !== id))} importSales={importCampaignSales} />}
+        {view === "trafego" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
         )}

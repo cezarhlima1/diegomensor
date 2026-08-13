@@ -107,6 +107,22 @@ export async function PATCH(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  const auth = await authorized();
+  if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
+  let body: { entity?: string; id?: string };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  if (body.entity !== "traffic" || !body.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  try {
+    const db = crmPool();
+    await db.query("delete from public.crm_traffic_campaigns where id=$1", [body.id]);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("CRM campaign DELETE failed", error);
+    return databaseError(error, "database-write-failed");
+  }
+}
+
 export async function PUT(request: Request) {
   const auth = await authorized();
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
@@ -141,7 +157,8 @@ export async function PUT(request: Request) {
       await db.query("delete from public.crm_purchases");
       for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9)", [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase), purchase.externalSaleCode || null, purchase.campaignId || null]);
       for (const item of traffic) await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, item.date || `${item.month}-01`, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]);
-      await db.query("delete from public.crm_traffic_campaigns where not(id = any($1::text[]))", [traffic.map((item) => String(item.id))]);
+      // Campanhas são removidas apenas pelo DELETE explícito. Um snapshot
+      // atrasado de outra aba nunca pode apagar uma campanha recém-criada.
       await db.query("delete from public.crm_message_templates");
       for (const message of messages) await db.query("insert into public.crm_message_templates(id,title,body) values($1,$2,$3)", [message.id, message.title, message.text]);
       await db.query("delete from public.crm_monthly_goals");
