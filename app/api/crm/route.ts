@@ -93,8 +93,27 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const auth = await authorized();
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
-  let body: { entity?: string; record?: Record<string, unknown> };
+  let body: { entity?: string; record?: Record<string, unknown>; oldId?: string; newId?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  if ((body.entity === "product-rename" || body.entity === "source-rename") && body.oldId && body.newId) {
+    try {
+      await withCrmTransaction(async (db) => {
+        if (body.entity === "product-rename") {
+          await db.query("update public.crm_products set name=$2,updated_at=now() where name=$1", [body.oldId, body.newId]);
+          await db.query("update public.crm_leads set product=$2,updated_at=now() where product=$1", [body.oldId, body.newId]);
+          await db.query("update public.crm_purchases set product=$2 where product=$1", [body.oldId, body.newId]);
+          await db.query("update public.crm_traffic_campaigns set product=$2,updated_at=now() where product=$1", [body.oldId, body.newId]);
+        } else {
+          await db.query("update public.crm_lead_sources set name=$2 where name=$1", [body.oldId, body.newId]);
+          await db.query("update public.crm_leads set source=$2,updated_at=now() where source=$1", [body.oldId, body.newId]);
+        }
+      });
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      console.error("CRM rename PATCH failed", error);
+      return databaseError(error, "database-write-failed");
+    }
+  }
   if (body.entity !== "traffic" || !body.record?.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
   const item = body.record;
   try {
@@ -112,13 +131,24 @@ export async function DELETE(request: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   let body: { entity?: string; id?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
-  if (body.entity !== "traffic" || !body.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  if (!body.entity || !body.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
   try {
     const db = crmPool();
-    await db.query("delete from public.crm_traffic_campaigns where id=$1", [body.id]);
+    const operations: Record<string, { query: string; value: string }> = {
+      traffic: { query: "delete from public.crm_traffic_campaigns where id=$1", value: body.id },
+      lead: { query: "delete from public.crm_leads where id=$1", value: body.id },
+      purchase: { query: "delete from public.crm_purchases where id=$1", value: body.id },
+      product: { query: "update public.crm_products set active=false,updated_at=now() where name=$1", value: body.id },
+      source: { query: "delete from public.crm_lead_sources where name=$1", value: body.id },
+      message: { query: "delete from public.crm_message_templates where id=$1", value: body.id },
+      stage: { query: "delete from public.crm_pipeline_stages where name=$1", value: body.id },
+    };
+    const operation = operations[body.entity];
+    if (!operation) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+    await db.query(operation.query, [operation.value]);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("CRM campaign DELETE failed", error);
+    console.error("CRM DELETE failed", error);
     return databaseError(error, "database-write-failed");
   }
 }
@@ -142,29 +172,19 @@ export async function PUT(request: Request) {
       for (const [position, product] of products.entries()) {
         await db.query("insert into public.crm_products(name,gross_price,net_price,position,active,updated_at) values($1,$2,$3,$4,true,now()) on conflict(name) do update set gross_price=excluded.gross_price,net_price=excluded.net_price,position=excluded.position,active=true,updated_at=now()", [product.name, Number(product.price) || 0, Number(product.netPrice ?? product.price) || 0, position]);
       }
-      const productNames = products.map((item) => String(item.name));
-      await db.query("update public.crm_products set active=false,updated_at=now() where not(name = any($1::text[]))", [productNames]);
-      await db.query("delete from public.crm_product_price_history");
       for (const product of products) {
         const productRow = await db.query("select id from public.crm_products where name=$1", [product.name]);
-        for (const change of Array.isArray(product.priceHistory) ? product.priceHistory as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_product_price_history(id,product_id,previous_gross_price,previous_net_price,gross_price,net_price,changed_at) values($1,$2,$3,$4,$5,$6,$7)", [change.id, productRow.rows[0].id, change.previousPrice, change.previousNetPrice, change.price, change.netPrice, change.changedAt]);
+        for (const change of Array.isArray(product.priceHistory) ? product.priceHistory as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_product_price_history(id,product_id,previous_gross_price,previous_net_price,gross_price,net_price,changed_at) values($1,$2,$3,$4,$5,$6,$7) on conflict(id) do update set product_id=excluded.product_id,previous_gross_price=excluded.previous_gross_price,previous_net_price=excluded.previous_net_price,gross_price=excluded.gross_price,net_price=excluded.net_price,changed_at=excluded.changed_at", [change.id, productRow.rows[0].id, change.previousPrice, change.previousNetPrice, change.price, change.netPrice, change.changedAt]);
       }
-      await db.query("delete from public.crm_lead_sources");
       for (const source of sources) await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
       for (const lead of leads) await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", lead.email || "", lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
-      const leadIds = leads.map((item) => String(item.id));
-      await db.query("delete from public.crm_leads where not(id = any($1::text[]))", [leadIds]);
-      await db.query("delete from public.crm_purchases");
-      for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9)", [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase), purchase.externalSaleCode || null, purchase.campaignId || null]);
+      for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase), purchase.externalSaleCode || null, purchase.campaignId || null]);
       for (const item of traffic) await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, item.date || `${item.month}-01`, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]);
       // Campanhas são removidas apenas pelo DELETE explícito. Um snapshot
       // atrasado de outra aba nunca pode apagar uma campanha recém-criada.
-      await db.query("delete from public.crm_message_templates");
-      for (const message of messages) await db.query("insert into public.crm_message_templates(id,title,body) values($1,$2,$3)", [message.id, message.title, message.text]);
-      await db.query("delete from public.crm_monthly_goals");
-      for (const [month, amount] of Object.entries(goals)) await db.query("insert into public.crm_monthly_goals(month,amount,updated_at) values($1,$2,now())", [month, Number(amount) || 0]);
-      await db.query("delete from public.crm_pipeline_stages");
-      for (const [position, stage] of stages.entries()) await db.query("insert into public.crm_pipeline_stages(name,position) values($1,$2)", [stage, position]);
+      for (const message of messages) await db.query("insert into public.crm_message_templates(id,title,body,updated_at) values($1,$2,$3,now()) on conflict(id) do update set title=excluded.title,body=excluded.body,updated_at=now()", [message.id, message.title, message.text]);
+      for (const [month, amount] of Object.entries(goals)) await db.query("insert into public.crm_monthly_goals(month,amount,updated_at) values($1,$2,now()) on conflict(month) do update set amount=excluded.amount,updated_at=now()", [month, Number(amount) || 0]);
+      for (const [position, stage] of stages.entries()) await db.query("insert into public.crm_pipeline_stages(name,position) values($1,$2) on conflict(name) do update set position=excluded.position", [stage, position]);
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

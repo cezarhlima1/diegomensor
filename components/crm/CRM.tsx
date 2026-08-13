@@ -118,6 +118,11 @@ const defaultStages: Stage[] = [
 ];
 const initialLeads: Lead[] = [];
 const goalsStorageKey = "mensor-crm-goals-v2";
+const uniqueId = () => crypto.randomUUID();
+const phoneKey = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+};
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -193,7 +198,6 @@ export default function CRM() {
     localStorage.removeItem("mensor-crm-products-v1");
     localStorage.removeItem("mensor-crm-sources-v1");
   }, []);
-  const saveTraffic = (next: TrafficRecord[]) => setTraffic(next);
   const saveCampaign = async (record: TrafficRecord) => {
     setDatabaseStatus("saving");
     setDatabaseIssue("");
@@ -222,11 +226,27 @@ export default function CRM() {
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
   };
+  const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
+    const persist = async () => {
+      const response = await fetch("/api/crm", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, id }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw new Error(`Falha ao excluir ${entity}`); }
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    try { await syncQueue.current; return true; }
+    catch (error) { console.error(`Falha ao excluir ${entity}`, error); return false; }
+  };
   useEffect(() => { setCatalogLoaded(true); }, []);
   const saveProducts = (next: ProductDefinition[]) => setCatalogProducts(next);
   const saveSources = (next: string[]) => setCatalogSources(next);
-  const renameProduct = (oldName: string, product: ProductDefinition) => { saveProducts(catalogProducts.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); saveTraffic(traffic.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
-  const renameSource = (oldName: string, name: string) => { saveSources(catalogSources.map((item) => item === oldName ? name : item)); setLeads((current) => current.map((lead) => lead.source === oldName ? { ...lead, source: name } : lead)); };
+  const renameRecord = async (entity: "product-rename" | "source-rename", oldId: string, newId: string) => {
+    if (oldId === newId) return true;
+    const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, oldId, newId }) });
+    if (response.ok) return true;
+    await registerDatabaseFailure(response);
+    return false;
+  };
+  const renameProduct = async (oldName: string, product: ProductDefinition) => { if (!await renameRecord("product-rename", oldName, product.name)) return; setCatalogProducts((current) => current.map((item) => item.name === oldName ? product : item)); setLeads((current) => current.map((lead) => lead.product === oldName ? { ...lead, product: product.name } : lead)); setTraffic((current) => current.map((item) => item.product === oldName ? { ...item, product: product.name } : item)); };
+  const renameSource = async (oldName: string, name: string) => { if (!await renameRecord("source-rename", oldName, name)) return; setCatalogSources((current) => current.map((item) => item === oldName ? name : item)); setLeads((current) => current.map((lead) => lead.source === oldName ? { ...lead, source: name } : lead)); };
 
   useEffect(() => {
     const handleLocalChange = () => setSyncRevision((value) => value + 1);
@@ -327,7 +347,7 @@ export default function CRM() {
   const stats = useMemo(() => {
     const metricLeads = leads.filter((lead) => !lead.campaignId && lead.source !== "Tráfego");
     const open = metricLeads.filter((lead) => lead.stage === "Proposta" && inRange(lead.proposalAt, dateRange.start, dateRange.end));
-    const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end));
+    const won = metricLeads.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, dateRange.start, dateRange.end));
     const proposals = metricLeads.filter((lead) => inRange(lead.proposalAt, dateRange.start, dateRange.end));
     return {
     total: reportingLeads.length,
@@ -358,32 +378,29 @@ export default function CRM() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-  const moveLead = (id: string, stage: Stage) =>
+  const transitionLead = (lead: Lead, stage: Stage, now = new Date().toISOString(), purchaseId = uniqueId()): Lead => {
+    const catalogProduct = catalogProducts.find((item) => item.name === lead.product);
+    const value = lead.value || catalogProduct?.price || productPrice(lead.product) || 0;
+    const netValue = lead.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value;
+    if (stage === "Proposta" || stage === "Fechado") {
+      if (stage === "Fechado" && lead.stage !== "Fechado") {
+        const history = purchasesForLead(lead, catalogProducts);
+        const purchase: Purchase = { id: purchaseId, product: lead.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 };
+        return { ...lead, stage, value, netValue, closedAt: now, purchases: [...history, purchase] };
+      }
+      return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: lead.proposalAt || now } : { closedAt: lead.closedAt || now }) };
+    }
+    return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: lead.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: lead.meetingAt || now } : {}) };
+  };
+  const moveLead = (id: string, stage: Stage, now = new Date().toISOString(), purchaseId = uniqueId()) =>
     setLeads((current) =>
-      current.map((lead) => {
-        if (lead.id !== id) return lead;
-        if (stage === "Proposta" || stage === "Fechado") {
-          const catalogProduct = catalogProducts.find((item) => item.name === lead.product);
-          const value = lead.value || catalogProduct?.price || productPrice(lead.product) || 0;
-          const netValue = lead.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value;
-          const now = new Date().toISOString();
-          if (stage === "Fechado" && lead.stage !== "Fechado") {
-            const history = purchasesForLead(lead, catalogProducts);
-            const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: lead.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 };
-            return { ...lead, stage, value, netValue, closedAt: now, purchases: [...history, purchase] };
-          }
-          return { ...lead, stage, value, netValue, ...(stage === "Proposta" ? { proposalAt: lead.proposalAt || now } : { closedAt: lead.closedAt || now }) };
-        }
-        const now = new Date().toISOString();
-        return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: lead.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: lead.meetingAt || now } : {}) };
-      }),
+      current.map((lead) => lead.id === id ? transitionLead(lead, stage, now, purchaseId) : lead),
     );
   const addLead = (lead: Lead) => {
     setLeads((current) => [lead, ...current]);
     setAdding(false);
   };
   const importCampaignSales = (campaign: TrafficRecord, sales: ImportedSale[]) => {
-    const phoneKey = (value: string) => value.replace(/\D/g, "");
     const uniqueSales = Array.from(new Map(sales.map((sale) => [sale.code.trim(), sale])).values());
     setLeads((current) => {
       const next = [...current];
@@ -401,7 +418,10 @@ export default function CRM() {
         knownCodes.add(sale.code);
       }
       const campaignPurchases = next.flatMap((lead) => purchasesForLead(lead, catalogProducts)).filter((purchase) => purchase.campaignId === campaign.id);
-      saveTraffic(traffic.map((item) => item.id === campaign.id ? { ...item, sales: campaignPurchases.length, revenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.value,0), netRevenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.netValue,0) } : item));
+      const updatedCampaign = { ...campaign, sales: campaignPurchases.length, revenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.value,0), netRevenue: campaignPurchases.reduce((sum,purchase) => sum + purchase.netValue,0) };
+      setTraffic((current) => current.some((item) => item.id === campaign.id)
+        ? current.map((item) => item.id === campaign.id ? updatedCampaign : item)
+        : [updatedCampaign, ...current]);
       return next;
     });
   };
@@ -498,7 +518,7 @@ export default function CRM() {
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
-        {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} />}
+        {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
       {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={(imported) => { setLeads((current) => [...imported, ...current]); setImporting(false); }} />}
@@ -513,15 +533,18 @@ export default function CRM() {
           update={(changes) => updateLead(selected.id, changes)}
           renameTag={renameTag}
           deleteTag={deleteTag}
-          remove={() => {
+          remove={async () => {
             if (!window.confirm(`Excluir o lead ${selected.name}? Essa ação não poderá ser desfeita.`)) return;
+            if (!await deleteRecord("lead", selected.id)) return;
             setLeads((current) => current.filter((lead) => lead.id !== selected.id));
             setSelected(null);
           }}
+          deletePurchase={(id) => deleteRecord("purchase", id)}
           move={(stage) => {
-            moveLead(selected.id, stage);
             const now = new Date().toISOString();
-            setSelected((current) => { if (!current) return current; const catalogProduct = catalogProducts.find((item) => item.name === current.product); const value = current.value || catalogProduct?.price || 0; const netValue = current.netValue ?? catalogProduct?.netPrice ?? catalogProduct?.price ?? value; const history = purchasesForLead(current, catalogProducts); const purchases = stage === "Fechado" && current.stage !== "Fechado" ? [...history, { id: `${current.id}-${Date.now()}`, product: current.product || "Não informado", value, netValue, closedAt: now, repurchase: history.length > 0 }] : current.purchases; return { ...current, stage, value: stage === "Proposta" || stage === "Fechado" ? value : 0, netValue, purchases, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: current.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: current.meetingAt || now } : {}), ...(stage === "Proposta" ? { proposalAt: current.proposalAt || now } : {}), ...(stage === "Fechado" ? { closedAt: current.closedAt || now } : {}) }; });
+            const purchaseId = uniqueId();
+            moveLead(selected.id, stage, now, purchaseId);
+            setSelected((current) => current ? transitionLead(current, stage, now, purchaseId) : current);
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -696,7 +719,7 @@ function TrafficDashboard({ records, month, products, leads, save, remove, impor
   const openEditData = (record: TrafficRecord) => { setDraft({ date: record.date || `${record.month}-01`, status: record.status || "Em andamento", campaign: record.campaign, product: record.product, investment: String(record.investment), sales: String(record.sales), revenue: String(record.revenue), netRevenue: String(record.netRevenue ?? netForValue(record.revenue, record.product, products)) }); setEditing(record); };
   records.sort((a, b) => safeCampaignDate(b.date, b.month).localeCompare(safeCampaignDate(a.date, a.month)));
   const totals = records.reduce((sum,item) => ({ investment: sum.investment+item.investment, sales: sum.sales+item.sales, revenue: sum.revenue+item.revenue, net: sum.net+(item.netRevenue ?? netForValue(item.revenue,item.product,products)) }), { investment:0,sales:0,revenue:0,net:0 });
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (saving) return; const base = typeof editing === "object" && editing ? editing : null; const record = { id: base?.id || String(Date.now()), month: draft.date.slice(0, 7), date: draft.date, status: draft.status, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment)||0, sales: Number(draft.sales)||0, revenue: Number(draft.revenue)||0, netRevenue: Number(draft.netRevenue)||0, clicks: base?.clicks||0, pageViews: base?.pageViews||0, checkouts: base?.checkouts||0 }; setSaving(true); setSaveError(""); try { await save(record); setEditing(null); } catch { setSaveError("Não foi possível salvar no banco. Tente novamente."); } finally { setSaving(false); } };
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (saving) return; const base = typeof editing === "object" && editing ? editing : null; const record = { id: base?.id || uniqueId(), month: draft.date.slice(0, 7), date: draft.date, status: draft.status, campaign: draft.campaign.trim(), product: draft.product, investment: Number(draft.investment)||0, sales: Number(draft.sales)||0, revenue: Number(draft.revenue)||0, netRevenue: Number(draft.netRevenue)||0, clicks: base?.clicks||0, pageViews: base?.pageViews||0, checkouts: base?.checkouts||0 }; setSaving(true); setSaveError(""); try { await save(record); setEditing(null); } catch { setSaveError("Não foi possível salvar no banco. Tente novamente."); } finally { setSaving(false); } };
   const cpa = totals.sales ? totals.investment/totals.sales : 0; const roas = totals.investment ? totals.revenue/totals.investment : 0;
   if (importingCampaign) return <CampaignSalesImport campaign={importingCampaign} leads={leads} close={() => setImportingCampaign(null)} edit={() => { const campaign = importingCampaign; setImportingCampaign(null); openEditData(campaign); }} confirm={(sales) => { importSales(importingCampaign, sales); setImportingCampaign(null); }} />;
   return <div className={`${styles.content} ${styles.trafficDashboard}`}><header className={styles.trafficHeader}><div><span>Vendas diretas</span><h2>Campanhas do mês</h2><p>Atualize diariamente os totais acumulados de cada campanha.</p></div><button onClick={openNew}>+ Adicionar campanha</button></header><div className={styles.trafficKpis}><Kpi label="Investimento total" value={currency.format(totals.investment)} detail={`${records.length} campanhas`} /><Kpi label="Faturamento bruto" value={currency.format(totals.revenue)} detail={`${totals.sales} vendas`} /><Kpi label="Faturamento líquido" value={currency.format(totals.net)} detail={`${currency.format(Math.max(0,totals.revenue-totals.net))} em taxas`} /><Kpi label="ROAS" value={`${roas.toFixed(2)}x`} detail={`CPA ${currency.format(cpa)}`} /></div><section className={`${styles.panel} ${styles.trafficTable}`}><header><div><span>Detalhamento</span><h3>Dashboard por campanha</h3></div><b>{records.length} campanhas</b></header><div className={styles.trafficRows}>{records.map((item) => { const net = item.netRevenue ?? netForValue(item.revenue,item.product,products); const campaignDate = item.date || `${item.month}-01`; const fees = Math.max(0,item.revenue-net); const itemCpa = item.sales ? item.investment/item.sales : 0; const netPerSale = item.sales ? net/item.sales : 0; const itemRoas = item.investment ? item.revenue/item.investment : 0; return <article className={styles.campaignDashboard} key={item.id}><header className={styles.campaignDashboardHeader}><div><span>Campanha</span><b>{item.campaign}</b><small>{item.product}</small><em className={item.status === "Fechada" ? styles.campaignClosed : styles.campaignRunning}>{item.status || "Em andamento"}</em></div><time dateTime={campaignDate}><small>Data da campanha</small><strong>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${campaignDate}T12:00:00`))}</strong></time><div className={styles.campaignActions}><button onClick={() => setImportingCampaign(item)}>Importar planilha</button><button onClick={() => openEditData(item)}>Editar</button><button onClick={() => remove(item.id)} aria-label={`Excluir ${item.campaign}`}>×</button></div></header><div className={styles.campaignMetrics}><span><small>Investimento</small><strong>{currency.format(item.investment)}</strong></span><span><small>Vendas</small><strong>{item.sales}</strong></span><span><small>Faturamento bruto</small><strong>{currency.format(item.revenue)}</strong></span><span><small>Faturamento líquido</small><strong>{currency.format(net)}</strong></span><span><small>Líquido por produto</small><strong>{currency.format(netPerSale)}</strong></span><span><small>Taxas</small><strong>{currency.format(fees)}</strong></span><span><small>CPA</small><strong>{currency.format(itemCpa)}</strong></span><span><small>ROAS</small><strong className={itemRoas < 1 ? styles.negativeMetric : undefined}>{itemRoas.toFixed(2)}x</strong></span></div></article>})}{!records.length && <div className={styles.emptyTraffic}>Nenhuma campanha cadastrada neste período.</div>}</div></section>{editing && <div className={styles.backdrop} onMouseDown={() => setEditing(null)}><form className={`${styles.modal} ${styles.trafficModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><header><div><span>Campanha mensal</span><h2>{editing === "new" ? "Adicionar campanha" : "Editar campanha"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header><div className={styles.formGrid}><Input label="Campanha" value={draft.campaign} set={(campaign) => setDraft({...draft,campaign})} required /><Input label="Data da campanha" value={draft.date} set={(date) => setDraft({...draft,date})} type="date" required /><label><span>Status da campanha</span><select value={draft.status} onChange={(event) => setDraft({...draft,status:event.target.value as "Em andamento" | "Fechada"})}><option>Em andamento</option><option>Fechada</option></select></label><label><span>Produto</span><select value={draft.product} onChange={(event) => setDraft({...draft,product:event.target.value})}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><Input label="Investimento total" value={draft.investment} set={(investment) => setDraft({...draft,investment})} type="number" /><Input label="Quantidade de vendas" value={draft.sales} set={(sales) => setDraft({...draft,sales})} type="number" /><Input label="Faturamento bruto" value={draft.revenue} set={(revenue) => setDraft({...draft,revenue})} type="number" /><Input label="Faturamento líquido" value={draft.netRevenue} set={(netRevenue) => setDraft({...draft,netRevenue})} type="number" /><div className={styles.autoMetrics}><span>CPA <b>{currency.format(Number(draft.sales) ? Number(draft.investment)/Number(draft.sales) : 0)}</b></span><span>Líquido por produto <b>{currency.format(Number(draft.sales) ? Number(draft.netRevenue)/Number(draft.sales) : 0)}</b></span><span>ROAS <b className={(Number(draft.investment) ? Number(draft.revenue)/Number(draft.investment) : 0) < 1 ? styles.negativeMetric : undefined}>{Number(draft.investment) ? (Number(draft.revenue)/Number(draft.investment)).toFixed(2) : "0.00"}x</b></span></div></div>{saveError && <p className={styles.reconcileError}>{saveError}</p>}<footer><button type="button" onClick={() => setEditing(null)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar campanha"}</button></footer></form></div>}</div>;
@@ -950,7 +973,7 @@ function Contacts({
     </div>
   );
 }
-function Details({ products, sources, saveProducts, saveSources, renameProduct, renameSource }: { products: ProductDefinition[]; sources: string[]; saveProducts: (items: ProductDefinition[]) => void; saveSources: (items: string[]) => void; renameProduct: (oldName: string, product: ProductDefinition) => void; renameSource: (oldName: string, name: string) => void }) {
+function Details({ products, sources, saveProducts, saveSources, renameProduct, renameSource, deleteRecord }: { products: ProductDefinition[]; sources: string[]; saveProducts: (items: ProductDefinition[]) => void; saveSources: (items: string[]) => void; renameProduct: (oldName: string, product: ProductDefinition) => Promise<void>; renameSource: (oldName: string, name: string) => Promise<void>; deleteRecord: (entity: "product" | "source" | "message", id: string) => Promise<boolean> }) {
   const [templates, setTemplates] = useState<Array<{ id: string; title: string; text: string }>>([]);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -963,25 +986,25 @@ function Details({ products, sources, saveProducts, saveSources, renameProduct, 
   const [sourceDraft, setSourceDraft] = useState("");
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem("mensor-crm-messages-v1"); if (saved) setTemplates(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const saveTemplates = (next: Array<{ id: string; title: string; text: string }>) => { setTemplates(next); localStorage.setItem("mensor-crm-messages-v1", JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
-  const addTemplate = (event: React.FormEvent) => { event.preventDefault(); if (!title.trim() || !message.trim()) return; saveTemplates(editingMessage ? templates.map((item) => item.id === editingMessage ? { ...item, title: title.trim(), text: message.trim() } : item) : [{ id: String(Date.now()), title: title.trim(), text: message.trim() }, ...templates]); setTitle(""); setMessage(""); setEditingMessage(null); setAddingMessage(false); };
+  const addTemplate = (event: React.FormEvent) => { event.preventDefault(); if (!title.trim() || !message.trim()) return; saveTemplates(editingMessage ? templates.map((item) => item.id === editingMessage ? { ...item, title: title.trim(), text: message.trim() } : item) : [{ id: uniqueId(), title: title.trim(), text: message.trim() }, ...templates]); setTitle(""); setMessage(""); setEditingMessage(null); setAddingMessage(false); };
   const copyTemplate = async (id: string, text: string) => { await navigator.clipboard.writeText(text); setCopied(id); window.setTimeout(() => setCopied(null), 1800); };
   const addProduct = () => { setProductDraft({ name: "", gross: "", net: "" }); setEditingProduct("new"); };
   const addSource = () => { setSourceDraft(""); setEditingSource("new"); };
   const editProduct = (product: ProductDefinition) => { setProductDraft({ name: product.name, gross: String(product.price), net: String(product.netPrice ?? product.price) }); setEditingProduct(product); };
   const editSource = (source: string) => { setSourceDraft(source); setEditingSource(source); };
   const moveProduct = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= products.length) return; const next = [...products]; [next[index], next[target]] = [next[target], next[index]]; saveProducts(next.map((product, position) => ({ ...product, position }))); };
-  const submitProduct = (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const price = Number(productDraft.gross)||0; const netPrice = Number(productDraft.net)||0; if (editingProduct === "new") saveProducts([...products,{ name, price, netPrice, priceHistory: [] }]); else if (editingProduct) { const changed = editingProduct.price !== price || (editingProduct.netPrice ?? editingProduct.price) !== netPrice; const priceHistory = changed ? [...(editingProduct.priceHistory || []), { id: String(Date.now()), changedAt: new Date().toISOString(), previousPrice: editingProduct.price, previousNetPrice: editingProduct.netPrice ?? editingProduct.price, price, netPrice }] : editingProduct.priceHistory || []; renameProduct(editingProduct.name,{ name, price, netPrice, priceHistory }); } setEditingProduct(null); };
-  const submitSource = (event: React.FormEvent) => { event.preventDefault(); const name = sourceDraft.trim(); if (!name) return; if (editingSource === "new") saveSources([...sources,name]); else if (editingSource) renameSource(editingSource,name); setEditingSource(null); };
+  const submitProduct = async (event: React.FormEvent) => { event.preventDefault(); const name = productDraft.name.trim(); if (!name) return; const price = Number(productDraft.gross)||0; const netPrice = Number(productDraft.net)||0; if (editingProduct === "new") saveProducts([...products,{ name, price, netPrice, priceHistory: [] }]); else if (editingProduct) { const changed = editingProduct.price !== price || (editingProduct.netPrice ?? editingProduct.price) !== netPrice; const priceHistory = changed ? [...(editingProduct.priceHistory || []), { id: uniqueId(), changedAt: new Date().toISOString(), previousPrice: editingProduct.price, previousNetPrice: editingProduct.netPrice ?? editingProduct.price, price, netPrice }] : editingProduct.priceHistory || []; await renameProduct(editingProduct.name,{ name, price, netPrice, priceHistory }); } setEditingProduct(null); };
+  const submitSource = async (event: React.FormEvent) => { event.preventDefault(); const name = sourceDraft.trim(); if (!name) return; if (editingSource === "new") saveSources([...sources,name]); else if (editingSource) await renameSource(editingSource,name); setEditingSource(null); };
   const editTemplate = (template: { id: string; title: string; text: string }) => { setTitle(template.title); setMessage(template.text); setEditingMessage(template.id); setAddingMessage(true); };
   return (
     <div className={`${styles.content} ${styles.detailsPage}`}>
       <header className={styles.detailsIntro}><span>Configurações do CRM</span><h2>Cadastros e recursos da operação</h2><p>Gerencie os registros utilizados na pipeline, nos filtros e nas métricas.</p></header>
       <div className={styles.detailCatalogs}>
-        <section className={styles.detailCatalog}><header><div><span>Esteira de ascensão</span><h3>Produtos</h3><small>A ordem abaixo define a próxima oferta de cada cliente.</small></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product,index) => <article key={product.name}><div className={styles.productIdentity}><span>{index + 1}</span><div><b>{product.name}</b><small>Taxas: {currency.format(Math.max(0, product.price - (product.netPrice ?? product.price)))}</small></div></div><div className={styles.productValues}><span>Bruto <b>{currency.format(product.price)}</b></span><span>Líquido <b>{currency.format(product.netPrice ?? product.price)}</b></span></div>{product.priceHistory?.length ? <details className={styles.priceHistory}><summary>Histórico de alterações <b>{product.priceHistory.length}</b></summary><div>{[...product.priceHistory].reverse().map((change) => <article key={change.id}><time>{formatEventDate(change.changedAt)}</time><span>Bruto: {currency.format(change.previousPrice)} → {currency.format(change.price)}</span><span>Líquido: {currency.format(change.previousNetPrice)} → {currency.format(change.netPrice)}</span></article>)}</div></details> : <small className={styles.noPriceHistory}>Nenhuma alteração de valor</small>}<div className={styles.catalogActions}><button className={styles.orderButton} onClick={() => moveProduct(index,-1)} disabled={!index} aria-label={`Subir ${product.name}`}>↑</button><button className={styles.orderButton} onClick={() => moveProduct(index,1)} disabled={index === products.length - 1} aria-label={`Descer ${product.name}`}>↓</button><button onClick={() => editProduct(product)}>Editar</button><button onClick={() => saveProducts(products.filter((item) => item.name !== product.name))} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
-        <section className={styles.detailCatalog}><header><div><span>Etiquetas</span><h3>Origens de lead</h3></div><button onClick={addSource}>+ Origem</button></header><div>{sources.map((source) => <article key={source}><div><b>{source}</b><small>Origem disponível no CRM</small></div><i className={styles.sourceTag}>{source}</i><div className={styles.catalogActions}><button onClick={() => editSource(source)}>Editar</button><button onClick={() => saveSources(sources.filter((item) => item !== source))} aria-label={`Excluir ${source}`}>×</button></div></article>)}</div></section>
+        <section className={styles.detailCatalog}><header><div><span>Esteira de ascensão</span><h3>Produtos</h3><small>A ordem abaixo define a próxima oferta de cada cliente.</small></div><button onClick={addProduct}>+ Produto</button></header><div>{products.map((product,index) => <article key={product.name}><div className={styles.productIdentity}><span>{index + 1}</span><div><b>{product.name}</b><small>Taxas: {currency.format(Math.max(0, product.price - (product.netPrice ?? product.price)))}</small></div></div><div className={styles.productValues}><span>Bruto <b>{currency.format(product.price)}</b></span><span>Líquido <b>{currency.format(product.netPrice ?? product.price)}</b></span></div>{product.priceHistory?.length ? <details className={styles.priceHistory}><summary>Histórico de alterações <b>{product.priceHistory.length}</b></summary><div>{[...product.priceHistory].reverse().map((change) => <article key={change.id}><time>{formatEventDate(change.changedAt)}</time><span>Bruto: {currency.format(change.previousPrice)} → {currency.format(change.price)}</span><span>Líquido: {currency.format(change.previousNetPrice)} → {currency.format(change.netPrice)}</span></article>)}</div></details> : <small className={styles.noPriceHistory}>Nenhuma alteração de valor</small>}<div className={styles.catalogActions}><button className={styles.orderButton} onClick={() => moveProduct(index,-1)} disabled={!index} aria-label={`Subir ${product.name}`}>↑</button><button className={styles.orderButton} onClick={() => moveProduct(index,1)} disabled={index === products.length - 1} aria-label={`Descer ${product.name}`}>↓</button><button onClick={() => editProduct(product)}>Editar</button><button onClick={async () => { if (await deleteRecord("product", product.name)) saveProducts(products.filter((item) => item.name !== product.name)); }} aria-label={`Excluir ${product.name}`}>×</button></div></article>)}</div></section>
+        <section className={styles.detailCatalog}><header><div><span>Etiquetas</span><h3>Origens de lead</h3></div><button onClick={addSource}>+ Origem</button></header><div>{sources.map((source) => <article key={source}><div><b>{source}</b><small>Origem disponível no CRM</small></div><i className={styles.sourceTag}>{source}</i><div className={styles.catalogActions}><button onClick={() => editSource(source)}>Editar</button><button onClick={async () => { if (await deleteRecord("source", source)) saveSources(sources.filter((item) => item !== source)); }} aria-label={`Excluir ${source}`}>×</button></div></article>)}</div></section>
       </div>
       <section className={styles.messageWorkspace}>
-        <section className={styles.messageLibrary}><header><div><span>Pipeline</span><h2>Mensagens salvas</h2></div><div className={styles.messageHeaderActions}><b>{templates.length}</b><button onClick={() => { setTitle(""); setMessage(""); setEditingMessage(null); setAddingMessage(true); }}>+ Adicionar mensagem</button></div></header>{templates.length ? <div>{templates.map((template) => <article key={template.id}><header><h3>{template.title}</h3><div className={styles.templateActions}><button onClick={() => editTemplate(template)}>Editar</button><button onClick={() => saveTemplates(templates.filter((item) => item.id !== template.id))} aria-label="Excluir mensagem">×</button></div></header><p>{template.text}</p><button onClick={() => copyTemplate(template.id, template.text)}>{copied === template.id ? "Copiada!" : "Copiar mensagem"}</button></article>)}</div> : <div className={styles.emptyMessages}><i>✉</i><b>Nenhuma mensagem cadastrada</b><span>Use o botão “Adicionar mensagem” para criar seu primeiro modelo.</span></div>}</section>
+        <section className={styles.messageLibrary}><header><div><span>Pipeline</span><h2>Mensagens salvas</h2></div><div className={styles.messageHeaderActions}><b>{templates.length}</b><button onClick={() => { setTitle(""); setMessage(""); setEditingMessage(null); setAddingMessage(true); }}>+ Adicionar mensagem</button></div></header>{templates.length ? <div>{templates.map((template) => <article key={template.id}><header><h3>{template.title}</h3><div className={styles.templateActions}><button onClick={() => editTemplate(template)}>Editar</button><button onClick={async () => { if (await deleteRecord("message", template.id)) saveTemplates(templates.filter((item) => item.id !== template.id)); }} aria-label="Excluir mensagem">×</button></div></header><p>{template.text}</p><button onClick={() => copyTemplate(template.id, template.text)}>{copied === template.id ? "Copiada!" : "Copiar mensagem"}</button></article>)}</div> : <div className={styles.emptyMessages}><i>✉</i><b>Nenhuma mensagem cadastrada</b><span>Use o botão “Adicionar mensagem” para criar seu primeiro modelo.</span></div>}</section>
       </section>
       {addingMessage && <div className={styles.backdrop} onMouseDown={() => setAddingMessage(false)}><form className={`${styles.messageForm} ${styles.messageModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={addTemplate}><header><button type="button" onClick={() => setAddingMessage(false)}>×</button><span>Mensagem da pipeline</span><h2>{editingMessage ? "Editar mensagem" : "Cadastrar mensagem padrão"}</h2><p>Crie um texto pronto para agilizar seus contatos comerciais.</p></header><label><span>Nome da mensagem</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex.: Primeiro contato" autoFocus required /></label><label><span>Texto da mensagem</span><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Escreva a mensagem que deseja reutilizar..." rows={7} required /></label><button type="submit">Salvar mensagem</button></form></div>}
       {editingProduct && <div className={styles.backdrop} onMouseDown={() => setEditingProduct(null)}><form className={`${styles.modal} ${styles.detailModal}`} onMouseDown={(event) => event.stopPropagation()} onSubmit={submitProduct}><header><div><span>Produto</span><h2>{editingProduct === "new" ? "Cadastrar produto" : "Editar produto"}</h2></div><button type="button" onClick={() => setEditingProduct(null)}>×</button></header><div className={styles.formGrid}><Input label="Nome do produto" value={productDraft.name} set={(name) => setProductDraft({...productDraft,name})} required /><Input label="Valor bruto" value={productDraft.gross} set={(gross) => setProductDraft({...productDraft,gross})} type="number" /><Input label="Valor líquido" value={productDraft.net} set={(net) => setProductDraft({...productDraft,net})} type="number" /></div><footer><button type="button" onClick={() => setEditingProduct(null)}>Cancelar</button><button type="submit">Salvar produto</button></footer></form></div>}
@@ -1012,7 +1035,7 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
       const XLSX = await import("xlsx");
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
       const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-      const existingKeys = new Set(existing.flatMap((lead) => [lead.email ? `e:${lead.email.trim().toLowerCase()}` : "", lead.phone ? `p:${lead.phone.replace(/\D/g, "")}` : ""]).filter(Boolean));
+      const existingKeys = new Set(existing.flatMap((lead) => [lead.email ? `e:${lead.email.trim().toLowerCase()}` : "", lead.phone ? `p:${phoneKey(lead.phone)}` : ""]).filter(Boolean));
       const importedKeys = new Set<string>();
       const parsed = rawRows.map((raw, index): PreviewRow => {
         const keyed = Object.fromEntries(Object.entries(raw).map(([key, value]) => [normalize(key), value]));
@@ -1024,12 +1047,14 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
         const temperatureInput = String(get("Temperatura")).trim(); const temperature: Lead["temperature"] = ["Quente","Morno","Frio"].find((item) => normalize(item) === normalize(temperatureInput)) as Lead["temperature"] || "Morno";
         const createdAt = parseDate(get("Data do lead", "Data lead", "Data")); const conversationAt = parseDate(get("Data da conversa")); const meetingAt = parseDate(get("Data da reunião", "Data da reuniao")); const proposalAt = parseDate(get("Data da proposta")); const closedAt = parseDate(get("Data do fechamento"));
         const customGross = numberValue(get("Valor bruto personalizado", "Valor bruto")); const customNet = numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido")); const value = customGross || catalogProduct?.price || 0; const netValue = customNet || (catalogProduct?.netPrice ?? catalogProduct?.price ?? 0);
-        const keys = [email ? `e:${email}` : "", phone ? `p:${phone.replace(/\D/g, "")}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
+        const keys = [email ? `e:${email}` : "", phone ? `p:${phoneKey(phone)}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
         let issue = !name ? "Nome não informado" : !createdAt ? "Data do lead inválida" : "";
+        if (!issue && sourceInput && !sources.some((item) => normalize(item) === normalize(sourceInput))) issue = "Origem não cadastrada";
         if (!issue && productInput && product === productInput && !catalogProduct) issue = "Produto não cadastrado";
         if (!issue && stage === "Fechado" && !closedAt) issue = "Fechamento sem data";
-        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: `import-${Date.now()}-${index}`, product, value, netValue, closedAt, repurchase: false }] : undefined;
-        const lead: Lead | undefined = issue ? undefined : { id: `import-${Date.now()}-${index}`, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: "", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
+        const leadId = uniqueId();
+        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: uniqueId(), product, value, netValue, closedAt, repurchase: false }] : undefined;
+        const lead: Lead | undefined = issue ? undefined : { id: leadId, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: "", date: createdAt ? new Intl.DateTimeFormat("pt-BR").format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
         return { name: name || `Linha ${index + 2}`, company, source, product, stage, lead, status: issue ? "Inválido" : duplicate ? "Duplicado" : "Pronto", issue: issue || (duplicate ? "WhatsApp ou e-mail já cadastrado" : undefined) };
       });
       setRows(parsed);
@@ -1075,12 +1100,12 @@ function LeadModal({
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault();
-          const email = draft.email.trim().toLowerCase(); const phone = draft.phone.replace(/\D/g, "");
-          const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && lead.phone.replace(/\D/g, "") === phone));
+          const email = draft.email.trim().toLowerCase(); const phone = phoneKey(draft.phone);
+          const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
           if (match) { window.alert("Este WhatsApp ou e-mail já está cadastrado. Vamos abrir o lead existente para você continuar o atendimento."); duplicate(match); return; }
           save({
             ...draft,
-            id: String(Date.now()),
+            id: uniqueId(),
             stage: "Novo lead",
             value: draft.customDeal ? Number(draft.customGross) || 0 : products.find((product) => product.name === draft.product)?.price || 0,
             netValue: draft.customDeal ? Number(draft.customNet) || 0 : products.find((product) => product.name === draft.product)?.netPrice ?? products.find((product) => product.name === draft.product)?.price ?? 0,
@@ -1175,6 +1200,7 @@ function LeadDrawer({
   renameTag,
   deleteTag,
   remove,
+  deletePurchase,
   startAscension,
 }: {
   lead: Lead;
@@ -1187,7 +1213,8 @@ function LeadDrawer({
   update: (changes: Partial<Lead>) => void;
   renameTag: (oldTag: string, newTag: string) => void;
   deleteTag: (tag: string) => void;
-  remove: () => void;
+  remove: () => void | Promise<void>;
+  deletePurchase: (id: string) => Promise<boolean>;
   startAscension: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -1215,8 +1242,9 @@ function LeadDrawer({
     const isLatest = purchaseHistory.at(-1)?.id === purchaseId;
     update({ purchases, ...(isLatest ? { closedAt } : {}) });
   };
-  const removePurchase = (purchaseId: string) => {
+  const removePurchase = async (purchaseId: string) => {
     if (!window.confirm("Excluir esta compra do histórico? Os valores também deixarão de aparecer nos dashboards.")) return;
+    if (!await deletePurchase(purchaseId)) return;
     const purchases = purchaseHistory.filter((purchase) => purchase.id !== purchaseId);
     const latest = purchases.at(-1);
     update({ purchases, ...(purchaseHistory.at(-1)?.id === purchaseId ? { closedAt: latest?.closedAt } : {}) });
@@ -1225,7 +1253,7 @@ function LeadDrawer({
     event.preventDefault();
     const closedAt = dateFromInput(closingDraft.date);
     if (!closedAt || !closingDraft.product) return;
-    const purchase: Purchase = { id: `${lead.id}-${Date.now()}`, product: closingDraft.product, value: Number(closingDraft.gross) || 0, netValue: Number(closingDraft.net) || 0, closedAt, repurchase: purchaseHistory.length > 0 };
+    const purchase: Purchase = { id: uniqueId(), product: closingDraft.product, value: Number(closingDraft.gross) || 0, netValue: Number(closingDraft.net) || 0, closedAt, repurchase: purchaseHistory.length > 0 };
     update({ stage: "Fechado", product: purchase.product, value: purchase.value, netValue: purchase.netValue, closedAt, purchases: [...purchaseHistory, purchase] });
     setAddingClosing(false);
   };
@@ -1376,7 +1404,7 @@ function MonthlyMetricsChart({ leads, endMonth, goals, setGoal }: { leads: Lead[
     const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const items = leads.filter((lead) => (lead.createdAt || "").slice(0, 7) === key);
-    const purchases = leads.flatMap((lead) => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ value: lead.value, closedAt: lead.closedAt }] : []);
+    const purchases = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => !purchase.campaignId));
     const trafficLeads = items.filter((lead) => lead.id.startsWith("traffic-")).length;
     return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, organicLeads: items.length - trafficLeads, trafficLeads, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.value, 0), goal: goals[key] || 0 };
   });
@@ -1395,14 +1423,15 @@ function PeriodFilter({ start, end, setRange }: { start: string; end: string; se
 }
 function ProductValueChart({ leads, start, end, products }: { leads: Lead[]; start: string; end: string; products: ProductDefinition[] }) {
   const productNames = Array.from(new Set([...products.map((product) => product.name), ...leads.map((lead) => lead.product || "Não informado"), ...leads.flatMap((lead) => purchasesForLead(lead, products).map((purchase) => purchase.product))])).filter((product) => product !== "Não informado");
-  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
+  const productData = productNames.map((product) => { const items = leads.filter((lead) => lead.product === product); const closed = leads.flatMap((lead) => purchasesForLead(lead, products)).filter((purchase) => !purchase.campaignId && purchase.product === product && inRange(purchase.closedAt, start, end)); const value = closed.reduce((sum, purchase) => sum + purchase.value, 0); return { product, value, net: closed.reduce((sum, purchase) => sum + purchase.netValue, 0), sales: closed.length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length }; }).sort((a,b) => b.value - a.value);
   const total = productData.reduce((sum, product) => sum + product.value, 0);
   const colors = ["#2bc48a", "#5aaee8", "#a986e8", "#d6a752", "#e47882"];
   return <section className={`${styles.panel} ${styles.productChart}`}><header><div><span>Receita por produto</span><h3>Composição do valor fechado</h3><p>Atualizado pelos produtos marcados como fechados na pipeline.</p></div><strong><Money value={total} /><small>valor bruto total</small></strong></header><div className={styles.productStack}>{productData.map((item,index) => <i key={item.product} style={{ width: `${total ? item.value / total * 100 : 100 / Math.max(productData.length,1)}%`, background: colors[index % colors.length] }} />)}</div><div className={styles.productList}>{productData.map((item,index) => <article key={item.product}><i style={{ background: colors[index % colors.length] }} /><div><b>{item.product}</b><small>{item.sales} fechamentos · líquido <Money value={item.net} /></small></div><strong><Money value={item.value} /></strong><em>{total ? (item.value / total * 100).toFixed(1) : "0.0"}%</em></article>)}</div></section>;
 }
 function OriginValueChart({ leads, start, end, sources }: { leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const origins = sources.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.flatMap((lead) => lead.purchases?.length ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ value: lead.value, closedAt: lead.closedAt }] : []).filter((purchase) => inRange(purchase.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const originNames = Array.from(new Set([...sources, ...leads.map((lead) => lead.source).filter(Boolean)]));
+  const origins = originNames.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = items.flatMap((lead) => purchasesForLead(lead, [])).filter((purchase) => !purchase.campaignId && inRange(purchase.closedAt, start, end)); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
   return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Fechamentos</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
