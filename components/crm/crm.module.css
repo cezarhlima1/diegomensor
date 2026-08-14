@@ -2382,6 +2382,7 @@
 /* A meta contábil permanece inteira mesmo nos cards mais estreitos. */
 .overviewGoal>div{min-width:0}
 .overviewGoal input{box-sizing:border-box;width:min(100%,160px);min-width:0;font-size:clamp(20px,1.65vw,25px)}
+.databaseStatus.saving>i{color:#d0a75e}.databaseStatus.offline{border-color:rgba(239,115,123,.3);background:rgba(239,115,123,.08)}
 
 .dashboardProductFilter{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 15px;border:1px solid rgba(190,215,225,.085);border-radius:11px;background:#0b1d28}.dashboardProductFilter>div{display:grid;gap:3px}.dashboardProductFilter span{color:#dfeaf0;font-size:10px;font-weight:750}.dashboardProductFilter small{color:#718995;font-size:8px}.dashboardProductFilter select{width:min(100%,280px);height:38px;padding:0 11px;border:1px solid rgba(105,205,245,.18);border-radius:8px;outline:0;background:#102735;color:#edf5f7;color-scheme:dark;font-size:10px}.crm[data-theme="light"] .dashboardProductFilter{border-color:rgba(35,68,84,.1);background:#fbfcfd}.crm[data-theme="light"] .dashboardProductFilter span{color:#203743}.crm[data-theme="light"] .dashboardProductFilter select{border-color:rgba(35,68,84,.14);background:#eef4f6;color:#294451;color-scheme:light}@media(max-width:600px){.dashboardProductFilter{align-items:stretch;flex-direction:column}.dashboardProductFilter select{width:100%}}
 

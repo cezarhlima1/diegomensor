@@ -257,6 +257,7 @@ export default function CRM() {
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseStatus, setDatabaseStatus] = useState<"connecting" | "saving" | "connected" | "offline">("connecting");
   const [databaseIssue, setDatabaseIssue] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const syncRequest = useRef(0);
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
   const skipNextSnapshotSync = useRef(false);
@@ -330,22 +331,6 @@ export default function CRM() {
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
   };
-  const persistLeadsAndTraffic = async (nextLeads: Lead[], nextTraffic: TrafficRecord[]) => {
-    setDatabaseStatus("saving");
-    setDatabaseIssue("");
-    const persist = async () => {
-      const snapshot = JSON.stringify({ leads: nextLeads, traffic: nextTraffic, products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") });
-      const response = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: snapshot });
-      if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao sincronizar dados"); }
-      skipNextSnapshotSync.current = true;
-      setLeads(nextLeads);
-      setTraffic(nextTraffic);
-      setDatabaseIssue("");
-      setDatabaseStatus("connected");
-    };
-    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
-    await syncQueue.current;
-  };
   const persistImportBatch = async (nextLeads: Lead[], nextTraffic: TrafficRecord[], changedLeads: Lead[], changedTraffic: TrafficRecord[] = []) => {
     setDatabaseStatus("saving"); setDatabaseIssue("");
     const persist = async () => {
@@ -363,9 +348,17 @@ export default function CRM() {
     const persist = async () => {
       const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "lead", record: lead }) });
       if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar lead"); }
+      const result = await response.json();
+      const expectedTags = JSON.stringify([...(lead.tags || [])].sort());
+      const savedTags = JSON.stringify([...(result.saved?.tags || [])].sort());
+      if (result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags) {
+        setDatabaseIssue("O banco não confirmou etapa, produto e etiquetas"); setDatabaseStatus("offline");
+        throw new Error("Confirmação do banco divergente");
+      }
       skipNextSnapshotSync.current = true;
       setDatabaseIssue("");
       setDatabaseStatus("connected");
+      setLastSavedAt(new Date());
     };
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
@@ -388,6 +381,13 @@ export default function CRM() {
     leadSaveTimers.current.delete(id);
     const lead = leadsRef.current.find((item) => item.id === id);
     if (lead) void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
+  };
+  const flushAllLeadSaves = () => {
+    for (const [id, timer] of leadSaveTimers.current) {
+      window.clearTimeout(timer); leadSaveTimers.current.delete(id);
+      const lead = leadsRef.current.find((item) => item.id === id);
+      if (lead) void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
+    }
   };
   const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
     const persist = async () => {
@@ -453,7 +453,10 @@ export default function CRM() {
     setDatabaseIssue("");
     const timeout = window.setTimeout(() => {
       const requestId = ++syncRequest.current;
-      const snapshot = JSON.stringify({ leads, traffic, products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") });
+      // Leads e campanhas possuem salvamentos granulares próprios. Reenviar a
+      // coleção inteira aqui permitia que uma aba antiga sobrescrevesse etapa,
+      // produto ou etiquetas recém-salvos por outra operação.
+      const snapshot = JSON.stringify({ products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") });
       syncQueue.current = syncQueue.current.catch(() => undefined).then(async () => {
         const response = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: snapshot });
         if (!response.ok) { if (requestId === syncRequest.current) await registerDatabaseFailure(response); throw new Error("Falha ao sincronizar CRM"); }
@@ -461,7 +464,7 @@ export default function CRM() {
       }).catch((error) => { if (requestId !== syncRequest.current) return; void registerDatabaseFailure(); console.error("Falha ao sincronizar CRM", error); });
     }, 500);
     return () => window.clearTimeout(timeout);
-  }, [databaseReady, leads, traffic, catalogProducts, catalogSources, pipelineStages, syncRevision]);
+  }, [databaseReady, catalogProducts, catalogSources, pipelineStages, syncRevision]);
   useEffect(() => {
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       if (databaseStatus !== "saving") return;
@@ -656,13 +659,25 @@ export default function CRM() {
     setSelected((current) => current?.id === id ? updated : current);
     scheduleLeadSave(updated);
   };
+  const persistTagChange = async (entity: "tag-rename" | "tag-delete", oldId: string, newId?: string) => {
+    const persist = async () => {
+      const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, oldId, newId }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar etiqueta"); }
+      const result = await response.json();
+      if (result.remaining !== 0) { setDatabaseIssue("O banco não confirmou a alteração da etiqueta"); setDatabaseStatus("offline"); throw new Error("Confirmação da etiqueta divergente"); }
+      setDatabaseIssue(""); setDatabaseStatus("connected"); setLastSavedAt(new Date());
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    await syncQueue.current;
+  };
   const renameTag = async (oldTag: string, newTag: string) => {
     const previousLeads = leadsRef.current;
     const nextLeads = previousLeads.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }));
-    leadSaveTimers.current.forEach((timer) => window.clearTimeout(timer)); leadSaveTimers.current.clear();
+    flushAllLeadSaves();
     leadsRef.current = nextLeads; localDataRevision.current += 1;
     try {
-      await persistLeadsAndTraffic(nextLeads, traffic);
+      await persistTagChange("tag-rename", oldTag, newTag);
+      setLeads(nextLeads);
       setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) } : lead);
     } catch (error) {
       leadsRef.current = previousLeads;
@@ -673,10 +688,11 @@ export default function CRM() {
   const deleteTag = async (tagToDelete: string) => {
     const previousLeads = leadsRef.current;
     const nextLeads = previousLeads.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }));
-    leadSaveTimers.current.forEach((timer) => window.clearTimeout(timer)); leadSaveTimers.current.clear();
+    flushAllLeadSaves();
     leadsRef.current = nextLeads; localDataRevision.current += 1;
     try {
-      await persistLeadsAndTraffic(nextLeads, traffic);
+      await persistTagChange("tag-delete", tagToDelete);
+      setLeads(nextLeads);
       setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) } : lead);
     } catch (error) {
       leadsRef.current = previousLeads;
@@ -737,8 +753,7 @@ export default function CRM() {
           </div>
           {["geral", "comercial", "trafego", "campanhas"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
-            {databaseStatus === "saving" && <small style={{ opacity: 0.6 }}>Salvando…</small>}
-            {databaseStatus === "offline" && <small className={styles.reconcileError} title={databaseIssue}>⚠ Falha ao salvar{databaseIssue ? `: ${databaseIssue}` : ""}</small>}
+            <div className={`${styles.databaseStatus} ${styles[databaseStatus]}`} title={databaseIssue}><i>{databaseStatus === "connected" ? "●" : databaseStatus === "offline" ? "!" : "◌"}</i><span><b>{databaseStatus === "saving" ? "Salvando no banco…" : databaseStatus === "offline" ? "Não foi salvo" : databaseStatus === "connecting" ? "Conectando…" : "Salvo no banco"}</b><small>{databaseStatus === "offline" ? databaseIssue || "Revise a conexão" : lastSavedAt ? `Confirmado às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit", second:"2-digit" })}` : "Banco conectado"}</small></span></div>
             <button className={styles.themeToggle} onClick={toggleTheme} aria-label={theme === "dark" ? "Ativar modo dia" : "Ativar modo noite"} title={theme === "dark" ? "Modo dia" : "Modo noite"}><span>{theme === "dark" ? "☀" : "☾"}</span><small>{theme === "dark" ? "Dia" : "Noite"}</small></button>
             {(view === "pipeline" || view === "contatos") && (
               <label>

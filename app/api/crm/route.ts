@@ -149,6 +149,18 @@ export async function PATCH(request: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   let body: { entity?: string; record?: Record<string, unknown>; oldId?: string; newId?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  if ((body.entity === "tag-rename" || body.entity === "tag-delete") && body.oldId) {
+    try {
+      const db = crmPool();
+      if (body.entity === "tag-rename" && body.newId) await db.query("update public.crm_leads set tags=array_replace(tags,$1,$2),updated_at=now() where $1=any(tags)", [body.oldId, body.newId]);
+      else await db.query("update public.crm_leads set tags=array_remove(tags,$1),updated_at=now() where $1=any(tags)", [body.oldId]);
+      const verification = await db.query("select count(*)::int remaining from public.crm_leads where $1=any(tags)", [body.oldId]);
+      return NextResponse.json({ ok: true, remaining: Number(verification.rows[0]?.remaining) || 0 });
+    } catch (error) {
+      console.error("CRM tag PATCH failed", error);
+      return databaseError(error, "database-write-failed");
+    }
+  }
   if ((body.entity === "product-rename" || body.entity === "source-rename") && body.oldId && body.newId) {
     try {
       await withCrmTransaction(async (db) => {
@@ -171,14 +183,16 @@ export async function PATCH(request: Request) {
   if (body.entity === "lead" && body.record?.id) {
     const lead = body.record;
     try {
-      await withCrmTransaction(async (db) => {
+      const saved = await withCrmTransaction(async (db) => {
         const columns = await purchaseColumns(db);
         await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }
+        const verification = await db.query("select stage,product,tags,updated_at from public.crm_leads where id=$1", [lead.id]);
+        return verification.rows[0];
       });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], updatedAt: saved.updated_at } });
     } catch (error) {
       console.error("CRM lead PATCH failed", error);
       return databaseError(error, "database-write-failed");
