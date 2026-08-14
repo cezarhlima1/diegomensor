@@ -52,7 +52,7 @@ async function purchaseColumns(db: PoolClient) {
   return { origin: columns.has("purchase_origin"), source: columns.has("purchase_source") };
 }
 async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, purchase: Record<string, unknown>, columns: { origin: boolean; source: boolean }) {
-  const campaign = purchase.origin === "campaign" || purchase.externalSaleCode || purchase.campaignId;
+  const campaign = purchase.origin === "campaign" || (purchase.origin == null && !String(purchase.id || "").startsWith("ascension-") && Boolean(purchase.externalSaleCode || purchase.campaignId));
   const base = [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase)];
   if (columns.origin && columns.source) {
     await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,purchase_source,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,purchase_source=excluded.purchase_source,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, campaign ? "campaign" : "pipeline", campaign ? "Tráfego" : purchase.source || lead.source || "Cadastro", purchase.externalSaleCode || null, purchase.campaignId || null]);

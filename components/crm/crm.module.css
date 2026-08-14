@@ -2330,7 +2330,50 @@
 .campaignLeadList>header{display:flex;align-items:center;justify-content:space-between;padding:14px 4px 8px}.campaignLeadList>header b{color:#eaf3f6;font-size:11px}.campaignLeadList>header span,.campaignLeadList>p{color:#78909c;font-size:9px}
 .campaignLeadList>div{display:grid;grid-template-columns:minmax(180px,1fr) 130px 130px 110px;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--line)}.campaignLeadList>div>span{display:grid;gap:3px}.campaignLeadList>div b,.campaignLeadList>div strong{color:#e7f0f4;font-size:9px}.campaignLeadList>div small{color:#78909c;font-size:8px}.campaignLeadList>div>strong{text-align:right}.campaignLeadList>p{margin:0;padding:18px 4px;text-align:center}
 .crm[data-theme="light"] .campaignLeadList>div b,.crm[data-theme="light"] .campaignLeadList>div strong,.crm[data-theme="light"] .campaignLeadList>header b{color:#294451}
+
+/* Modo dia: superfícies separadas e contraste confortável, sem branco sobre branco. */
+.crm[data-theme="light"] .topbar>.periodFilter{
+  border-color:rgba(39,77,94,.16);
+  background:#e2ecef;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
+.crm[data-theme="light"] .topbar>.periodFilter>span,
+.crm[data-theme="light"] .topbar>.periodFilter>label>small{color:#526d79}
+.crm[data-theme="light"] .topbar>.periodFilter>label>input{
+  border-color:rgba(39,77,94,.2);
+  background:#f7fafb;
+  color:#203743;
+  box-shadow:0 1px 2px rgba(31,62,76,.05);
+}
+.crm[data-theme="light"] .topbar>.periodFilter>label>input:hover{border-color:rgba(36,127,168,.42);background:#fff}
+.crm[data-theme="light"] .topbar>.periodFilter>label>input:focus{border-color:#378caf;background:#fff;box-shadow:0 0 0 3px rgba(55,140,175,.13)}
+.crm[data-theme="light"] .dashboardContent .kpis article,
+.crm[data-theme="light"] .dashboardContent>.monthlyChart,
+.crm[data-theme="light"] .productChart,
+.crm[data-theme="light"] .dashboardContent>.funnelColumn>.funnelVisual,
+.crm[data-theme="light"] .trafficHeader,
+.crm[data-theme="light"] .trafficTable{background:#f6f9fa}
+.crm[data-theme="light"] .financialSummary article,
+.crm[data-theme="light"] .originAnalysis,
+.crm[data-theme="light"] .productList article,
+.crm[data-theme="light"] .trafficRows .campaignDashboard{background:#eaf2f5}
+.campaignActions button:disabled{opacity:.35;cursor:not-allowed}
+.ascensionModal{width:min(100%,560px)}.ascensionModal .formGrid{display:grid;gap:14px}.ascensionModal .formGrid>label{display:grid;gap:6px}.ascensionModal .formGrid select,.ascensionSource select{width:100%;height:40px;padding:0 10px;border:1px solid rgba(190,215,225,.12);border-radius:8px;background:#102735;color:#eaf3f6;color-scheme:dark}.ascensionModal .formGrid>p{margin:0;padding:12px;border:1px solid rgba(105,205,245,.12);border-radius:9px;background:rgba(7,139,212,.06);color:#91a7b2;font-size:10px;line-height:1.55}.ascensionSource{display:grid;gap:6px;padding:12px;border:1px solid rgba(105,205,245,.12);border-radius:9px;background:#091923}.ascensionSource>span{color:#b8cad2;font-size:9px;font-weight:750}.ascensionSource>small{color:#718995;font-size:8px}.crm[data-theme="light"] .ascensionModal .formGrid select,.crm[data-theme="light"] .ascensionSource select{border-color:rgba(35,68,84,.14);background:#edf4f6;color:#294451;color-scheme:light}.crm[data-theme="light"] .ascensionModal .formGrid>p,.crm[data-theme="light"] .ascensionSource{border-color:rgba(35,68,84,.1);background:#eaf2f5;color:#526d79}
 @media(max-width:700px){.campaignLeadList>div{grid-template-columns:minmax(0,1fr) auto}.campaignLeadList>div>span:nth-child(2),.campaignLeadList>div>span:nth-child(3){display:none}.campaignLeadList>header{align-items:flex-start;flex-direction:column;gap:3px}}
+
+/* Filtro rápido com calendário para intervalos personalizados. */
+.periodPresets{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid rgba(190,215,225,.09);border-radius:8px;background:#0b202b}
+.periodPresets button{height:27px;padding:0 9px;border:0;border-radius:6px;background:transparent;color:#7f96a2;font-size:8px;font-weight:750;cursor:pointer}
+.periodPresets button:hover{background:rgba(105,205,245,.08);color:#b9dce9}
+.periodPresets .activePeriod{background:#218fbe;color:#fff;box-shadow:0 2px 7px rgba(8,92,128,.2)}
+.crm[data-theme="light"] .periodPresets{border-color:rgba(39,77,94,.14);background:#d5e3e8}
+.crm[data-theme="light"] .periodPresets button{color:#526d79}
+.crm[data-theme="light"] .periodPresets button:hover{background:rgba(255,255,255,.55);color:#245d76}
+.crm[data-theme="light"] .periodPresets .activePeriod{background:#378caf;color:#fff}
+.pipelineFilters>.periodPresets,.contactFilterFields>.periodPresets{flex:none;align-self:end}
+@media(max-width:900px){.topbar>.periodFilter{flex-wrap:wrap}.topbar>.periodFilter>span{display:none}.periodPresets{order:1}.topbar>.periodFilter>label{order:2;flex:1}.topbar>.periodFilter>label>input{width:100%}}
+@media(max-width:560px){.topbar>.periodFilter{display:grid;grid-template-columns:1fr 1fr!important}.periodPresets{grid-column:1/-1}.topbar>.periodFilter>label{display:grid!important}.topbar>.periodFilter>label>small{display:block}.topbar>.periodFilter>label>input{min-width:0}}
+@media(max-width:700px){.contactFilterFields>.periodPresets{grid-column:1/-1}.contactFilterFields>label:nth-child(3){grid-column:auto}.contactFilterFields>label:nth-child(4){grid-column:1/-1}}
 
 /* A meta contábil permanece inteira mesmo nos cards mais estreitos. */
 .overviewGoal>div{min-width:0}
