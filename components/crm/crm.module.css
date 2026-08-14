@@ -2382,3 +2382,7 @@
 /* A meta contábil permanece inteira mesmo nos cards mais estreitos. */
 .overviewGoal>div{min-width:0}
 .overviewGoal input{box-sizing:border-box;width:min(100%,160px);min-width:0;font-size:clamp(20px,1.65vw,25px)}
+
+/* Valores bruto e líquido na composição de receita de todas as dashboards. */
+.productTotals{display:flex;gap:18px;text-align:right}.productTotals>span,.productValues>span{display:grid;gap:4px}.productTotals small,.productValues small{color:#738a96;font:600 8px var(--font-manrope);letter-spacing:.06em;text-transform:uppercase}.productTotals strong{color:#fff;font:750 18px var(--font-archivo)}.productTotals>span:last-child strong,.productValues>span:last-child strong{color:#62d4a6}.productValues{display:grid!important;grid-template-columns:repeat(2,minmax(90px,1fr));gap:15px!important;text-align:right}.productValues strong{color:#fff;font-size:11px}.crm[data-theme="light"] .productTotals strong,.crm[data-theme="light"] .productValues strong{color:#203743}.crm[data-theme="light"] .productTotals>span:last-child strong,.crm[data-theme="light"] .productValues>span:last-child strong{color:#238363}
+@media(max-width:700px){.productTotals{text-align:left}.productList article{grid-template-columns:9px minmax(0,1fr) auto!important}.productValues{grid-column:2;text-align:left}.productList article>em{grid-column:3!important;grid-row:2;justify-self:end!important}}
