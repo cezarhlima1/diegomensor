@@ -232,6 +232,8 @@ export default function CRM() {
   const [view, setView] = useState<View>("geral");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
+  const leadsRef = useRef<Lead[]>(leads);
+  const localDataRevision = useRef(0);
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -252,6 +254,8 @@ export default function CRM() {
   const leadSaveTimers = useRef<Map<string, number>>(new Map());
   const [syncRevision, setSyncRevision] = useState(0);
   const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
+
+  useEffect(() => { leadsRef.current = leads; }, [leads]);
 
   const registerDatabaseFailure = async (response?: Response) => {
     if (!response) { setDatabaseIssue("Falha de rede"); setDatabaseStatus("offline"); return; }
@@ -373,7 +377,7 @@ export default function CRM() {
     if (!timer) return;
     window.clearTimeout(timer);
     leadSaveTimers.current.delete(id);
-    const lead = leads.find((item) => item.id === id);
+    const lead = leadsRef.current.find((item) => item.id === id);
     if (lead) void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
   };
   const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
@@ -463,10 +467,14 @@ export default function CRM() {
     const refreshFromDatabase = async () => {
       if (refreshing || document.visibilityState === "hidden" || databaseStatus === "saving") return;
       refreshing = true;
+      const revisionAtStart = localDataRevision.current;
       try {
         const response = await fetch("/api/crm", { cache: "no-store" });
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
+        // Se houve uma edição enquanto a leitura estava em andamento, a
+        // resposta já nasceu antiga e não pode substituir o estado local.
+        if (revisionAtStart !== localDataRevision.current) return;
         skipNextSnapshotSync.current = true;
         setLeads(mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)));
         setTraffic(remote.traffic || []);
@@ -528,10 +536,14 @@ export default function CRM() {
     return { ...lead, stage, value: 0, ...(stage === "Primeiro contato" || stage === "Em conversação" ? { conversationAt: lead.conversationAt || now } : {}), ...(stage === "Reunião agendada" ? { meetingAt: lead.meetingAt || now } : {}) };
   };
   const moveLead = (id: string, stage: Stage, now = new Date().toISOString()) => {
-    const lead = leads.find((item) => item.id === id);
+    const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
+    const pendingSave = leadSaveTimers.current.get(id);
+    if (pendingSave) { window.clearTimeout(pendingSave); leadSaveTimers.current.delete(id); }
     const updated = transitionLead(lead, stage, now);
-    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    const next = leadsRef.current.map((item) => item.id === id ? updated : item);
+    leadsRef.current = next; localDataRevision.current += 1;
+    setLeads(next);
     void saveLead(updated).catch((error) => console.error("Falha ao salvar movimentação do lead", error));
   };
   const addLead = async (lead: Lead) => {
@@ -621,29 +633,39 @@ export default function CRM() {
     return { ...lead, ...changes, purchases };
   };
   const updateLead = (id: string, changes: Partial<Lead>) => {
-    const lead = leads.find((item) => item.id === id);
+    const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
     const updated = applyLeadChanges(lead, changes);
-    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    const next = leadsRef.current.map((item) => item.id === id ? updated : item);
+    leadsRef.current = next; localDataRevision.current += 1;
+    setLeads(next);
     setSelected((current) => current?.id === id ? updated : current);
     scheduleLeadSave(updated);
   };
   const renameTag = async (oldTag: string, newTag: string) => {
-    const nextLeads = leads.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }));
+    const previousLeads = leadsRef.current;
+    const nextLeads = previousLeads.map((lead) => ({ ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) }));
+    leadSaveTimers.current.forEach((timer) => window.clearTimeout(timer)); leadSaveTimers.current.clear();
+    leadsRef.current = nextLeads; localDataRevision.current += 1;
     try {
       await persistLeadsAndTraffic(nextLeads, traffic);
       setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).map((tag) => tag === oldTag ? newTag : tag) } : lead);
     } catch (error) {
+      leadsRef.current = previousLeads;
       console.error("Falha ao renomear etiqueta", error);
       window.alert("Não foi possível salvar a etiqueta no banco. Tente novamente.");
     }
   };
   const deleteTag = async (tagToDelete: string) => {
-    const nextLeads = leads.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }));
+    const previousLeads = leadsRef.current;
+    const nextLeads = previousLeads.map((lead) => ({ ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) }));
+    leadSaveTimers.current.forEach((timer) => window.clearTimeout(timer)); leadSaveTimers.current.clear();
+    leadsRef.current = nextLeads; localDataRevision.current += 1;
     try {
       await persistLeadsAndTraffic(nextLeads, traffic);
       setSelected((lead) => lead ? { ...lead, tags: (lead.tags || []).filter((tag) => tag !== tagToDelete) } : lead);
     } catch (error) {
+      leadsRef.current = previousLeads;
       console.error("Falha ao excluir etiqueta", error);
       window.alert("Não foi possível excluir a etiqueta no banco. Tente novamente.");
     }
