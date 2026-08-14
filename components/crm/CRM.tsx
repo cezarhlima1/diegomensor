@@ -477,7 +477,11 @@ export default function CRM() {
     if (!databaseReady) return;
     let refreshing = false;
     const refreshFromDatabase = async () => {
-      if (refreshing || document.visibilityState === "hidden" || databaseStatus === "saving") return;
+      // "offline" indica que a última gravação falhou (ou não foi confirmada) e
+      // ainda não houve nova tentativa: buscar o remoto agora sobrescreveria a
+      // alteração local com o dado antigo do banco. Só atualiza quando sabemos
+      // que local e remoto estão sincronizados.
+      if (refreshing || document.visibilityState === "hidden" || databaseStatus !== "connected") return;
       refreshing = true;
       const revisionAtStart = localDataRevision.current;
       try {
