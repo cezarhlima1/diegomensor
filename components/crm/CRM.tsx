@@ -733,7 +733,12 @@ export default function CRM() {
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
-      {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={async (imported) => { await persistLeadsAndTraffic(mergeLeadCollections(leads, imported), traffic); setImporting(false); }} />}
+      {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={async (imported) => {
+        const nextLeads = mergeLeadCollections(leads, imported);
+        const changedLeads = imported.map((incoming) => nextLeads.find((lead) => lead.id === incoming.id || leadIdentityMatch(lead, incoming))).filter((lead): lead is Lead => Boolean(lead));
+        await persistImportBatch(nextLeads, traffic, Array.from(new Map(changedLeads.map((lead) => [lead.id, lead])).values()));
+        setImporting(false);
+      }} />}
       {selected && (
         <LeadDrawer
           lead={selected}
@@ -1299,21 +1304,27 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
       const parsed = rawRows.map((raw, index): PreviewRow => {
         const keyed = Object.fromEntries(Object.entries(raw).map(([key, value]) => [normalize(key), value]));
         const get = (...keys: string[]) => keys.map((key) => keyed[normalize(key)]).find((value) => String(value ?? "").trim()) ?? "";
-        const name = String(get("Nome")).trim(); const company = String(get("Empresa", "Oficina")).trim(); const phone = String(get("WhatsApp", "Telefone")).trim(); const email = String(get("E-mail", "Email")).trim().toLowerCase();
-        const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || "Cadastro";
+        const importedName = String(get("Nome")).trim(); const company = String(get("Empresa", "Oficina")).trim(); const phone = String(get("WhatsApp", "Telefone")).trim(); const email = String(get("E-mail", "Email")).trim().toLowerCase();
+        const existingLead = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phoneKey(phone)));
+        const name = importedName || existingLead?.name || "";
+        const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || existingLead?.source || "Cadastro";
         const productInput = String(get("Produto")).trim(); const catalogProduct = products.find((item) => normalize(item.name) === normalize(productInput)); const product = catalogProduct?.name || productInput || "Não informado";
-        const stageInput = String(get("Etapa")).trim(); const matchedStage = stages.find((item) => normalize(item) === normalize(stageInput)); const closedStage = stages.find((item) => normalize(item) === "fechado") || "Fechado"; const closedAlias = ["fechado", "fechamento", "venda", "vendido", "cliente"].includes(normalize(stageInput)); const stage = matchedStage || (closedAlias ? closedStage : "Novo lead");
+        const stageInput = String(get("Etapa")).trim(); const matchedStage = stages.find((item) => normalize(item) === normalize(stageInput)); const closedStage = stages.find((item) => normalize(item) === "fechado") || "Fechado"; const closedAlias = ["fechado", "fechamento", "venda", "vendido", "cliente"].includes(normalize(stageInput));
         const temperatureInput = String(get("Temperatura")).trim(); const temperature: Lead["temperature"] = ["Quente","Morno","Frio"].find((item) => normalize(item) === normalize(temperatureInput)) as Lead["temperature"] || "Morno";
-        const createdAt = parseDate(get("Data do lead", "Data lead", "Data")); const conversationAt = parseDate(get("Data da conversa")); const meetingAt = parseDate(get("Data da reunião", "Data da reuniao")); const proposalAt = parseDate(get("Data da proposta")); const closedAt = parseDate(get("Data do fechamento"));
-        const customGross = numberValue(get("Valor bruto personalizado", "Valor bruto")); const customNet = numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido")); const value = customGross || catalogProduct?.price || 0; const netValue = customNet || (catalogProduct?.netPrice ?? catalogProduct?.price ?? 0);
+        const createdAt = parseDate(get("Data do lead", "Data lead", "Data")) || existingLead?.createdAt; const conversationAt = parseDate(get("Data da conversa")); const meetingAt = parseDate(get("Data da reunião", "Data da reuniao")); const proposalAt = parseDate(get("Data da proposta")); const closedAt = parseDate(get("Data do fechamento", "Data fechamento", "Data da venda", "Data da compra"));
+        const customGross = numberValue(get("Valor bruto personalizado", "Valor bruto", "Valor de fechamento", "Valor do fechamento", "Valor da venda", "Valor da compra")); const customNet = numberValue(get("Valor líquido personalizado", "Valor liquido personalizado", "Valor líquido", "Valor liquido", "Valor líquido do fechamento", "Valor liquido do fechamento")); const value = customGross || catalogProduct?.price || 0; const netValue = customNet || (catalogProduct?.netPrice ?? catalogProduct?.price ?? 0);
+        // Uma data de fechamento preenchida comprova a venda mesmo quando a
+        // coluna Etapa vier vazia. Nesse caso a compra deve entrar no card.
+        const stage = matchedStage || (closedAlias || (!stageInput && Boolean(closedAt)) ? closedStage : "Novo lead");
         const keys = [email ? `e:${email}` : "", phone ? `p:${phoneKey(phone)}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
         let issue = !name ? "Nome não informado" : !createdAt ? "Data do lead inválida" : "";
         if (!issue && sourceInput && !sources.some((item) => normalize(item) === normalize(sourceInput))) issue = "Origem não cadastrada";
         if (!issue && productInput && product === productInput && !catalogProduct) issue = "Produto não cadastrado";
         if (!issue && stageInput && !matchedStage && !closedAlias) issue = "Etapa não cadastrada";
-        if (!issue && stage === "Fechado" && !closedAt) issue = "Fechamento sem data";
+        if (!issue && stage === closedStage && !closedAt) issue = "Fechamento sem data";
+        if (!issue && stage === closedStage && value <= 0) issue = "Fechamento sem valor bruto";
         const leadId = uniqueId();
-        const purchases: Purchase[] | undefined = stage === "Fechado" && closedAt ? [{ id: `pipeline-${uniqueId()}`, origin: "pipeline", product, source, value, netValue, closedAt, repurchase: false }] : undefined;
+        const purchases: Purchase[] | undefined = stage === closedStage && closedAt ? [{ id: `pipeline-${uniqueId()}`, origin: "pipeline", product, source, value, netValue, closedAt, repurchase: false }] : undefined;
         const lead: Lead = { id: leadId, name, company, phone, email, source, product, stage, value, netValue, temperature, nextAction: "", date: createdAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(createdAt)) : "", createdAt, conversationAt, meetingAt, proposalAt, closedAt, purchases };
         return { rowNumber: index + 2, name: name || `Linha ${index + 2}`, company, source, product, stage, lead, duplicate, status: issue ? "Inválido" : duplicate ? "Atualizar" : "Pronto", issue: issue || (duplicate ? "Será acrescentado ao cadastro existente" : undefined) };
       });
