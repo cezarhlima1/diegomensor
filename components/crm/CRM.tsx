@@ -512,11 +512,11 @@ export default function CRM() {
   }, [trafficLeads, traffic, leads, catalogProducts]);
   const trafficStats = useMemo(() => channelStats(trafficDashboardLeads, "traffic", dateRange.start, dateRange.end, catalogProducts), [trafficDashboardLeads, dateRange, catalogProducts]);
 
-  const filtered = leads.filter((lead) =>
-    `${lead.name} ${lead.company} ${lead.email}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return leads;
+    return leads.filter((lead) => `${lead.name} ${lead.company} ${lead.email} ${lead.phone}`.toLowerCase().includes(term));
+  }, [leads, search]);
   const transitionLead = (lead: Lead, stage: Stage, now = new Date().toISOString()): Lead => {
     const catalogProduct = catalogProducts.find((item) => item.name === lead.product);
     const value = lead.value || catalogProduct?.price || productPrice(lead.product) || 0;
@@ -1104,17 +1104,24 @@ function Pipeline({
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
   const archived = (lead: Lead) => lead.tags?.includes("Desqualificado");
-  const inPipelineRange = (lead: Lead) => {
-    if (!range.start && !range.end) return true;
-    const purchases = purchasesForLead(lead, products);
-    // Depois da primeira venda, o período da pipeline acompanha o histórico de
-    // compras. Assim, um cliente que fechou em julho e ascendeu em agosto
-    // aparece nos dois meses, uma única vez em cada visualização.
-    if (purchases.length) return purchases.some((purchase) => (!range.start || brazilDateKey(purchase.closedAt) >= range.start) && (!range.end || brazilDateKey(purchase.closedAt) <= range.end));
-    return (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
-  };
-  const visible = leads.filter((lead) => inPipelineRange(lead) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
+  const stageItems = useMemo(() => {
+    const grouped = new Map<Stage, Lead[]>(stages.map((stage) => [stage, []]));
+    for (const lead of leads) {
+      const purchases = purchasesForLead(lead, products);
+      const matchesRange = !range.start && !range.end
+        ? true
+        : purchases.length
+          ? purchases.some((purchase) => (!range.start || brazilDateKey(purchase.closedAt) >= range.start) && (!range.end || brazilDateKey(purchase.closedAt) <= range.end))
+          : (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
+      if (!matchesRange) continue;
+      if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
+      if (!search && archiveFilter !== "Todos" && (archiveFilter === "Desqualificados" ? !archived(lead) : archived(lead))) continue;
+      const stage = visibleStage(lead);
+      grouped.get(stage)?.push(lead);
+    }
+    return grouped;
+  }, [leads, products, stages, range.start, range.end, productFilter, archiveFilter, search]);
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   return (
@@ -1122,7 +1129,7 @@ function Pipeline({
       <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Status</small><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
-          const items = visible.filter((lead) => visibleStage(lead) === stage);
+          const items = stageItems.get(stage) || [];
           const stageIndex = stages.indexOf(stage);
           return (
             <section
