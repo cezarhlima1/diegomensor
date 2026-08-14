@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 
 type Stage = string;
-type View = "geral" | "comercial" | "trafego" | "pipeline" | "contatos" | "mensagens";
+type View = "geral" | "comercial" | "trafego" | "campanhas" | "pipeline" | "contatos" | "mensagens";
 type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string };
 type Lead = {
   id: string;
@@ -614,8 +614,9 @@ export default function CRM() {
     ["geral", "Visão geral", "⌂"],
     ["comercial", "Orgânico", "◫"],
     ["trafego", "Tráfego", "↗"],
+    ["campanhas", "Campanhas", "◎"],
     ["pipeline", "Pipeline", "▦"],
-    ["contatos", "Leads", "◎"],
+    ["contatos", "Leads", "◇"],
     ["mensagens", "Detalhes", "⚙"],
   ];
   return (
@@ -648,7 +649,7 @@ export default function CRM() {
             <h1>{navigation.find(([id]) => id === view)?.[1]}</h1>
             {view === "geral" && <p>Orgânico × Tráfego</p>}
           </div>
-          {["geral", "comercial", "trafego"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
+          {["geral", "comercial", "trafego", "campanhas"].includes(view) && <PeriodFilter start={dateRange.start} end={dateRange.end} setRange={(start, end) => { setDateRange({ start, end }); setSelectedMonth(start.slice(0, 7)); }} />}
           <div className={styles.topActions}>
             {databaseStatus === "saving" && <small style={{ opacity: 0.6 }}>Salvando…</small>}
             {databaseStatus === "offline" && <small className={styles.reconcileError} title={databaseIssue}>⚠ Falha ao salvar{databaseIssue ? `: ${databaseIssue}` : ""}</small>}
@@ -671,7 +672,8 @@ export default function CRM() {
         {view === "comercial" && (
           <Dashboard channel="organic" leads={organicLeads} allLeads={organicLeads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources.filter((source) => !isTrafficSource(source))} />
         )}
-        {view === "trafego" && <><Dashboard channel="traffic" leads={trafficDashboardLeads} allLeads={trafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={["Tráfego"]} /><TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} /></>}
+        {view === "trafego" && <Dashboard channel="traffic" leads={trafficDashboardLeads} allLeads={trafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={["Tráfego"]} />}
+        {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
         )}
