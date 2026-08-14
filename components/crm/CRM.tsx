@@ -1120,6 +1120,11 @@ function Pipeline({
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
     }
+    const closedStage = stages.find((stage) => stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "fechado");
+    if (closedStage) grouped.get(closedStage)?.sort((left, right) => {
+      const latestClosing = (lead: Lead) => purchasesForLead(lead, products).reduce((latest, purchase) => Math.max(latest, new Date(purchase.closedAt).getTime() || 0), 0);
+      return latestClosing(right) - latestClosing(left);
+    });
     return grouped;
   }, [leads, products, stages, range.start, range.end, productFilter, archiveFilter, search]);
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
