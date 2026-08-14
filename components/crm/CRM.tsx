@@ -1104,7 +1104,16 @@ function Pipeline({
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
   const archived = (lead: Lead) => lead.tags?.includes("Desqualificado");
-  const visible = leads.filter((lead) => (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
+  const inPipelineRange = (lead: Lead) => {
+    if (!range.start && !range.end) return true;
+    const purchases = purchasesForLead(lead, products);
+    // Depois da primeira venda, o período da pipeline acompanha o histórico de
+    // compras. Assim, um cliente que fechou em julho e ascendeu em agosto
+    // aparece nos dois meses, uma única vez em cada visualização.
+    if (purchases.length) return purchases.some((purchase) => (!range.start || brazilDateKey(purchase.closedAt) >= range.start) && (!range.end || brazilDateKey(purchase.closedAt) <= range.end));
+    return (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
+  };
+  const visible = leads.filter((lead) => inPipelineRange(lead) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (search ? true : archiveFilter === "Todos" || (archiveFilter === "Desqualificados" ? archived(lead) : !archived(lead))));
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
