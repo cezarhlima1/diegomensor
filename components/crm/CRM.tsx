@@ -184,6 +184,14 @@ const mergeLeadCollections = (current: Lead[], incoming: Lead[]) => {
   }
   return merged;
 };
+const filterLeadsByProduct = (leads: Lead[], product: string, catalog: ProductDefinition[]) => {
+  if (product === "Todos") return leads;
+  return leads.flatMap((lead) => {
+    const purchases = purchasesForLead(lead, catalog).filter((purchase) => purchase.product === product);
+    if (lead.product !== product && !purchases.length) return [];
+    return [{ ...lead, purchases }];
+  });
+};
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -240,6 +248,7 @@ export default function CRM() {
   const [selected, setSelected] = useState<Lead | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => brazilMonthKey(new Date()));
+  const [dashboardProduct, setDashboardProduct] = useState("Todos");
   const [dateRange, setDateRange] = useState(() => { const now = new Date(); const month = brazilMonthKey(now); const [year, monthNumber] = month.split("-").map(Number); return { start: `${month}-01`, end: `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, "0")}` }; });
   const [traffic, setTraffic] = useState<TrafficRecord[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
@@ -503,7 +512,9 @@ export default function CRM() {
 
   const organicLeads = useMemo(() => leads.filter((lead) => !isTrafficLead(lead)), [leads]);
   const trafficLeads = useMemo(() => leads.filter(isTrafficLead), [leads]);
-  const stats = useMemo(() => channelStats(organicLeads, "organic", dateRange.start, dateRange.end, catalogProducts), [organicLeads, dateRange, catalogProducts]);
+  const filteredOrganicLeads = useMemo(() => filterLeadsByProduct(organicLeads, dashboardProduct, catalogProducts), [organicLeads, dashboardProduct, catalogProducts]);
+  const filteredCatalogProducts = useMemo(() => dashboardProduct === "Todos" ? catalogProducts : catalogProducts.filter((product) => product.name === dashboardProduct), [catalogProducts, dashboardProduct]);
+  const stats = useMemo(() => channelStats(filteredOrganicLeads, "organic", dateRange.start, dateRange.end, catalogProducts), [filteredOrganicLeads, dateRange, catalogProducts]);
   const trafficDashboardLeads = useMemo(() => {
     const campaignFallbacks = traffic.flatMap((campaign) => {
       if (purchasesForCampaign(leads, campaign.id, catalogProducts).length) return [];
@@ -518,7 +529,10 @@ export default function CRM() {
     });
     return [...trafficLeads, ...campaignFallbacks];
   }, [trafficLeads, traffic, leads, catalogProducts]);
-  const trafficStats = useMemo(() => channelStats(trafficDashboardLeads, "traffic", dateRange.start, dateRange.end, catalogProducts), [trafficDashboardLeads, dateRange, catalogProducts]);
+  const filteredTrafficDashboardLeads = useMemo(() => filterLeadsByProduct(trafficDashboardLeads, dashboardProduct, catalogProducts), [trafficDashboardLeads, dashboardProduct, catalogProducts]);
+  const filteredOverviewLeads = useMemo(() => filterLeadsByProduct(leads, dashboardProduct, catalogProducts), [leads, dashboardProduct, catalogProducts]);
+  const filteredOverviewTraffic = useMemo(() => dashboardProduct === "Todos" ? traffic : traffic.filter((campaign) => campaign.product === dashboardProduct), [traffic, dashboardProduct]);
+  const trafficStats = useMemo(() => channelStats(filteredTrafficDashboardLeads, "traffic", dateRange.start, dateRange.end, catalogProducts), [filteredTrafficDashboardLeads, dateRange, catalogProducts]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -740,11 +754,11 @@ export default function CRM() {
             {(view === "pipeline" || view === "contatos") && <button className={styles.importButton} onClick={() => setImporting(true)}>↑ Importar</button>}
           </div>
         </header>
-        {view === "geral" && <ExecutiveOverview leads={leads} products={catalogProducts} start={dateRange.start} end={dateRange.end} traffic={traffic} />}
+        {view === "geral" && <ExecutiveOverview leads={filteredOverviewLeads} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} start={dateRange.start} end={dateRange.end} traffic={filteredOverviewTraffic} />}
         {view === "comercial" && (
-          <Dashboard channel="organic" leads={organicLeads} allLeads={organicLeads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources.filter((source) => !isTrafficSource(source))} />
+          <Dashboard channel="organic" leads={filteredOrganicLeads} allLeads={filteredOrganicLeads} stats={stats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} sources={catalogSources.filter((source) => !isTrafficSource(source))} />
         )}
-        {view === "trafego" && <Dashboard channel="traffic" leads={trafficDashboardLeads} allLeads={trafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={["Tráfego"]} />}
+        {view === "trafego" && <Dashboard channel="traffic" leads={filteredTrafficDashboardLeads} allLeads={filteredTrafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} sources={["Tráfego"]} />}
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
@@ -791,7 +805,7 @@ export default function CRM() {
   );
 }
 
-function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; start: string; end: string; traffic: TrafficRecord[] }) {
+function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setProduct, start, end, traffic }: { leads: Lead[]; products: ProductDefinition[]; allProducts: ProductDefinition[]; selectedProduct: string; setProduct: (product: string) => void; start: string; end: string; traffic: TrafficRecord[] }) {
   const [goals, setGoals] = useState<Record<string, number>>({});
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const goalMonth = start.slice(0, 7);
@@ -836,6 +850,7 @@ function ExecutiveOverview({ leads, products, start, end, traffic }: { leads: Le
   const balanceHue = 354 + balanceRatio * 132;
   const balanceStyle = { "--balance-hue": balanceHue } as React.CSSProperties;
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
+    <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
     <div className={styles.overviewKpis}>
       <article className={styles.balanceCard} style={balanceStyle}><span>Saldo total do período</span><strong><Money value={periodBalance} /></strong><small>{goal ? `${Math.max(0, balanceProgress).toFixed(1)}% da meta de faturamento` : "Defina a meta do mês"}</small></article>
       <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail="Faturamento total do período" />
@@ -1037,6 +1052,9 @@ function Dashboard({
   start,
   end,
   products,
+  allProducts,
+  selectedProduct,
+  setProduct,
   sources,
 }: {
   channel: Channel;
@@ -1061,6 +1079,9 @@ function Dashboard({
   start: string;
   end: string;
   products: ProductDefinition[];
+  allProducts: ProductDefinition[];
+  selectedProduct: string;
+  setProduct: (product: string) => void;
   sources: string[];
 }) {
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
@@ -1074,6 +1095,7 @@ function Dashboard({
   ];
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
+      <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
       <div className={styles.kpis}>
         <Kpi
           label="Leads gerados no mês"
@@ -1794,6 +1816,9 @@ function QuickPeriodButtons({ start, end, setRange }: { start: string; end: stri
       <button type="button" className={active === "week" ? styles.activePeriod : undefined} onClick={() => setRange(...weekRange)}>Semana</button>
       <button type="button" className={active === "month" ? styles.activePeriod : undefined} onClick={() => setRange(...monthRange)}>Mês</button>
     </div>;
+}
+function DashboardProductFilter({ products, value, set }: { products: ProductDefinition[]; value: string; set: (product: string) => void }) {
+  return <section className={styles.dashboardProductFilter}><div><span>Produto analisado</span><small>Todos os indicadores abaixo respeitam esta seleção.</small></div><select value={value} onChange={(event) => set(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></section>;
 }
 function PeriodFilter({ start, end, setRange }: { start: string; end: string; setRange: (start: string, end: string) => void }) {
   return <section className={styles.periodFilter}>
