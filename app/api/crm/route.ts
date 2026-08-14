@@ -64,6 +64,9 @@ async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, pur
   }
   await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, purchase.externalSaleCode || null, purchase.campaignId || null]);
 }
+async function upsertLeadRecord(db: PoolClient, lead: Record<string, unknown>) {
+  await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
+}
 
 export async function GET() {
   const auth = await authorized();
@@ -107,6 +110,37 @@ export async function GET() {
   } catch (error) {
     console.error("CRM GET failed", error);
     return databaseError(error, "database-unavailable");
+  }
+}
+
+// Importações gravam somente os registros alterados, em uma única transação.
+// Isso evita reenviar todo o snapshot do CRM a cada planilha validada.
+export async function POST(request: Request) {
+  const auth = await authorized();
+  if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
+  let body: { leads?: Array<Record<string, unknown>>; traffic?: Array<Record<string, unknown>> };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  const leads = Array.isArray(body.leads) ? body.leads : [];
+  const traffic = Array.isArray(body.traffic) ? body.traffic : [];
+  if (!leads.length && !traffic.length) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  try {
+    await withCrmTransaction(async (db) => {
+      const columns = await purchaseColumns(db);
+      for (const lead of leads) {
+        if (!lead.id) continue;
+        await upsertLeadRecord(db, lead);
+        for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
+      }
+      for (const item of traffic) {
+        if (!item.id) continue;
+        const campaignDate = /^\d{4}-\d{2}-\d{2}/.test(String(item.date || "")) ? item.date : `${item.month}-01`;
+        await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, campaignDate, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]);
+      }
+    });
+    return NextResponse.json({ ok: true, leads: leads.length, traffic: traffic.length });
+  } catch (error) {
+    console.error("CRM batch import POST failed", error);
+    return databaseError(error, "database-write-failed");
   }
 }
 
