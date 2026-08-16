@@ -55,14 +55,23 @@ async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, pur
   const campaign = purchase.origin === "campaign" || (purchase.origin == null && !String(purchase.id || "").startsWith("ascension-") && Boolean(purchase.externalSaleCode || purchase.campaignId));
   const base = [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase)];
   if (columns.origin && columns.source) {
-    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,purchase_source,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,purchase_source=excluded.purchase_source,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, campaign ? "campaign" : "pipeline", campaign ? "Tráfego" : purchase.source || lead.source || "Cadastro", purchase.externalSaleCode || null, purchase.campaignId || null]);
-    return;
+    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,purchase_source,external_sale_code,traffic_campaign_id,payment_method,payment_provider,payment_notes) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,purchase_source=excluded.purchase_source,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id,payment_method=excluded.payment_method,payment_provider=excluded.payment_provider,payment_notes=excluded.payment_notes", [...base, campaign ? "campaign" : "pipeline", campaign ? "Tráfego" : purchase.source || lead.source || "Cadastro", purchase.externalSaleCode || null, purchase.campaignId || null, purchase.paymentMethod || null, purchase.paymentProvider || null, purchase.paymentNotes || ""]);
+  } else if (columns.origin) {
+    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,external_sale_code,traffic_campaign_id,payment_method,payment_provider,payment_notes) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id,payment_method=excluded.payment_method,payment_provider=excluded.payment_provider,payment_notes=excluded.payment_notes", [...base, campaign ? "campaign" : "pipeline", purchase.externalSaleCode || null, purchase.campaignId || null, purchase.paymentMethod || null, purchase.paymentProvider || null, purchase.paymentNotes || ""]);
+  } else {
+    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id,payment_method,payment_provider,payment_notes) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id,payment_method=excluded.payment_method,payment_provider=excluded.payment_provider,payment_notes=excluded.payment_notes", [...base, purchase.externalSaleCode || null, purchase.campaignId || null, purchase.paymentMethod || null, purchase.paymentProvider || null, purchase.paymentNotes || ""]);
   }
-  if (columns.origin) {
-    await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, campaign ? "campaign" : "pipeline", purchase.externalSaleCode || null, purchase.campaignId || null]);
-    return;
+  if (Array.isArray(purchase.installments)) {
+    const installments = purchase.installments as Array<Record<string, unknown>>;
+    const total = installments.reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
+    const numbers = installments.map((item) => Math.max(1, Number(item.number) || 1));
+    if (Math.abs(total - Math.max(0, Number(purchase.netValue) || 0)) > .01 || new Set(numbers).size !== numbers.length || installments.some((item) => !/^\d{4}-\d{2}-\d{2}/.test(String(item.dueDate || "")))) throw new Error("invalid-receivables-schedule");
+    await db.query("delete from public.crm_receivables where purchase_id=$1", [purchase.id]);
+    for (const raw of installments) {
+      const number = Math.max(1, Number(raw.number) || 1);
+      await db.query("insert into public.crm_receivables(id,purchase_id,installment_number,due_date,amount,status,received_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,now())", [raw.id || `${purchase.id}-${number}`, purchase.id, number, raw.dueDate, Math.max(0, Number(raw.amount) || 0), raw.status || "Previsto", raw.receivedAt || null]);
+    }
   }
-  await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,external_sale_code,traffic_campaign_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id", [...base, purchase.externalSaleCode || null, purchase.campaignId || null]);
 }
 async function upsertLeadRecord(db: PoolClient, lead: Record<string, unknown>) {
   await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
@@ -73,9 +82,11 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   try {
     const db = crmPool();
-    const [leadsResult, purchasesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult, stagesResult, stateResult] = await Promise.all([
+    const [leadsResult, purchasesResult, receivablesResult, expensesResult, trafficResult, productsResult, historyResult, sourcesResult, messagesResult, goalsResult, stagesResult, stateResult] = await Promise.all([
       db.query("select * from public.crm_leads order by inserted_at"),
       db.query("select * from public.crm_purchases order by closed_at"),
+      db.query("select * from public.crm_receivables order by due_date, installment_number"),
+      db.query("select * from public.crm_expenses order by due_date desc"),
       db.query("select * from public.crm_traffic_campaigns order by campaign_date desc"),
       db.query("select * from public.crm_products where active order by position, created_at"),
       db.query("select h.*, p.name as product_name from public.crm_product_price_history h join public.crm_products p on p.id = h.product_id order by h.changed_at"),
@@ -85,10 +96,17 @@ export async function GET() {
       db.query("select name from public.crm_pipeline_stages order by position"),
       db.query("select key,value from public.crm_state"),
     ]);
+    const installmentsByPurchase = new Map<string, Array<Record<string, unknown>>>();
+    for (const row of receivablesResult.rows) {
+      const list = installmentsByPurchase.get(row.purchase_id) || [];
+      list.push({ id: row.id, number: row.installment_number, dueDate: row.due_date, amount: Number(row.amount), status: row.status, receivedAt: row.received_at });
+      installmentsByPurchase.set(row.purchase_id, list);
+    }
     const purchasesByLead = new Map<string, Array<Record<string, unknown>>>();
     for (const row of purchasesResult.rows) {
       const list = purchasesByLead.get(row.lead_id) || [];
-      list.push({ id: row.id, product: row.product, source: row.purchase_source, value: Number(row.gross_value), netValue: Number(row.net_value), closedAt: row.closed_at, repurchase: row.is_repurchase, origin: row.purchase_origin, externalSaleCode: row.external_sale_code, campaignId: row.traffic_campaign_id });
+      const installments = installmentsByPurchase.get(row.id);
+      list.push({ id: row.id, product: row.product, source: row.purchase_source, value: Number(row.gross_value), netValue: Number(row.net_value), closedAt: row.closed_at, repurchase: row.is_repurchase, origin: row.purchase_origin, externalSaleCode: row.external_sale_code, campaignId: row.traffic_campaign_id, paymentMethod: row.payment_method, paymentProvider: row.payment_provider, paymentNotes: row.payment_notes || "", ...(installments?.length ? { installments } : {}) });
       purchasesByLead.set(row.lead_id, list);
     }
     const historyByProduct = new Map<string, Array<Record<string, unknown>>>();
@@ -106,6 +124,7 @@ export async function GET() {
       goals: Object.fromEntries(goalsResult.rows.map((row) => [row.month, Number(row.amount)])),
       stages: stagesResult.rows.map((row) => row.name),
       state: Object.fromEntries(stateResult.rows.map((row) => [row.key, row.value])),
+      expenses: expensesResult.rows.map((row) => ({ id: row.id, description: row.description, category: row.category, amount: Number(row.amount), dueDate: row.due_date, status: row.status, paidAt: row.paid_at, notes: row.notes || "" })),
     });
   } catch (error) {
     console.error("CRM GET failed", error);
@@ -198,6 +217,18 @@ export async function PATCH(request: Request) {
       return databaseError(error, "database-write-failed");
     }
   }
+  if (body.entity === "expense" && body.record?.id) {
+    const item = body.record;
+    if (!String(item.description || "").trim() || Number(item.amount) <= 0 || !/^\d{4}-\d{2}-\d{2}/.test(String(item.dueDate || ""))) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+    try {
+      const db = crmPool();
+      await db.query("insert into public.crm_expenses(id,description,category,amount,due_date,status,paid_at,notes,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,now()) on conflict(id) do update set description=excluded.description,category=excluded.category,amount=excluded.amount,due_date=excluded.due_date,status=excluded.status,paid_at=excluded.paid_at,notes=excluded.notes,updated_at=now()", [item.id, item.description, item.category, Math.max(0, Number(item.amount) || 0), item.dueDate, item.status || "Prevista", item.paidAt || null, item.notes || ""]);
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      console.error("CRM expense PATCH failed", error);
+      return databaseError(error, "database-write-failed");
+    }
+  }
   if (body.entity !== "traffic" || !body.record?.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
   const item = body.record;
   try {
@@ -222,6 +253,7 @@ export async function DELETE(request: Request) {
       traffic: { query: "delete from public.crm_traffic_campaigns where id=$1", value: body.id },
       lead: { query: "delete from public.crm_leads where id=$1", value: body.id },
       purchase: { query: "delete from public.crm_purchases where id=$1", value: body.id },
+      expense: { query: "delete from public.crm_expenses where id=$1", value: body.id },
       product: { query: "update public.crm_products set active=false,updated_at=now() where name=$1", value: body.id },
       source: { query: "delete from public.crm_lead_sources where name=$1", value: body.id },
       message: { query: "delete from public.crm_message_templates where id=$1", value: body.id },

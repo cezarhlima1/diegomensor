@@ -4,8 +4,11 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 
 type Stage = string;
-type View = "geral" | "comercial" | "trafego" | "campanhas" | "pipeline" | "contatos" | "mensagens";
-type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string };
+type View = "geral" | "comercial" | "trafego" | "campanhas" | "pipeline" | "contatos" | "financeiro" | "mensagens";
+type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
+type Installment = { id: string; number: number; dueDate: string; amount: number; status: "Previsto" | "Recebido" | "Atrasado" | "Cancelado"; receivedAt?: string };
+type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string; paymentMethod?: PaymentMethod; paymentProvider?: string; paymentNotes?: string; installments?: Installment[] };
+type Expense = { id: string; description: string; category: string; amount: number; dueDate: string; status: "Prevista" | "Paga" | "Atrasada" | "Cancelada"; paidAt?: string; notes?: string };
 type Lead = {
   id: string;
   name: string;
@@ -98,6 +101,8 @@ const inRange = (date: string | undefined, start: string, end: string) => { cons
 const formatEventDate = (date?: string) => date ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(date)) : "Ainda não ocorreu";
 const dateInputValue = (date?: string) => brazilDateKey(date);
 const dateFromInput = (date: string) => date ? new Date(`${date}T12:00:00-03:00`).toISOString() : undefined;
+const addMonths = (date: string, months: number) => { const [year, month, day] = date.slice(0, 10).split("-").map(Number); const target = new Date(year, month - 1 + months, 1); const safeDay = Math.min(day, new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()); return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`; };
+const buildInstallments = (purchaseId: string, total: number, count: number, firstDueDate: string): Installment[] => { const cents = Math.round(Math.max(0, total) * 100); const base = Math.floor(cents / count); return Array.from({ length: count }, (_, index) => ({ id: `${purchaseId}-${index + 1}`, number: index + 1, dueDate: addMonths(firstDueDate, index), amount: (base + (index === 0 ? cents - base * count : 0)) / 100, status: "Previsto" })); };
 const safeCampaignDate = (date?: string, month?: string) => {
   const candidate = String(date || (month ? `${month}-01` : "")).slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : "";
@@ -251,6 +256,7 @@ export default function CRM() {
   const [dashboardProduct, setDashboardProduct] = useState("Todos");
   const [dateRange, setDateRange] = useState(() => { const now = new Date(); const month = brazilMonthKey(now); const [year, monthNumber] = month.split("-").map(Number); return { start: `${month}-01`, end: `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, "0")}` }; });
   const [traffic, setTraffic] = useState<TrafficRecord[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<ProductDefinition[]>([...products]);
   const [catalogSources, setCatalogSources] = useState<string[]>([...leadSources]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
@@ -389,7 +395,7 @@ export default function CRM() {
       if (lead) void saveLead(lead).catch((error) => console.error("Falha ao salvar lead", error));
     }
   };
-  const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage", id: string) => {
+  const deleteRecord = async (entity: "lead" | "purchase" | "product" | "source" | "message" | "stage" | "expense", id: string) => {
     const persist = async () => {
       const response = await fetch("/api/crm", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, id }) });
       if (!response.ok) { await registerDatabaseFailure(response); throw new Error(`Falha ao excluir ${entity}`); }
@@ -398,6 +404,14 @@ export default function CRM() {
     try { await syncQueue.current; return true; }
     catch (error) { console.error(`Falha ao excluir ${entity}`, error); return false; }
   };
+  const saveExpense = async (record: Expense) => {
+    setDatabaseStatus("saving"); setDatabaseIssue("");
+    const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "expense", record }) });
+    if (!response.ok) { await registerDatabaseFailure(response); throw new Error("Falha ao salvar despesa"); }
+    setExpenses((current) => current.some((item) => item.id === record.id) ? current.map((item) => item.id === record.id ? record : item) : [record, ...current]);
+    setDatabaseStatus("connected"); setLastSavedAt(new Date());
+  };
+  const removeExpense = async (id: string) => { if (!await deleteRecord("expense", id)) return; setExpenses((current) => current.filter((item) => item.id !== id)); };
   useEffect(() => { setCatalogLoaded(true); }, []);
   const saveProducts = (next: ProductDefinition[]) => setCatalogProducts(next);
   const saveSources = (next: string[]) => setCatalogSources(next);
@@ -429,6 +443,7 @@ export default function CRM() {
         const remoteLeads = mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
         setLeads(remoteLeads);
         setTraffic(remote.traffic || []);
+        setExpenses(remote.expenses || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
         setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
         setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
@@ -494,6 +509,7 @@ export default function CRM() {
         skipNextSnapshotSync.current = true;
         setLeads(mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)));
         setTraffic(remote.traffic || []);
+        setExpenses(remote.expenses || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
         setCatalogSources(remote.sources?.length ? remote.sources : [...leadSources]);
         setPipelineStages(remote.stages?.length ? remote.stages : defaultStages);
@@ -723,6 +739,7 @@ export default function CRM() {
     ["campanhas", "Campanhas", "◎"],
     ["pipeline", "Pipeline", "▦"],
     ["contatos", "Leads", "◇"],
+    ["financeiro", "Financeiro", "$"],
     ["mensagens", "Detalhes", "⚙"],
   ];
   return (
@@ -785,6 +802,7 @@ export default function CRM() {
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
+        {view === "financeiro" && <FinanceDashboard leads={leads} expenses={expenses} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
@@ -1621,7 +1639,7 @@ function LeadDrawer({
   const [tagDraft, setTagDraft] = useState("");
   const [addingClosing, setAddingClosing] = useState(false);
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
-  const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? "") });
+  const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "" });
   const tags = lead.tags || [];
   const addTag = () => { const typed = newTag.trim(); if (!typed) return; const existing = availableTags.find((item) => item.toLowerCase() === typed.toLowerCase()); const tag = existing || typed; if (!tags.includes(tag)) update({ tags: [...tags, tag] }); setNewTag(""); };
   const saveTag = (index: number) => { const tag = tagDraft.trim(); if (!tag) return; renameTag(tags[index], tag); setEditingTag(null); setTagDraft(""); };
@@ -1637,6 +1655,10 @@ function LeadDrawer({
     const isLatest = purchaseHistory.at(-1)?.id === purchaseId;
     update({ purchases, ...(isLatest ? { closedAt } : {}) });
   };
+  const editPurchasePayment = (purchaseId: string, changes: Partial<Purchase>) => {
+    const purchases = purchaseHistory.map((purchase) => purchase.id === purchaseId ? { ...purchase, ...changes, installments: changes.paymentMethod && !purchase.installments?.length ? buildInstallments(purchase.id, purchase.netValue, 1, brazilDateKey(purchase.closedAt)) : purchase.installments } : purchase);
+    update({ purchases });
+  };
   const removePurchase = async (purchaseId: string) => {
     if (!window.confirm("Excluir esta compra do histórico? Os valores também deixarão de aparecer nos dashboards.")) return;
     if (!await deletePurchase(purchaseId)) return;
@@ -1650,7 +1672,14 @@ function LeadDrawer({
     if (!closedAt || !closingDraft.product) return;
     const value = Number(closingDraft.gross) || 0; const netValue = Number(closingDraft.net) || 0;
     if (value < 0 || netValue < 0 || netValue > value) { window.alert("O valor líquido deve estar entre zero e o valor bruto."); return; }
-    const purchase: Purchase = { id: `pipeline-${uniqueId()}`, origin: "pipeline", product: closingDraft.product, source: lead.source, value, netValue, closedAt, repurchase: purchaseHistory.length > 0 };
+    const purchaseId = `pipeline-${uniqueId()}`;
+    const count = Math.max(1, Math.floor(Number(closingDraft.installments) || 1));
+    const entry = Math.min(netValue, Math.max(0, Number(closingDraft.entry) || 0));
+    if (entry > 0 && entry < netValue && count < 2) { window.alert("Para registrar entrada parcial, informe ao menos 2 parcelas no total."); return; }
+    let installments = buildInstallments(purchaseId, netValue, count, closingDraft.firstDueDate || closingDraft.date);
+    if (entry > 0 && count > 1) installments = [{ id: `${purchaseId}-1`, number: 1, dueDate: closingDraft.date, amount: entry, status: "Recebido", receivedAt: closingDraft.date }, ...buildInstallments(purchaseId, netValue - entry, count - 1, closingDraft.firstDueDate || closingDraft.date).map((item, index) => ({ ...item, id: `${purchaseId}-${index + 2}`, number: index + 2 }))];
+    if (entry === netValue && netValue > 0) installments = [{ id: `${purchaseId}-1`, number: 1, dueDate: closingDraft.date, amount: netValue, status: "Recebido", receivedAt: closingDraft.date }];
+    const purchase: Purchase = { id: purchaseId, origin: "pipeline", product: closingDraft.product, source: lead.source, value, netValue, closedAt, repurchase: purchaseHistory.length > 0, paymentMethod: closingDraft.paymentMethod, paymentProvider: closingDraft.provider.trim(), paymentNotes: closingDraft.paymentNotes.trim(), installments };
     update({ stage: "Fechado", product: purchase.product, value: purchase.value, netValue: purchase.netValue, closedAt, purchases: [...purchaseHistory, purchase] });
     setAddingClosing(false);
   };
@@ -1747,11 +1776,38 @@ function LeadDrawer({
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
         </section>
-        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={styles.closingForm} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor bruto</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor líquido</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><button type="submit">Salvar fechamento</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><small>{isCampaignPurchase(purchase) ? "Compra da campanha" : purchase.repurchase ? "Recompra da base" : "Primeira compra"}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Bruto <b><Money value={purchase.value} /></b></span><span>Líquido <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button></article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
+        <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos e pagamentos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={`${styles.closingForm} ${styles.paymentClosingForm}`} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Valor vendido</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor a receber</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><label><span>Forma de pagamento</span><select value={closingDraft.paymentMethod} onChange={(event) => setClosingDraft({ ...closingDraft, paymentMethod: event.target.value as PaymentMethod })}>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><label><span>Plataforma / instituição</span><input value={closingDraft.provider} onChange={(event) => setClosingDraft({ ...closingDraft, provider: event.target.value })} placeholder="Green, banco, operadora..." /></label><label><span>Total de parcelas</span><input type="number" min="1" max="120" value={closingDraft.installments} onChange={(event) => setClosingDraft({ ...closingDraft, installments: event.target.value })} required /></label><label><span>Entrada já recebida</span><AccountingInput value={closingDraft.entry} set={(entry) => setClosingDraft({ ...closingDraft, entry })} /></label><label><span>1º vencimento</span><input type="date" value={closingDraft.firstDueDate} onChange={(event) => setClosingDraft({ ...closingDraft, firstDueDate: event.target.value })} required /></label><label className={styles.paymentNotes}><span>Observações do pagamento</span><input value={closingDraft.paymentNotes} onChange={(event) => setClosingDraft({ ...closingDraft, paymentNotes: event.target.value })} placeholder="Condições negociadas" /></label><button type="submit">Salvar fechamento e fluxo</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><label className={styles.inlinePayment}><span>Pagamento</span><select value={purchase.paymentMethod || ""} onChange={(event) => editPurchasePayment(purchase.id, { paymentMethod: event.target.value as PaymentMethod })}><option value="">Informar...</option>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><small>{purchase.paymentProvider || `${purchase.installments?.length || 0} parcela(s)`}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Vendido <b><Money value={purchase.value} /></b></span><span>A receber <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button>{purchase.installments?.length ? <div className={styles.installmentSummary}>{purchase.installments.map((item) => <span key={item.id}>{item.number}ª · {new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))} · {currency.format(item.amount)} · {item.status}</span>)}</div> : null}</article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
       </aside>
     </div>
   );
 }
+function FinanceDashboard({ leads, expenses, month, setMonth, saveExpense, removeExpense, updateLead }: { leads: Lead[]; expenses: Expense[]; month: string; setMonth: (month: string) => void; saveExpense: (expense: Expense) => Promise<void>; removeExpense: (id: string) => Promise<void>; updateLead: (id: string, changes: Partial<Lead>) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState({ description: "", category: "Equipe", amount: "", dueDate: `${month}-01`, status: "Prevista" as Expense["status"], notes: "" });
+  const receivables = leads.flatMap((lead) => purchasesForLead(lead, []).flatMap((purchase) => {
+    const scheduled = purchase.installments?.length ? purchase.installments : [{ id: `${purchase.id}-legacy`, number: 1, dueDate: brazilDateKey(purchase.closedAt), amount: purchase.netValue, status: "Previsto" as const }];
+    return scheduled.map((installment) => ({ ...installment, purchase, lead }));
+  }));
+  const monthReceivables = receivables.filter((item) => item.dueDate.slice(0, 7) === month && item.status !== "Cancelado");
+  const monthExpenses = expenses.filter((item) => item.dueDate.slice(0, 7) === month && item.status !== "Cancelada");
+  const expectedRevenue = monthReceivables.reduce((sum, item) => sum + item.amount, 0);
+  const receivedRevenue = monthReceivables.filter((item) => item.status === "Recebido").reduce((sum, item) => sum + item.amount, 0);
+  const expectedExpenses = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
+  const paidExpenses = monthExpenses.filter((item) => item.status === "Paga").reduce((sum, item) => sum + item.amount, 0);
+  const updateInstallment = (lead: Lead, purchase: Purchase, installmentId: string, status: Installment["status"]) => {
+    const purchases = purchasesForLead(lead, []).map((item) => item.id === purchase.id ? { ...item, installments: (item.installments || []).map((installment) => installment.id === installmentId ? { ...installment, status, receivedAt: status === "Recebido" ? brazilDateKey(new Date()) : undefined } : installment) } : item);
+    updateLead(lead.id, { purchases });
+  };
+  const submitExpense = async (event: React.FormEvent) => { event.preventDefault(); if (!draft.description.trim() || Number(draft.amount) <= 0 || !draft.dueDate) { window.alert("Informe descrição, valor maior que zero e vencimento."); return; } setSaving(true); try { await saveExpense({ id: `expense-${uniqueId()}`, description: draft.description.trim(), category: draft.category, amount: Number(draft.amount), dueDate: draft.dueDate, status: draft.status, paidAt: draft.status === "Paga" ? brazilDateKey(new Date()) : undefined, notes: draft.notes.trim() }); setAdding(false); setDraft({ description: "", category: "Equipe", amount: "", dueDate: `${month}-01`, status: "Prevista", notes: "" }); } finally { setSaving(false); } };
+  return <div className={`${styles.content} ${styles.financeDashboard}`}>
+    <section className={styles.financeHero}><div><span>Fluxo de caixa</span><h2>Financeiro mensal</h2><p>Fechamentos mostram vendas; parcelas mostram quando o dinheiro realmente entra.</p></div><label><span>Competência</span><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label></section>
+    <div className={styles.financeKpis}><Kpi label="Receita prevista" value={currency.format(expectedRevenue)} detail={`${monthReceivables.length} recebimentos`} /><Kpi label="Receita recebida" value={currency.format(receivedRevenue)} detail={`${currency.format(expectedRevenue - receivedRevenue)} pendente`} /><Kpi label="Despesas previstas" value={currency.format(expectedExpenses)} detail={`${monthExpenses.length} lançamentos`} /><Kpi label="Saldo projetado" value={currency.format(expectedRevenue - expectedExpenses)} detail={`Realizado ${currency.format(receivedRevenue - paidExpenses)}`} /></div>
+    <section className={styles.financePanel}><header><div><span>Entradas</span><h3>Recebimentos do mês</h3></div><b>{currency.format(expectedRevenue)}</b></header><div className={styles.financeRows}>{monthReceivables.map((item) => <article key={item.id}><div><b>{item.lead.name}</b><small>{item.purchase.product} · {item.purchase.paymentMethod || "Pagamento não informado"}</small></div><span><small>Parcela</small><b>{item.number}/{item.purchase.installments?.length || 1}</b></span><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong>{item.purchase.installments?.length ? <select value={item.status} onChange={(event) => updateInstallment(item.lead, item.purchase, item.id, event.target.value as Installment["status"])}><option>Previsto</option><option>Recebido</option><option>Atrasado</option><option>Cancelado</option></select> : <em>Legado</em>}</article>)}{!monthReceivables.length && <p>Nenhum recebimento previsto neste mês.</p>}</div></section>
+    <section className={styles.financePanel}><header><div><span>Saídas</span><h3>Despesas do projeto</h3></div><button onClick={() => setAdding((value) => !value)}>{adding ? "Cancelar" : "+ Nova despesa"}</button></header>{adding && <form className={styles.expenseForm} onSubmit={submitExpense}><Input label="Descrição" value={draft.description} set={(description) => setDraft({ ...draft, description })} required /><label><span>Categoria</span><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{["Equipe","Tráfego","Ferramentas","Impostos","Operacional","Comissões","Outros"].map((category) => <option key={category}>{category}</option>)}</select></label><Input label="Valor" value={draft.amount} set={(amount) => setDraft({ ...draft, amount })} type="money" required /><Input label="Vencimento" value={draft.dueDate} set={(dueDate) => setDraft({ ...draft, dueDate })} type="date" required /><label><span>Status</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Expense["status"] })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select></label><Input label="Observações" value={draft.notes} set={(notes) => setDraft({ ...draft, notes })} /><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar despesa"}</button></form>}<div className={styles.financeRows}>{monthExpenses.map((item) => <article key={item.id}><div><b>{item.description}</b><small>{item.category}{item.notes ? ` · ${item.notes}` : ""}</small></div><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong><select value={item.status} onChange={(event) => void saveExpense({ ...item, status: event.target.value as Expense["status"], paidAt: event.target.value === "Paga" ? brazilDateKey(new Date()) : undefined })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select><button className={styles.deletePurchase} onClick={() => { if (window.confirm("Excluir esta despesa?")) void removeExpense(item.id); }}>×</button></article>)}{!monthExpenses.length && <p>Nenhuma despesa lançada neste mês.</p>}</div></section>
+  </div>;
+}
+
 function Input({
   label,
   value,
