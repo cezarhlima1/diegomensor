@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Login from "@/components/auth/Login";
+import SuporteWhatsApp from "@/components/auth/SuporteWhatsApp";
 
 export const metadata: Metadata = {
   title: "Entrar - Diego Mensor",
@@ -13,6 +14,9 @@ export default function LoginPage() {
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[440px]">
         <Login />
+        <div className="mt-6 flex justify-center">
+          <SuporteWhatsApp />
+        </div>
       </div>
     </main>
   );
