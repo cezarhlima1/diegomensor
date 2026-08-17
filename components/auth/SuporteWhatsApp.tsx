@@ -1,7 +1,7 @@
 import { WhatsApp } from "@/components/icons";
 
-/** Dígitos do WhatsApp de suporte (55 47 9135-4788) — código do país + DDD, sem espaços/traços, formato exigido pelo link wa.me. */
-const NUMERO_WHATSAPP_SUPORTE = "554791354788";
+/** Dígitos do WhatsApp de suporte (+55 47 99270-9538) — código do país + DDD, sem espaços/traços, formato exigido pelo link wa.me. */
+const NUMERO_WHATSAPP_SUPORTE = "5547992709538";
 
 /**
  * Link de contato de suporte via WhatsApp. Reutilizado no header logado
