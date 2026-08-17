@@ -91,7 +91,9 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Mentoria CRM write failed", error);
-    return NextResponse.json({ ok: false, error: "crm-write-failed" }, { status: 502 });
+    // A planilha ja recebeu a aplicacao. A sincronizacao com o CRM e
+    // complementar e nao deve fazer o formulario exibir falha (nem induzir o
+    // usuario a enviar o mesmo lead novamente).
   }
 
   return NextResponse.json({ ok: true });
