@@ -6,8 +6,7 @@ import ExpiryBanner from "@/components/ExpiryBanner";
 import BackRedirect from "@/components/BackRedirect";
 
 const ACCOUNT = "b809ca06-75c2-4eba-ae57-2f6bbda7e885";
-const PLAYER = "6a282ada1bc96b19a568dcc5";
-const MEDIA = "6a282a878a83ed8548b9f7d9";
+const AB_TEST = "6a80c349640c4e8507945843";
 
 export const metadata: Metadata = {
   title: "Assista agora - Precificação para Oficinas | Diego Mensor",
@@ -25,22 +24,17 @@ export default function V1() {
       <link
         rel="preload"
         as="script"
-        href={`https://scripts.converteai.net/${ACCOUNT}/players/${PLAYER}/v4/player.js`}
+        href={`https://scripts.converteai.net/${ACCOUNT}/ab-test/${AB_TEST}/player.js`}
       />
       <link
         rel="preload"
         as="script"
         href="https://scripts.converteai.net/lib/js/smartplayer-wc/v4/smartplayer.js"
       />
-      <link
-        rel="preload"
-        as="fetch"
-        crossOrigin="anonymous"
-        href={`https://cdn.converteai.net/${ACCOUNT}/${MEDIA}/main.m3u8`}
-      />
       <link rel="dns-prefetch" href="https://cdn.converteai.net" />
       <link rel="dns-prefetch" href="https://scripts.converteai.net" />
       <link rel="dns-prefetch" href="https://images.converteai.net" />
+      <link rel="dns-prefetch" href="https://m3u8.vturb.net" />
       <link rel="dns-prefetch" href="https://license.vturb.com" />
 
       <ExpiryBanner />
