@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
+import { crmPool } from "@/lib/crm-db";
 
 const MAX_BODY_BYTES = 32_768;
 const TIMEOUT_MS = 8_000;
@@ -34,6 +35,16 @@ export async function POST(request: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email) || answers.whatsapp.replace(/\D/g, "").length < 10) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 400 });
 
   const readableAnswers = allQuestions.map((question) => ({ numero: question.number, pergunta: question.label, resposta: answers[question.id] }));
+  const rawAttribution = body.attribution && typeof body.attribution === "object" ? body.attribution as Record<string, unknown> : {};
+  const attribution = {
+    utmSource: safeText(rawAttribution.utmSource, 100) || "direto",
+    utmMedium: safeText(rawAttribution.utmMedium, 100),
+    utmCampaign: safeText(rawAttribution.utmCampaign, 150),
+    utmContent: safeText(rawAttribution.utmContent, 150),
+    utmTerm: safeText(rawAttribution.utmTerm, 150),
+    landingPage: safeText(rawAttribution.landingPage, 1_000),
+    referrer: safeText(rawAttribution.referrer, 1_000) || "direto",
+  };
 
   try {
     const response = await fetch(webhook, {
@@ -43,9 +54,11 @@ export async function POST(request: Request) {
         name: answers.nome,
         phone: answers.whatsapp,
         email: answers.email,
-        source: "aplicacao-mentoria",
+        source: attribution.utmSource,
+        formSource: "aplicacao-mentoria",
         city: answers.cidadeEstado,
         answers: JSON.stringify(readableAnswers),
+        ...attribution,
         submittedAt: new Date().toISOString(),
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -55,6 +68,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "submission-failed" }, { status: 502 });
   }
 
+  try {
+    const db = crmPool();
+    const submittedAt = new Date().toISOString();
+    const application = { submittedAt, attribution, answers: readableAnswers };
+    const tags = [attribution.utmSource, attribution.utmMedium, attribution.utmCampaign]
+      .filter((value) => value && value !== "direto");
+    const existing = await db.query(
+      "select id from public.crm_leads where lower(email)=lower($1) or regexp_replace(phone,'\\D','','g')=regexp_replace($2,'\\D','','g') limit 1",
+      [answers.email, answers.whatsapp],
+    );
+    if (existing.rows[0]?.id) {
+      await db.query(
+        "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),source='Formulário',product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
+        [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), JSON.stringify(application), tags, submittedAt],
+      );
+    } else {
+      await db.query(
+        "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,'Formulário','Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$6,$7::jsonb)",
+        [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, submittedAt, JSON.stringify(application)],
+      );
+    }
+  } catch (error) {
+    console.error("Mentoria CRM write failed", error);
+    return NextResponse.json({ ok: false, error: "crm-write-failed" }, { status: 502 });
+  }
+
   return NextResponse.json({ ok: true });
 }
-

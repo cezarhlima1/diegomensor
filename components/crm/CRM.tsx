@@ -6,6 +6,11 @@ import styles from "./crm.module.css";
 type Stage = string;
 type View = "geral" | "comercial" | "trafego" | "campanhas" | "pipeline" | "contatos" | "financeiro" | "mensagens";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
+type LeadApplication = {
+  submittedAt?: string;
+  attribution?: { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; landingPage?: string };
+  answers?: Array<{ numero: number; pergunta: string; resposta: string }>;
+};
 type Installment = { id: string; number: number; dueDate: string; amount: number; status: "Previsto" | "Recebido" | "Atrasado" | "Cancelado"; receivedAt?: string };
 type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string; paymentMethod?: PaymentMethod; paymentProvider?: string; paymentNotes?: string; installments?: Installment[] };
 type Expense = { id: string; description: string; category: string; amount: number; dueDate: string; status: "Prevista" | "Paga" | "Atrasada" | "Cancelada"; paidAt?: string; notes?: string };
@@ -32,6 +37,7 @@ type Lead = {
   closedAt?: string;
   purchases?: Purchase[];
   campaignId?: string;
+  application?: LeadApplication;
 };
 type TrafficRecord = {
   id: string;
@@ -1733,6 +1739,20 @@ function LeadDrawer({
             </select>
           </label>
         </section>
+        {lead.application && <section className={styles.applicationSection}>
+          <small>Aplicação da mentoria</small>
+          <div className={styles.applicationSummary}>
+            <span><small>Origem</small><b>{lead.application.attribution?.utmSource || "Direto"}</b></span>
+            <span><small>Canal</small><b>{lead.application.attribution?.utmMedium || "Não informado"}</b></span>
+            <span><small>Faturamento</small><b>{lead.application.answers?.find((answer) => answer.numero === 9)?.resposta || "Não informado"}</b></span>
+            <span><small>Aplicação</small><b>{lead.application.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(lead.application.submittedAt)) : "Sem data"}</b></span>
+          </div>
+          <details className={styles.applicationDetails}>
+            <summary>Ver respostas <b>{lead.application.answers?.length || 0}</b></summary>
+            <div>{lead.application.answers?.map((answer) => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b>{answer.resposta}</b></p></article>)}</div>
+            {(lead.application.attribution?.utmCampaign || lead.application.attribution?.utmContent) && <footer><span>Campanha</span><b>{[lead.application.attribution.utmCampaign, lead.application.attribution.utmContent].filter(Boolean).join(" · ")}</b></footer>}
+          </details>
+        </section>}
         <section className={styles.leadOpportunitySection}>
           <small>Oportunidade atual</small>
           <label>

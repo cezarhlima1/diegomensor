@@ -6,6 +6,19 @@ import styles from "./formulario.module.css";
 
 type Answers = Record<string, string>;
 
+function getAttribution() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    utmSource: params.get("utm_source") || "direto",
+    utmMedium: params.get("utm_medium") || "",
+    utmCampaign: params.get("utm_campaign") || "",
+    utmContent: params.get("utm_content") || "",
+    utmTerm: params.get("utm_term") || "",
+    landingPage: window.location.href,
+    referrer: document.referrer || "direto",
+  };
+}
+
 export default function MentoriaForm() {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({}), [error, setError] = useState("");
@@ -32,7 +45,7 @@ export default function MentoriaForm() {
     if (index < allQuestions.length - 1) { setIndex(value => value + 1); setError(""); return; }
     setSubmitting(true);
     try {
-      const response = await fetch("/api/aplicacao-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...answers, [current.id]: value }) });
+      const response = await fetch("/api/aplicacao-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...answers, [current.id]: value, attribution: getAttribution() }) });
       if (!response.ok) throw new Error(); setDone(true);
     } catch { setError("Não consegui enviar agora. Confira sua conexão e tente novamente."); }
     finally { setSubmitting(false); }
@@ -51,7 +64,7 @@ export default function MentoriaForm() {
     <header className={styles.chatHeader}><div className={styles.avatar}>DM<span /></div><div><b>Diego Mensor</b><span><i /> online agora</span></div><small>Aplicação para mentoria</small></header>
     <div className={styles.topProgress}><i style={{ width: `${progress}%` }} /></div>
     <section className={styles.conversation}>
-      <div className={styles.history}>{index === 0 && <BotBubble>Fala MEU JOVEM!👋<br />Vou te fazer algumas perguntas rápidas para entender o momento da sua oficina.</BotBubble>}{allQuestions.slice(Math.max(0, index - 2), index).map(question => <div className={styles.exchange} key={question.id}><BotBubble muted>{question.label}</BotBubble><div className={styles.userBubble}>{answers[question.id]}</div></div>)}</div>
+      <div className={styles.history}>{index === 0 && <BotBubble>Fala JOVEM!🫡<br />Vou te fazer algumas perguntas rápidas para entender o momento da sua oficina.</BotBubble>}{allQuestions.slice(Math.max(0, index - 2), index).map(question => <div className={styles.exchange} key={question.id}><BotBubble muted>{question.label}</BotBubble><div className={styles.userBubble}>{answers[question.id]}</div></div>)}</div>
       {typing ? <div className={styles.typing} aria-label="Diego está digitando"><i /><i /><i /></div> : <div className={styles.activeQuestion} key={current.id}>
         <div className={styles.botRow}><div className={styles.miniAvatar}>DM</div><div><span className={styles.sender}>Diego</span><div className={styles.botBubble}><b>{current.label}</b>{current.description && <p>{current.description}</p>}</div></div></div>
         <div className={styles.answerArea}>{current.type === "choice" ? <div className={styles.choiceGrid}>{current.options?.map((option, optionIndex) => <button key={option} type="button" className={answers[current.id] === option ? styles.chosen : ""} onClick={() => choose(option)}><i>{String.fromCharCode(65 + optionIndex)}</i><span>{option}</span><b>→</b></button>)}</div> : <div className={styles.textAnswer}>{current.type === "textarea" ? <textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>} value={answers[current.id] || ""} placeholder={current.placeholder} rows={4} onChange={event => update(event.target.value)} onKeyDown={onKeyDown} /> : <input ref={inputRef as React.RefObject<HTMLInputElement>} type={current.type} inputMode={current.type === "tel" ? "tel" : current.type === "email" ? "email" : "text"} autoComplete={current.type === "email" ? "email" : current.type === "tel" ? "tel" : current.id === "nome" ? "name" : "off"} value={answers[current.id] || ""} placeholder={current.placeholder} onChange={event => update(event.target.value)} onKeyDown={onKeyDown} />}<button type="button" onClick={() => void advance()} disabled={submitting} aria-label="Enviar resposta">{submitting ? "…" : "➜"}</button></div>}{error && <p className={styles.chatError} role="alert">{error}</p>}<div className={styles.helper}>{current.type === "textarea" ? "Ctrl + Enter para continuar" : current.type === "choice" ? "Escolha uma opção" : "Enter para continuar"}</div></div>
