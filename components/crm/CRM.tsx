@@ -38,6 +38,7 @@ type Lead = {
   purchases?: Purchase[];
   campaignId?: string;
   application?: LeadApplication;
+  contactCheckpoints?: string[];
 };
 type TrafficRecord = {
   id: string;
@@ -374,6 +375,16 @@ export default function CRM() {
     };
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
+  };
+  const markContactToday = (id: string) => {
+    const lead = leadsRef.current.find((item) => item.id === id);
+    if (!lead) return;
+    const today = brazilDateKey(new Date());
+    if (lead.contactCheckpoints?.some((checkpoint) => brazilDateKey(checkpoint) === today)) return;
+    const updated = { ...lead, contactCheckpoints: [...(lead.contactCheckpoints || []), new Date().toISOString()] };
+    localDataRevision.current += 1;
+    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    void saveLead(updated).catch((error) => console.error("Falha ao registrar contato com o lead", error));
   };
   const scheduleLeadSave = (lead: Lead) => {
     setDatabaseStatus("saving");
@@ -803,7 +814,7 @@ export default function CRM() {
         {view === "trafego" && <Dashboard channel="traffic" leads={filteredTrafficDashboardLeads} allLeads={filteredTrafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} sources={["Tráfego"]} />}
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} select={setSelected} search={search} />
+          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} markContactToday={markContactToday} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -1182,6 +1193,7 @@ function Pipeline({
   stages,
   setStages,
   moveLead,
+  markContactToday,
   select,
   search,
 }: {
@@ -1190,6 +1202,7 @@ function Pipeline({
   stages: Stage[];
   setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
+  markContactToday: (id: string) => void;
   select: (lead: Lead) => void;
   search: string;
 }) {
@@ -1270,6 +1283,7 @@ function Pipeline({
                         </a>
                       )}
                     </div>
+                    <ContactCheckpoint lead={lead} mark={() => markContactToday(lead.id)} />
                   </article>
                 ))}
               </div>
@@ -1278,6 +1292,27 @@ function Pipeline({
         })}
       </div></div>
     </div>
+  );
+}
+
+function ContactCheckpoint({ lead, mark }: { lead: Lead; mark: () => void }) {
+  const checkpoints = lead.contactCheckpoints || [];
+  const doneToday = checkpoints.some((checkpoint) => brazilDateKey(checkpoint) === brazilDateKey(new Date()));
+  const last = checkpoints.at(-1);
+  return (
+    <button
+      type="button"
+      className={`${styles.contactCheckpoint} ${doneToday ? styles.contactCheckpointDone : ""}`}
+      disabled={doneToday}
+      onClick={(event) => { event.stopPropagation(); mark(); }}
+      title={doneToday ? "Contato registrado hoje" : "Registrar contato feito hoje"}
+    >
+      <i>{doneToday ? "✓" : ""}</i>
+      <span>
+        <b>{doneToday ? "Contato feito hoje" : "Marcar contato de hoje"}</b>
+        {last && <small>Último: {new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(last))} · {checkpoints.length} {checkpoints.length === 1 ? "contato" : "contatos"}</small>}
+      </span>
+    </button>
   );
 }
 
