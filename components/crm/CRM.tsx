@@ -376,14 +376,18 @@ export default function CRM() {
     syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
     await syncQueue.current;
   };
-  const markContactToday = (id: string) => {
+  const toggleContactToday = (id: string) => {
     const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
     const today = brazilDateKey(new Date());
-    if (lead.contactCheckpoints?.some((checkpoint) => brazilDateKey(checkpoint) === today)) return;
-    const updated = { ...lead, contactCheckpoints: [...(lead.contactCheckpoints || []), new Date().toISOString()] };
+    const checkpoints = lead.contactCheckpoints || [];
+    const doneToday = checkpoints.some((checkpoint) => brazilDateKey(checkpoint) === today);
+    const updated = { ...lead, contactCheckpoints: doneToday ? checkpoints.filter((checkpoint) => brazilDateKey(checkpoint) !== today) : [...checkpoints, new Date().toISOString()] };
+    const next = leadsRef.current.map((item) => item.id === id ? updated : item);
+    leadsRef.current = next;
     localDataRevision.current += 1;
-    setLeads((current) => current.map((item) => item.id === id ? updated : item));
+    setLeads(next);
+    setSelected((current) => current?.id === id ? updated : current);
     void saveLead(updated).catch((error) => console.error("Falha ao registrar contato com o lead", error));
   };
   const scheduleLeadSave = (lead: Lead) => {
@@ -814,7 +818,7 @@ export default function CRM() {
         {view === "trafego" && <Dashboard channel="traffic" leads={filteredTrafficDashboardLeads} allLeads={filteredTrafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} sources={["Tráfego"]} />}
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end))} month={selectedMonth} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} markContactToday={markContactToday} select={setSelected} search={search} />
+          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -898,7 +902,7 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
   const periodBalance = totalNet - trafficInvestment;
   const totalSales = organicSales + directSales;
   const goal = goalMonths.reduce((sum, month) => sum + (goals[month] || 0), 0);
-  const goalProgress = goal ? totalRevenue / goal * 100 : 0;
+  const goalProgress = goal ? totalNet / goal * 100 : 0;
   const balanceProgress = goalProgress;
   const balanceRatio = Math.max(0, Math.min(1, balanceProgress / 100));
   const balanceHue = 354 + balanceRatio * 132;
@@ -906,7 +910,7 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
   return <div className={`${styles.content} ${styles.executiveOverview}`}>
     <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
     <div className={styles.overviewKpis}>
-      <article className={styles.balanceCard} style={balanceStyle}><span>Saldo total do período</span><strong><Money value={periodBalance} /></strong><small>{goal ? `${Math.max(0, balanceProgress).toFixed(1)}% da meta de faturamento` : "Defina a meta do mês"}</small></article>
+      <article className={styles.balanceCard} style={balanceStyle}><span>Saldo total do período</span><strong><Money value={periodBalance} /></strong><small>{goal ? `${Math.max(0, balanceProgress).toFixed(1)}% da meta de faturamento líquido` : "Defina a meta líquida do mês"}</small></article>
       <Kpi label="Receita bruta" value={<Money value={totalRevenue} />} detail="Faturamento total do período" />
       <Kpi label="Vendas totais" value={String(totalSales)} detail={`${organicSales} orgânicas + ${campaignSales} campanhas + ${manualTrafficClosings.length} novos fechamentos`} />
       <Kpi label="Receita líquida" value={<Money value={totalNet} />} detail={<><Money value={Math.max(0, totalRevenue - totalNet)} /> em taxas</>} />
@@ -915,7 +919,7 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
       <Kpi label="Receita do tráfego" value={<Money value={trafficRevenue} />} detail={<>Líquido <Money value={trafficNet} /></>} />
       <Kpi label="Receita de recompra" value={<Money value={repurchaseRevenue} />} detail={`${repurchaseShare.toFixed(1)}% da receita total`} />
       <Kpi label="Participação da base" value={`${repurchaseShare.toFixed(1)}%`} detail={`${repurchases.length} recompras no período`} />
-      <article className={styles.overviewGoal}><label>{goalMonths.length === 1 ? "Meta do mês" : "Meta do período"}</label><div>{goalMonths.length === 1 ? <AccountingInput value={goal} set={(value) => updateGoal(goalMonth, Number(value) || 0)} /> : <strong><Money value={goal} /></strong>}</div><span>{goal ? `${goalProgress.toFixed(1)}% atingido${goalMonths.length > 1 ? ` · ${goalMonths.length} metas mensais` : ""}` : "Preencha as metas mensais"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
+      <article className={styles.overviewGoal}><label>{goalMonths.length === 1 ? "Meta líquida do mês" : "Meta líquida do período"}</label><div>{goalMonths.length === 1 ? <AccountingInput value={goal} set={(value) => updateGoal(goalMonth, Number(value) || 0)} /> : <strong><Money value={goal} /></strong>}</div><span>{goal ? `${goalProgress.toFixed(1)}% do líquido atingido${goalMonths.length > 1 ? ` · ${goalMonths.length} metas mensais` : ""}` : "Preencha as metas líquidas mensais"}</span><i><b style={{ width: `${Math.min(100, goalProgress)}%` }} /></i></article>
     </div>
     <section className={`${styles.panel} ${styles.channelComposition}`}><header><h3>Composição da receita</h3></header><div><article><span>Orgânico</span><strong><Money value={organicRevenue} /></strong><div><i style={{ width: `${totalRevenue ? organicRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (organicRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article><article><span>Tráfego</span><strong><Money value={trafficRevenue} /></strong><div><i style={{ width: `${totalRevenue ? trafficRevenue / totalRevenue * 100 : 0}%` }} /></div><small>{totalRevenue ? (trafficRevenue / totalRevenue * 100).toFixed(1) : "0.0"}% do total</small></article></div></section>
     <UnifiedRevenueAnalysis leads={leads} traffic={traffic} products={products} start={start} end={end} goals={goals} setGoal={updateGoal} />
@@ -1193,7 +1197,7 @@ function Pipeline({
   stages,
   setStages,
   moveLead,
-  markContactToday,
+  toggleContactToday,
   select,
   search,
 }: {
@@ -1202,7 +1206,7 @@ function Pipeline({
   stages: Stage[];
   setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
-  markContactToday: (id: string) => void;
+  toggleContactToday: (id: string) => void;
   select: (lead: Lead) => void;
   search: string;
 }) {
@@ -1283,7 +1287,7 @@ function Pipeline({
                         </a>
                       )}
                     </div>
-                    <ContactCheckpoint lead={lead} mark={() => markContactToday(lead.id)} />
+                    {!['fechado', 'nao fechou'].includes(stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) && <ContactCheckpoint lead={lead} toggle={() => toggleContactToday(lead.id)} />}
                   </article>
                 ))}
               </div>
@@ -1295,23 +1299,23 @@ function Pipeline({
   );
 }
 
-function ContactCheckpoint({ lead, mark }: { lead: Lead; mark: () => void }) {
+function ContactCheckpoint({ lead, toggle }: { lead: Lead; toggle: () => void }) {
   const checkpoints = lead.contactCheckpoints || [];
   const doneToday = checkpoints.some((checkpoint) => brazilDateKey(checkpoint) === brazilDateKey(new Date()));
-  const last = checkpoints.at(-1);
+  const last = [...checkpoints].sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0];
   return (
     <button
       type="button"
       className={`${styles.contactCheckpoint} ${doneToday ? styles.contactCheckpointDone : ""}`}
-      disabled={doneToday}
-      onClick={(event) => { event.stopPropagation(); mark(); }}
-      title={doneToday ? "Contato registrado hoje" : "Registrar contato feito hoje"}
+      onClick={(event) => { event.stopPropagation(); toggle(); }}
+      title={doneToday ? "Desmarcar contato de hoje" : "Registrar contato feito hoje"}
     >
       <i>{doneToday ? "✓" : ""}</i>
       <span>
-        <b>{doneToday ? "Contato feito hoje" : "Marcar contato de hoje"}</b>
-        {last && <small>Último: {new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(last))} · {checkpoints.length} {checkpoints.length === 1 ? "contato" : "contatos"}</small>}
+        <b>{doneToday ? "Contato hoje" : "Marcar contato"}</b>
+        {last && <small>Últ. {new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(last))}</small>}
       </span>
+      {checkpoints.length > 0 && <em>{checkpoints.length}</em>}
     </button>
   );
 }
@@ -1682,6 +1686,11 @@ function LeadDrawer({
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
   const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "" });
   const tags = lead.tags || [];
+  const contactCheckpoints = [...(lead.contactCheckpoints || [])].sort((left, right) => new Date(right).getTime() - new Date(left).getTime());
+  const today = brazilDateKey(new Date());
+  const contactedToday = contactCheckpoints.some((checkpoint) => brazilDateKey(checkpoint) === today);
+  const toggleTodayContact = () => update({ contactCheckpoints: contactedToday ? contactCheckpoints.filter((checkpoint) => brazilDateKey(checkpoint) !== today) : [...contactCheckpoints, new Date().toISOString()] });
+  const removeContactCheckpoint = (checkpoint: string) => update({ contactCheckpoints: contactCheckpoints.filter((item) => item !== checkpoint) });
   const addTag = () => { const typed = newTag.trim(); if (!typed) return; const existing = availableTags.find((item) => item.toLowerCase() === typed.toLowerCase()); const tag = existing || typed; if (!tags.includes(tag)) update({ tags: [...tags, tag] }); setNewTag(""); };
   const saveTag = (index: number) => { const tag = tagDraft.trim(); if (!tag) return; renameTag(tags[index], tag); setEditingTag(null); setTagDraft(""); };
   const purchaseHistory = purchasesForLead(lead, products);
@@ -1773,6 +1782,13 @@ function LeadDrawer({
               {sources.map((source) => <option key={source}>{source}</option>)}
             </select>
           </label>
+        </section>
+        <section className={styles.contactHistorySection}>
+          <div className={styles.contactHistoryHeader}>
+            <span><small>Histórico de contatos</small><b>{contactCheckpoints.length} {contactCheckpoints.length === 1 ? "contato" : "contatos"}</b></span>
+            <button type="button" className={contactedToday ? styles.contactTodayDone : ""} onClick={toggleTodayContact}>{contactedToday ? "✓ Desmarcar hoje" : "+ Contato hoje"}</button>
+          </div>
+          {contactCheckpoints.length > 0 ? <div className={styles.contactHistoryList}>{contactCheckpoints.map((checkpoint) => <article key={checkpoint}><i>✓</i><span><b>{brazilDateKey(checkpoint) === today ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(checkpoint))}</b><small>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(checkpoint))}</small></span><button type="button" aria-label="Remover contato do histórico" title="Remover contato" onClick={() => removeContactCheckpoint(checkpoint)}>×</button></article>)}</div> : <p className={styles.emptyContactHistory}>Nenhum contato registrado.</p>}
         </section>
         {lead.application && <section className={styles.applicationSection}>
           <small>Aplicação da mentoria</small>
@@ -1920,7 +1936,7 @@ function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { cha
     const items = leads.filter((lead) => brazilMonthKey(lead.createdAt) === key);
     const purchases = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => purchaseMatchesChannel(purchase, lead, channel)));
     const trafficLeads = items.filter((lead) => lead.source === "Tráfego" || lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))).length;
-    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, organicLeads: items.length - trafficLeads, trafficLeads, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.value, 0), goal: goals[key] || 0 };
+    return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, organicLeads: items.length - trafficLeads, trafficLeads, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.netValue, 0), goal: goals[key] || 0 };
   });
   const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
   const maxLeads = Math.max(1, ...months.map((item) => item.leads));
@@ -1930,7 +1946,7 @@ function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { cha
   const valueTicks = [maxValue, maxValue * .75, maxValue * .5, maxValue * .25, 0];
   const leadTicks = [maxLeads, Math.round(maxLeads * .75), Math.round(maxLeads * .5), Math.round(maxLeads * .25), 0];
   const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
-  return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor fechado × meta</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta</span><span><i className={styles.closedLegend} />Valor fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b><span className={styles.leadPointTooltip}><strong>{months[index].label} · {point.value} leads</strong><small>Orgânico <b>{months[index].organicLeads}</b></small><small>Tráfego <b>{months[index].trafficLeads}</b></small></span></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
+  return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor líquido fechado × meta líquida</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta líquida</span><span><i className={styles.closedLegend} />Líquido fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta líquida do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta líquida" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b><span className={styles.leadPointTooltip}><strong>{months[index].label} · {point.value} leads</strong><small>Orgânico <b>{months[index].organicLeads}</b></small><small>Tráfego <b>{months[index].trafficLeads}</b></small></span></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
 }
 function QuickPeriodButtons({ start, end, setRange }: { start: string; end: string; setRange: (start: string, end: string) => void }) {
   const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
