@@ -129,7 +129,15 @@ function ResultPage({ result, analysis, verdict, restart }: { result: QuizResult
       <span className="limited">{result.kicker}</span><p className="font-mono text-[11px] uppercase tracking-[.14em] text-muted">Seu diagnóstico</p>
       <p className={styles.diagnosisOpening}>Jovem, o diagnóstico está pronto. Analisamos todas as tuas respostas e acho que tu vai se identificar com várias das coisas que temos pra te mostrar agora.</p>
       <h2 className="font-display font-black text-[clamp(27px,5vw,44px)] text-blue mt-2">{result.course}</h2><p className="font-display font-bold text-[19px] mt-4">{result.tagline}</p><p className="lead mt-4">{result.description}</p>
-      <div className={styles.analysisBox}><p className="font-mono text-[10px] uppercase tracking-[.12em] text-blue">Análise geral da tua oficina</p><div>{analysis.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div></div>
+      <div className={styles.analysisBox}>
+        <p className="font-mono text-[10px] uppercase tracking-[.12em] text-blue">Análise geral da tua oficina</p>
+        <div className={styles.analysisFlow}>
+          {analysis.map((section, sectionIndex) => <article className={styles.analysisStep} key={section}>
+            <div className={styles.analysisMarker} aria-hidden="true"><span>{String(sectionIndex + 1).padStart(2, "0")}</span></div>
+            <div>{section.split("\n\n").map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+          </article>)}
+        </div>
+      </div>
       <p className={styles.verdict}>{verdict}</p>
     </section>
 

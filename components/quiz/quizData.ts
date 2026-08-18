@@ -52,43 +52,43 @@ export function buildDiagnosis(answers: number[]): Diagnosis {
   const [month, labor, parts, budget, costs, separation] = choices;
 
   const financial = month === 0
-    ? "Tu demonstra uma relação saudável com os números e já acompanha o que entra e o que realmente sobra. Isso te coloca à frente da maioria, mas esse controle só protege o lucro quando os preços também acompanham os custos reais da operação."
+    ? "Primeiro… parabéns, tá? Se tu sabe na ponta do lápis quanto entrou e quanto realmente sobrou no fim do mês, tu já tá na frente da maioria dos donos de oficina. Normalmente quem tem uma relação saudável com os próprios números acompanha isso de perto. E esse é um baita ponto de partida."
     : month === 1
-      ? "A oficina tem movimento, mas o dinheiro que sobra ainda não acompanha todo o esforço que tu faz. Isso mostra que o problema provavelmente não está na falta de serviço, e sim em detalhes da gestão e da precificação que estão segurando uma parte do teu lucro."
-      : "A oficina trabalha bastante e, mesmo assim, o dinheiro não permanece no fim do mês. Esse é um alerta importante: o problema provavelmente não é falta de serviço, mas dinheiro sendo deixado na mesa sem que tu perceba — e preço errado costuma ser o começo desse incêndio.";
+      ? "Primeiro, quero trazer uma coisa que chamou atenção. A tua oficina tem carro entrando, mas o dinheiro que sobra ainda não acompanha todo o esforço que tu faz. Geralmente existe algum detalhe na gestão ou na precificação impedindo a oficina de lucrar tudo o que poderia. Mas te acalma, isso é mais fácil de resolver do que tu imagina."
+      : "Primeiro, vou te falar uma coisa… quando tu trabalha pra caramba desse jeito, o dinheiro entra e mesmo assim não sobra nada no fim do mês, tu precisa acender um alerta urgente. Na maioria das vezes o problema não é falta de serviço. É que tua oficina tá deixando dinheiro na mesa sem perceber. E por que ligar esse alerta? Porque cobrar errado é um começo perigoso de incêndio que tu vai precisar apagar lá na frente.";
 
   const priceBase = labor === 0
-    ? "A tua hora técnica parte de um cálculo, o que dá uma base mais segura para tomar decisões."
+    ? "Agora, olhando especificamente pra forma como tu define teus preços, gostei de ver uma coisa. Tu já procura calcular tua hora técnica antes de montar um orçamento. Isso faz muita diferença, porque quem trabalha baseado em números toma decisões muito mais seguras do que quem trabalha no achismo. E pode parecer que não, mas isso é importante demais pra ser ignorado. Vai por mim! Assim como a venda de peças, que muita oficina acaba deixando de lado."
     : labor === 1
-      ? "A tua hora técnica ainda recebe influência demais do mercado e da concorrência. A oficina do vizinho pode servir como referência, mas nunca como cálculo, porque a estrutura e os custos dele não são os teus."
-      : "A tua hora técnica muda conforme a situação, fazendo cada orçamento seguir uma lógica diferente. Assim, fica praticamente impossível saber se o serviço realmente deu lucro.";
+      ? "Agora, olhando pra forma como tu define teus preços, tem um ponto que merece atenção. Basear teus números na oficina do vizinho não te ajuda em quase nada, porque tu não sabe quais são os custos que ele tem. Se a estrutura dele custa menos que a tua, quem absorve essa diferença é a tua oficina. ‘Ah, Diego… então eu ignoro a concorrência?’ Claro que não. Ela serve como referência, mas nunca pode definir o preço da tua oficina. E pode parecer que não, mas isso é importante demais pra ser ignorado. Vai por mim! Assim como a venda de peças, que muita oficina acaba deixando de lado."
+      : "Agora, olhando pra forma como tu define teus preços, aqui mora um dos maiores perigos. Quando tu muda o valor conforme a situação, cada orçamento passa a seguir uma lógica diferente. Hoje tu cobra de um jeito, amanhã de outro. E depois fica praticamente impossível saber se aquele serviço realmente deu lucro. E pode parecer que não, mas isso é importante demais pra ser ignorado. Vai por mim! Assim como a venda de peças, que muita oficina acaba deixando de lado.";
   const partsBase = parts === 0
-    ? "O markup definido nas peças é outro ponto positivo, porque protege a margem e evita decisões por impulso."
+    ? "A venda das peças precisa ser um PLUS dentro da oficina: a operação limpa onde tu compra, acrescenta a margem correta e vende. O markup é um dos grandes responsáveis pela lucratividade da oficina. E como tu já tem um markup bem definido e segue esse padrão, tá protegendo tua margem e evitando decisões no impulso."
     : parts === 1
-      ? "Ao mesmo tempo, o markup das peças varia conforme o cliente ou o serviço. O custo continua igual; o que muda é apenas o quanto sobra no teu bolso, tirando a previsibilidade do lucro."
-      : "A situação fica mais delicada nas peças: repassar praticamente pelo preço de compra faz a oficina abrir mão de uma receita que deveria contribuir para o lucro e para o caixa.";
+      ? "A venda das peças precisa ser um PLUS dentro da oficina: a operação limpa onde tu compra, acrescenta a margem correta e vende. Quando tu muda o markup conforme o cliente ou o serviço, tua margem também muda. Só que o teu custo continua o mesmo. A equipe continua a mesma. A estrutura continua a mesma. O único que muda é o quanto sobra no teu bolso. E quando isso vira rotina, tu perde completamente a previsibilidade do teu lucro."
+      : "A venda das peças precisa ser um PLUS dentro da oficina: a operação limpa onde tu compra, acrescenta a margem correta e vende. Repassar a peça praticamente pelo preço que tu pagou é um erro grave. Na hora parece uma boa estratégia, mas tua oficina abre mão de uma receita que deveria virar lucro. Porque tu não é revendedor de peça. Quanto antes entender isso, mais lucro e caixa vai ter no fim do mês.";
   const costBase = costs === 0
-    ? "Como tu revisa os custos da operação, existe uma boa estrutura para validar e atualizar esses números com frequência."
+    ? "Saber como precificar certo vai te trazer uma clareza tão grande que tu vai pensar: ‘Por que eu não sentei pra ver isso antes?’ Entender a hora técnica deveria ser obrigatório, e é muito bom que tu já tenha esse número. Esse é um dos indicadores mais importantes da oficina, porque dá segurança pra saber se o preço realmente faz sentido."
     : costs === 1
-      ? "Como o custo mensal ainda é conhecido apenas por aproximação, despesas importantes podem passar despercebidas e fazer o lucro desaparecer."
-      : "Sem conhecer claramente o custo mensal e o valor da hora técnica, os orçamentos continuam sem uma referência confiável.";
+      ? "Saber como precificar certo vai te trazer uma clareza tão grande que tu vai pensar: ‘Por que eu não sentei pra ver isso antes?’ Entender a hora técnica deveria ser obrigatório. Se hoje tu só tem uma noção desse valor ou ainda tem dúvidas sobre o cálculo, vale parar e olhar isso com atenção. Existe uma boa chance de tu estar cobrando menos do que deveria."
+      : "Saber como precificar certo vai te trazer uma clareza tão grande que tu vai pensar: ‘Por que eu não sentei pra ver isso antes?’ Entender a hora técnica deveria ser obrigatório. Se hoje tu ainda não sabe exatamente quanto ela vale, tu precisa olhar pra isso urgente. Sem esse número, praticamente todo orçamento continua sendo feito sem uma referência confiável.";
 
   const confidence = budget === 0
-    ? "Essa base também aparece na segurança para explicar o orçamento ao cliente — sinal de que existe uma lógica por trás do preço."
+    ? "Se esse B.O. do markup das peças ficou claro, quero trazer outro ponto importante: passar o orçamento pro cliente. Se tu apresenta teus orçamentos com segurança pra explicar o valor do serviço, aí tu é o cara mesmo. A gente não tem que ter medo de explicar o que é certo. E normalmente isso acontece quando existe uma lógica por trás do preço. Top demais."
     : budget === 1
-      ? "O desconforto ao defender o orçamento indica que ainda falta confiança nos próprios números. Na maioria das vezes não é porque está caro, mas porque falta segurança para provar que o preço está certo."
-      : "Quando o orçamento diminui sempre que o cliente questiona, quem passa a definir o lucro é o cliente. Isso corrói uma margem que já pode estar apertada.";
+      ? "Se esse B.O. do markup das peças ficou claro, quero trazer outro ponto importante: passar o orçamento pro cliente. Se nessa hora aparece um sentimento de desconforto, vale ligar um alerta. Quando o cliente questiona o preço, tu ainda se sente inseguro. É hora de entender melhor a tua precificação pra explicar o valor com mais confiança. E calma… na maioria das vezes isso não acontece porque tá caro. Acontece porque ainda falta segurança pra provar que tu tá certo."
+      : "Se esse B.O. do markup das peças ficou claro, quero trazer outro ponto importante: passar o orçamento pro cliente. Se quando o cliente questiona o valor o orçamento acaba diminuindo, a coisa tá feita. Quem passa a definir o teu lucro deixa de ser tu. Passa a ser o cliente. E eu nem preciso te explicar o tamanho desse B.O., né?";
   const cash = separation === 0
-    ? "A separação entre o caixa da oficina e a conta pessoal, com pró-labore definido, ajuda a enxergar esse resultado com muito mais clareza."
+    ? "Pra fechar, apareceu mais um ponto positivo. Tu consegue separar o caixa da oficina da tua conta pessoal e tira um pró-labore definido. Isso faz toda diferença, porque te mostra o que é dinheiro da empresa, o que é tua retirada e o que realmente virou lucro."
     : separation === 1
-      ? "A mistura ocasional entre o caixa da oficina e a conta pessoal ainda distorce a visão do que é lucro e do que é apenas dinheiro disponível."
-      : "Sem separar o caixa da oficina da conta pessoal e sem um pró-labore definido, fica muito difícil saber quanto a empresa realmente lucra.";
+      ? "Pra fechar, apareceu um detalhe que vale tua atenção. O caixa da oficina e a tua conta pessoal ainda se misturam em alguns momentos. E quando isso acontece, fica fácil confundir dinheiro disponível com lucro e perder a clareza do que a oficina realmente tá gerando."
+      : "Pra fechar, apareceu um dos pontos mais importantes desse diagnóstico. Hoje tu ainda não separa o caixa da oficina da tua conta pessoal e não tem um pró-labore definido. Enquanto isso não estiver claro, fica muito difícil saber quanto a empresa realmente lucrou e quanto tu pode tirar sem machucar o caixa.";
 
   const verdict = result.id === "controle"
-    ? "No geral, tua oficina tem uma boa base. O próximo passo é garantir que hora técnica, markup e custos estejam sempre atualizados e sejam aplicados em todos os serviços, sem exceção."
+    ? "No geral, tua oficina tem uma base muito boa. Agora é garantir que hora técnica, markup e custos estejam sempre atualizados e sejam aplicados em todos os serviços, sem exceção. Porque preço certo não é achismo, jovem. É número."
     : result.id === "atencao"
-      ? "O diagnóstico mostra que tu não precisa necessariamente de mais carros: precisa fechar as brechas que fazem uma parte do faturamento escapar. Padronizar os cálculos vai trazer previsibilidade e segurança para cobrar o preço certo."
-      : "O diagnóstico acende um alerta urgente. Antes de buscar mais movimento, tu precisa corrigir a base dos preços e organizar os números; essa pode ser a forma mais rápida de parar de perder dinheiro todos os dias.";
+      ? "O diagnóstico mostra que tu não precisa necessariamente de mais carros, jovem. Tu precisa fechar as brechas que fazem uma parte do faturamento escapar. Quando tu padroniza os cálculos, ganha previsibilidade e segurança pra cobrar o preço certo."
+      : "Esse diagnóstico acende um alerta urgente, jovem. Antes de buscar mais movimento, tu precisa corrigir a base dos preços e organizar os números. Essa pode ser a forma mais rápida de parar de perder dinheiro todos os dias.";
 
-  return { result, analysis: [financial, `${priceBase} ${partsBase} ${costBase}`, `${confidence} ${cash}`], verdict };
+  return { result, analysis: [`${financial}\n\n${priceBase}`, `${partsBase}\n\n${confidence}`, `${costBase}\n\n${cash}`], verdict };
 }
