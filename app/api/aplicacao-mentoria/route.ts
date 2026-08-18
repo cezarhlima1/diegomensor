@@ -10,6 +10,17 @@ function safeText(value: unknown, max = 4_000) {
   return /^[=+\-@]/.test(text) ? `'${text}` : text;
 }
 
+function crmSourceForAttribution(attribution: { utmSource: string; utmContent: string }) {
+  const source = attribution.utmSource.toLowerCase();
+  const content = attribution.utmContent.toLowerCase();
+  if (source === "instagram" && content === "biografia") return "forms - biografia";
+  if (source === "instagram" && content === "stories") return "forms - storie";
+  if (source === "instagram" && content === "feed") return "forms - feed";
+  if (source === "youtube") return "forms - youtube";
+  if (source === "isca") return "forms - isca";
+  return "Formulário";
+}
+
 export async function POST(request: Request) {
   const webhook = process.env.MENTORIA_SHEETS_WEBHOOK_URL || process.env.SHEETS_WEBHOOK_URL;
   if (!webhook?.startsWith("https://")) return NextResponse.json({ ok: false, error: "missing-webhook" }, { status: 500 });
@@ -72,8 +83,14 @@ export async function POST(request: Request) {
     const db = crmPool();
     const submittedAt = new Date().toISOString();
     const application = { submittedAt, attribution, answers: readableAnswers };
-    const tags = [attribution.utmSource, attribution.utmMedium, attribution.utmCampaign]
+    const tags = [attribution.utmSource, attribution.utmMedium, attribution.utmCampaign, attribution.utmContent]
       .filter((value) => value && value !== "direto");
+    const expectedSource = crmSourceForAttribution(attribution);
+    const registeredSource = await db.query(
+      "select name from public.crm_lead_sources where lower(name)=lower($1) limit 1",
+      [expectedSource],
+    );
+    const crmSource = registeredSource.rows[0]?.name || expectedSource;
     const applicationColumn = await db.query(
       "select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='application' limit 1",
     );
@@ -85,25 +102,25 @@ export async function POST(request: Request) {
     if (existing.rows[0]?.id) {
       if (supportsApplication) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),source='Formulário',product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), JSON.stringify(application), tags, submittedAt],
+          "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), JSON.stringify(application), tags, crmSource, submittedAt],
         );
       } else {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),source='Formulário',product='Mentoria OAG',stage='Novo lead',created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, submittedAt],
+          "update public.crm_leads set name=$2,phone=$3,email=$4,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt],
         );
       }
     } else {
       if (supportsApplication) {
         await db.query(
-          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,'Formulário','Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$6,$7::jsonb)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, submittedAt, JSON.stringify(application)],
+          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7,$8::jsonb)",
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt, JSON.stringify(application)],
         );
       } else {
         await db.query(
-          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,$4,'',$5,'Formulário','Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$6)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, submittedAt],
+          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7)",
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt],
         );
       }
     }
