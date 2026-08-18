@@ -69,7 +69,7 @@ export default function Quiz() {
 
         {stage === "intro" && <div className="text-center cta-reveal">
           <span className="tag">Teste gratuito · 2 minutos</span>
-          <h1 className="section-title mt-5">Em menos de 2 minutos, descubra se você está <span className="text-blue">COBRANDO errado</span> dentro da sua oficina.</h1>
+          <h1 className={`section-title mt-5 ${styles.introTitle}`}>Em menos de 2 minutos, descubra se você está <span className="text-blue">COBRANDO errado</span> dentro da sua oficina.</h1>
           <p className="lead mt-5 max-w-[600px] mx-auto">Responda algumas perguntas rápidas e descubra se você está cobrando certo ou perdendo dinheiro em serviços todos os dias.</p>
           <button className="btn btn--lg mt-9" onClick={() => setStage("quiz")}>Começar o teste</button>
           <p className="reassure mt-5"><b>Grátis</b> · leva 2 minutos · resultado na hora · informações criptografadas</p>
