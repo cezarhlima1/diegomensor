@@ -19,6 +19,14 @@
  * Sempre que editar este script depois de já implantado, use
  * Implantar > Gerenciar implantações > editar (ícone de lápis) > Nova versão,
  * senão a URL antiga continua rodando o código antigo.
+ *
+ * Como funciona o rastreio por etapa:
+ * O formulário do site envia uma requisição a cada pergunta respondida
+ * (não só no final). Cada visitante tem um "ID sessão" fixo durante o
+ * preenchimento, então este script sempre procura uma linha existente com
+ * aquele ID e atualiza só as respostas novas, em vez de criar uma linha por
+ * etapa. Assim dá para ver, na coluna "Status"/"Etapa", exatamente até onde
+ * cada pessoa foi e quando parou de responder.
  */
 
 const SPREADSHEET_ID = "COLE_AQUI_O_ID_DA_PLANILHA";
@@ -47,7 +55,11 @@ const PERGUNTAS_EM_ORDEM = [
 ];
 
 const HEADERS = [
-  "Data e hora",
+  "ID sessão",
+  "Status",
+  "Etapa",
+  "Data e hora (criado)",
+  "Última atualização",
   "Origem (source)",
   ...PERGUNTAS_EM_ORDEM,
   "UTM Source",
@@ -58,6 +70,33 @@ const HEADERS = [
   "Landing Page",
   "Referrer",
 ];
+
+const COL = HEADERS.reduce((map, header, offset) => {
+  map[header] = offset + 1;
+  return map;
+}, {});
+
+function getSheet_() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+  if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(HEADERS);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function findRowBySessionId_(sheet, sessionId) {
+  if (!sessionId || sheet.getLastRow() < 2) return 0;
+  const finder = sheet
+    .getRange(2, COL["ID sessão"], sheet.getLastRow() - 1, 1)
+    .createTextFinder(sessionId)
+    .matchEntireCell(true);
+  const match = finder.findNext();
+  return match ? match.getRow() : 0;
+}
 
 function doPost(event) {
   const lock = LockService.getScriptLock();
@@ -72,30 +111,52 @@ function doPost(event) {
       respostaPorPergunta[item.pergunta] = item.resposta;
     });
 
-    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+    const sheet = getSheet_();
+    const now = new Date();
+    const sessionId = payload.sessionId || "";
+    const status = payload.completed ? "Completo" : "Em andamento";
+    const etapa = payload.step && payload.totalSteps ? `${payload.step}/${payload.totalSteps}` : "";
+    const existingRow = findRowBySessionId_(sheet, sessionId);
 
-    if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(HEADERS);
-      sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
-      sheet.setFrozenRows(1);
+    if (existingRow) {
+      const range = sheet.getRange(existingRow, 1, 1, HEADERS.length);
+      const values = range.getValues()[0];
+      values[COL["Status"] - 1] = status;
+      values[COL["Etapa"] - 1] = etapa;
+      values[COL["Última atualização"] - 1] = now;
+      values[COL["Origem (source)"] - 1] = payload.source || values[COL["Origem (source)"] - 1];
+      PERGUNTAS_EM_ORDEM.forEach((pergunta) => {
+        const resposta = respostaPorPergunta[pergunta];
+        if (resposta) values[COL[pergunta] - 1] = resposta;
+      });
+      values[COL["UTM Source"] - 1] = payload.utmSource || values[COL["UTM Source"] - 1];
+      values[COL["UTM Medium"] - 1] = payload.utmMedium || values[COL["UTM Medium"] - 1];
+      values[COL["UTM Campaign"] - 1] = payload.utmCampaign || values[COL["UTM Campaign"] - 1];
+      values[COL["UTM Content"] - 1] = payload.utmContent || values[COL["UTM Content"] - 1];
+      values[COL["UTM Term"] - 1] = payload.utmTerm || values[COL["UTM Term"] - 1];
+      values[COL["Landing Page"] - 1] = payload.landingPage || values[COL["Landing Page"] - 1];
+      values[COL["Referrer"] - 1] = payload.referrer || values[COL["Referrer"] - 1];
+      range.setValues([values]);
+    } else {
+      const linha = new Array(HEADERS.length).fill("");
+      linha[COL["ID sessão"] - 1] = sessionId;
+      linha[COL["Status"] - 1] = status;
+      linha[COL["Etapa"] - 1] = etapa;
+      linha[COL["Data e hora (criado)"] - 1] = now;
+      linha[COL["Última atualização"] - 1] = now;
+      linha[COL["Origem (source)"] - 1] = payload.source || "";
+      PERGUNTAS_EM_ORDEM.forEach((pergunta) => {
+        linha[COL[pergunta] - 1] = respostaPorPergunta[pergunta] || "";
+      });
+      linha[COL["UTM Source"] - 1] = payload.utmSource || "";
+      linha[COL["UTM Medium"] - 1] = payload.utmMedium || "";
+      linha[COL["UTM Campaign"] - 1] = payload.utmCampaign || "";
+      linha[COL["UTM Content"] - 1] = payload.utmContent || "";
+      linha[COL["UTM Term"] - 1] = payload.utmTerm || "";
+      linha[COL["Landing Page"] - 1] = payload.landingPage || "";
+      linha[COL["Referrer"] - 1] = payload.referrer || "";
+      sheet.appendRow(linha);
     }
-
-    const linha = [
-      new Date(),
-      payload.source || "",
-      ...PERGUNTAS_EM_ORDEM.map((pergunta) => respostaPorPergunta[pergunta] || ""),
-      payload.utmSource || "",
-      payload.utmMedium || "",
-      payload.utmCampaign || "",
-      payload.utmContent || "",
-      payload.utmTerm || "",
-      payload.landingPage || "",
-      payload.referrer || "",
-    ];
-
-    sheet.appendRow(linha);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);

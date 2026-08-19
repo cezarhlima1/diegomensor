@@ -24,7 +24,8 @@ export default function MentoriaForm() {
   const [answers, setAnswers] = useState<Answers>({}), [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false), [done, setDone] = useState(false);
   const [playing, setPlaying] = useState(false), [typing, setTyping] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null), inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null), inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null), sessionIdRef = useRef("");
+  if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
   const current = allQuestions[index], progress = Math.round(((index + 1) / allQuestions.length) * 100);
 
   useEffect(() => { const audio = audioRef.current; if (!audio) return; audio.volume = .025; void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); }, []);
@@ -38,14 +39,24 @@ export default function MentoriaForm() {
     if (question.type === "textarea" && value.length < 10) return "Conta um pouquinho mais para eu entender bem.";
     return "";
   }
+  function sendProgress(currentAnswers: Answers, step: number, completed: boolean) {
+    void fetch("/api/aplicacao-mentoria/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ sessionId: sessionIdRef.current, step, totalSteps: allQuestions.length, completed, answers: currentAnswers, attribution: getAttribution() }),
+    }).catch(() => {});
+  }
   async function advance(valueOverride?: string) {
     const value = (valueOverride ?? answers[current.id] ?? "").trim(), message = validationMessage(current, value);
     if (message) { setError(message); inputRef.current?.focus(); return; }
-    setAnswers(previous => ({ ...previous, [current.id]: value }));
-    if (index < allQuestions.length - 1) { setIndex(value => value + 1); setError(""); return; }
+    const updatedAnswers = { ...answers, [current.id]: value };
+    setAnswers(updatedAnswers);
+    if (index < allQuestions.length - 1) { setIndex(value => value + 1); setError(""); sendProgress(updatedAnswers, current.number, false); return; }
     setSubmitting(true);
+    sendProgress(updatedAnswers, current.number, true);
     try {
-      const response = await fetch("/api/aplicacao-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...answers, [current.id]: value, attribution: getAttribution() }) });
+      const response = await fetch("/api/aplicacao-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...updatedAnswers, attribution: getAttribution(), sessionId: sessionIdRef.current }) });
       if (!response.ok) throw new Error(); setDone(true);
     } catch { setError("Não consegui enviar agora. Confira sua conexão e tente novamente."); }
     finally { setSubmitting(false); }

@@ -4,6 +4,7 @@ import { crmPool } from "@/lib/crm-db";
 
 const MAX_BODY_BYTES = 32_768;
 const TIMEOUT_MS = 8_000;
+const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function safeText(value: unknown, max = 4_000) {
   const text = String(value ?? "").trim().slice(0, max);
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email) || answers.whatsapp.replace(/\D/g, "").length < 10) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 400 });
 
+  const rawSessionId = safeText(body.sessionId, 100);
+  const sessionId = SESSION_ID_RE.test(rawSessionId) ? rawSessionId : "";
+
   const readableAnswers = allQuestions.map((question) => ({ numero: question.number, pergunta: question.label, resposta: answers[question.id] }));
   const rawAttribution = body.attribution && typeof body.attribution === "object" ? body.attribution as Record<string, unknown> : {};
   const attribution = {
@@ -62,6 +66,10 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        sessionId,
+        step: allQuestions.length,
+        totalSteps: allQuestions.length,
+        completed: true,
         name: answers.nome,
         phone: answers.whatsapp,
         email: answers.email,
