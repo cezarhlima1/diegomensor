@@ -454,7 +454,7 @@ export async function atualizarObservacaoOrcamento(
 ): Promise<ResultadoAuth> {
   const sessao = await getSessaoComEmpresa();
   const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
-  if (!vinculo) return { ok: false, error: ERRO_SEM_VINCULO };
+  if (!sessao || !vinculo) return { ok: false, error: ERRO_SEM_VINCULO };
   if (!(await permiteRecursosPecas(empresaId, sessao.email))) {
     return { ok: false, error: ERRO_SEM_PERMISSAO };
   }
