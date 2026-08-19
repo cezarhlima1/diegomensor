@@ -88,7 +88,8 @@ export async function POST(request: Request) {
     if (!value) return NextResponse.json({ ok: false, error: "missing-fields" }, { status: 400 });
     answers[question.id] = value;
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email) || answers.whatsapp.replace(/\D/g, "").length < 10) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 400 });
+  if (answers.whatsapp.replace(/\D/g, "").length < 10) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 400 });
+  const email = "";
 
   const rawSessionId = safeText(body.sessionId, 100);
   const sessionId = SESSION_ID_RE.test(rawSessionId) ? rawSessionId : "";
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
         completed: true,
         name: answers.nome,
         phone: answers.whatsapp,
-        email: answers.email,
+        email,
         source: attribution.utmSource,
         formSource: "aplicacao-mentoria",
         city: answers.cidadeEstado,
@@ -137,31 +138,31 @@ export async function POST(request: Request) {
     );
     const supportsApplication = Boolean(applicationColumn.rows[0]);
     const existing = await db.query(
-      "select id from public.crm_leads where lower(email)=lower($1) or regexp_replace(phone,'\\D','','g')=regexp_replace($2,'\\D','','g') limit 1",
-      [answers.email, answers.whatsapp],
+      "select id from public.crm_leads where regexp_replace(phone,'\\D','','g')=regexp_replace($1,'\\D','','g') limit 1",
+      [answers.whatsapp],
     );
     if (existing.rows[0]?.id) {
       if (supportsApplication) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), JSON.stringify(application), tags, crmSource, submittedAt],
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), tags, crmSource, submittedAt],
         );
       } else {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt],
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt],
         );
       }
     } else {
       if (supportsApplication) {
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7,$8::jsonb)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt, JSON.stringify(application)],
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt, JSON.stringify(application)],
         );
       } else {
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt],
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt],
         );
       }
     }
