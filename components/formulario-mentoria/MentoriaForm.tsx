@@ -25,10 +25,19 @@ export default function MentoriaForm() {
   const [submitting, setSubmitting] = useState(false), [done, setDone] = useState(false);
   const [playing, setPlaying] = useState(false), [typing, setTyping] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null), inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const conversationRef = useRef<HTMLElement>(null);
   const current = allQuestions[index], progress = Math.round(((index + 1) / allQuestions.length) * 100);
 
   useEffect(() => { const audio = audioRef.current; if (!audio) return; audio.volume = .025; void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); }, []);
   useEffect(() => { if (done) return; setTyping(true); const timer = window.setTimeout(() => { setTyping(false); window.setTimeout(() => inputRef.current?.focus(), 40); }, index ? 360 : 650); return () => window.clearTimeout(timer); }, [index, done]);
+  useEffect(() => {
+    if (typing || done) return;
+    const scrollToQuestion = () => conversationRef.current?.scrollTo({ top: conversationRef.current.scrollHeight, behavior: "smooth" });
+    const frame = window.requestAnimationFrame(scrollToQuestion);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", scrollToQuestion);
+    return () => { window.cancelAnimationFrame(frame); viewport?.removeEventListener("resize", scrollToQuestion); };
+  }, [typing, index, done]);
 
   function update(value: string) { setAnswers(previous => ({ ...previous, [current.id]: value })); setError(""); }
   function validationMessage(question: Question, value: string) {
@@ -38,10 +47,23 @@ export default function MentoriaForm() {
     if (question.type === "textarea" && value.length < 10) return "Conta um pouquinho mais para eu entender bem.";
     return "";
   }
+  async function savePartial(name: string) {
+    const whatsapp = (answers.whatsapp || "").trim();
+    if (name.length < 2 || whatsapp.replace(/\D/g, "").length < 10) return;
+    try {
+      await fetch("/api/aplicacao-mentoria", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "partial", nome: name, whatsapp, attribution: getAttribution() }),
+        keepalive: true,
+      });
+    } catch { /* O formulário continua mesmo se a captura parcial falhar. */ }
+  }
   async function advance(valueOverride?: string) {
     const value = (valueOverride ?? answers[current.id] ?? "").trim(), message = validationMessage(current, value);
     if (message) { setError(message); inputRef.current?.focus(); return; }
     setAnswers(previous => ({ ...previous, [current.id]: value }));
+    if (current.id === "nome") await savePartial(value);
     if (index < allQuestions.length - 1) { setIndex(value => value + 1); setError(""); return; }
     setSubmitting(true);
     try {
@@ -63,7 +85,7 @@ export default function MentoriaForm() {
   return <>{audio}<main className={styles.chatPage}>
     <header className={styles.chatHeader}><div className={styles.avatar}>DM<span /></div><div><b>Diego Mensor</b><span><i /> online agora</span></div><small>Aplicação para mentoria</small></header>
     <div className={styles.topProgress}><i style={{ width: `${progress}%` }} /></div>
-    <section className={styles.conversation}>
+    <section ref={conversationRef} className={styles.conversation}>
       <div className={styles.history}>{index === 0 && <BotBubble>Fala JOVEM!🫡<br />Vou te fazer algumas perguntas rápidas para entender o momento da sua oficina.</BotBubble>}{allQuestions.slice(Math.max(0, index - 2), index).map(question => <div className={styles.exchange} key={question.id}><BotBubble muted>{question.label}</BotBubble><div className={styles.userBubble}>{answers[question.id]}</div></div>)}</div>
       {typing ? <div className={styles.typing} aria-label="Diego está digitando"><i /><i /><i /></div> : <div className={styles.activeQuestion} key={current.id}>
         <div className={styles.botRow}><div className={styles.miniAvatar}>DM</div><div><span className={styles.sender}>Diego</span><div className={styles.botBubble}><b>{current.label}</b>{current.description && <p>{current.description}</p>}</div></div></div>
