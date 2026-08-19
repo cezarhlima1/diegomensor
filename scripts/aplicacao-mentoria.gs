@@ -76,12 +76,18 @@ const COL = HEADERS.reduce((map, header, offset) => {
   return map;
 }, {});
 
+function headerRowMatches_(sheet) {
+  if (sheet.getLastRow() === 0) return false;
+  const currentHeader = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  return HEADERS.every((header, offset) => currentHeader[offset] === header);
+}
+
 function getSheet_() {
   const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
+  if (!headerRowMatches_(sheet)) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
     sheet.setFrozenRows(1);
   }

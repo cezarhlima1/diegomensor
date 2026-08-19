@@ -76,7 +76,6 @@ export default function MentoriaForm() {
     if (current.id === "nome") await savePartial(value);
     if (index < allQuestions.length - 1) { setIndex(value => value + 1); setError(""); sendProgress(updatedAnswers, current.number, false); return; }
     setSubmitting(true);
-    sendProgress(updatedAnswers, current.number, true);
     try {
       const response = await fetch("/api/aplicacao-mentoria", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...updatedAnswers, attribution: getAttribution(), sessionId: sessionIdRef.current }) });
       if (!response.ok) throw new Error(); setDone(true);
