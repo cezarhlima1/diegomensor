@@ -130,6 +130,8 @@ export default function Calculadora({
   permiteEditarOrcamentos,
   historicoCompacto,
   permiteVerCustoPecas,
+  permiteReordenarPecas,
+  permiteQuantidadeDecimal,
 }: {
   /** Papel do usuário na empresa ativa — gate do Passo 1. */
   papel: Papel;
@@ -153,6 +155,10 @@ export default function Calculadora({
   historicoCompacto: boolean;
   /** Acesso restrito ao detalhamento interno de custo das peças. */
   permiteVerCustoPecas: boolean;
+  /** Permite alterar a ordem das peças antes de montar o orçamento. */
+  permiteReordenarPecas: boolean;
+  /** Permite informar quantidades fracionadas de peças. */
+  permiteQuantidadeDecimal: boolean;
 }) {
   const ehAdmin = papel === "admin";
   const [view, setView] = useState<View>("calc");
@@ -168,6 +174,8 @@ export default function Calculadora({
   const [pecas, setPecas] = useState<Peca[]>([]);
   const [expandedId, setExpandedId] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [draggedPecaId, setDraggedPecaId] = useState("");
+  const [dragOverPecaId, setDragOverPecaId] = useState("");
   const [tiers, setTiers] = useState<MarkupTier[]>(() =>
     tiersFromMarkups(passo2ConfigInicial?.markupTiers ?? []),
   );
@@ -461,6 +469,32 @@ export default function Calculadora({
     const p = novaPeca();
     setPecas((prev) => [...prev, p]);
     setExpandedId(p.id);
+  }
+
+  function reorderPeca(draggedId: string, targetId: string) {
+    if (!permiteReordenarPecas) return;
+    if (!draggedId || !targetId || draggedId === targetId) return;
+    setPecas((prev) => {
+      const from = prev.findIndex((p) => p.id === draggedId);
+      const to = prev.findIndex((p) => p.id === targetId);
+      if (from < 0 || to < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
+  function movePecaByKeyboard(id: string, direction: -1 | 1) {
+    if (!permiteReordenarPecas) return;
+    setPecas((prev) => {
+      const from = prev.findIndex((p) => p.id === id);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      [next[from], next[to]] = [next[to], next[from]];
+      return next;
+    });
   }
 
   async function removePeca(id: string) {
@@ -1020,7 +1054,22 @@ export default function Calculadora({
                       return (
                         <div
                           key={p.id}
-                          className={`calc-peca ${isOpen ? "is-open" : ""}`}
+                          className={`calc-peca ${isOpen ? "is-open" : ""} ${draggedPecaId === p.id ? "is-dragging" : ""} ${dragOverPecaId === p.id ? "is-drag-over" : ""}`}
+                          onDragOver={(event) => {
+                            if (!draggedPecaId || isOpen) return;
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            setDragOverPecaId(p.id);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverPecaId === p.id) setDragOverPecaId("");
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            reorderPeca(draggedPecaId, p.id);
+                            setDraggedPecaId("");
+                            setDragOverPecaId("");
+                          }}
                         >
                           <div className="calc-peca-headrow">
                             <span className="calc-peca-chk">
@@ -1031,6 +1080,32 @@ export default function Calculadora({
                                 aria-label={`Selecionar ${p.nome.trim() || "peça"}`}
                               />
                             </span>
+                            {permiteReordenarPecas && !isOpen && pecas.length > 1 && (
+                              <span
+                                className="calc-peca-drag"
+                                draggable
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Reordenar ${p.nome.trim() || "peça"}. Use as setas para cima ou para baixo.`}
+                                title="Arraste para reordenar"
+                                onDragStart={(event) => {
+                                  setDraggedPecaId(p.id);
+                                  event.dataTransfer.effectAllowed = "move";
+                                  event.dataTransfer.setData("text/plain", p.id);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedPecaId("");
+                                  setDragOverPecaId("");
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                                  event.preventDefault();
+                                  movePecaByKeyboard(p.id, event.key === "ArrowUp" ? -1 : 1);
+                                }}
+                              >
+                                ⋮⋮
+                              </span>
+                            )}
                             <button
                               type="button"
                               className="calc-peca-head"
@@ -1068,15 +1143,17 @@ export default function Calculadora({
                                   <span className="quiz-label">Qtd.</span>
                                   <input
                                     type="text"
-                                    inputMode="numeric"
+                                    inputMode={permiteQuantidadeDecimal ? "decimal" : "numeric"}
                                     className="quiz-input"
-                                    placeholder="1"
+                                    placeholder={permiteQuantidadeDecimal ? "Ex.: 1,5" : "1"}
                                     value={p.quantidade}
                                     onChange={(e) =>
                                       setPecaField(
                                         p.id,
                                         "quantidade",
-                                        maskIntTyping(e.target.value),
+                                        permiteQuantidadeDecimal
+                                          ? maskMoneyTyping(e.target.value)
+                                          : maskIntTyping(e.target.value),
                                       )
                                     }
                                   />
@@ -2269,13 +2346,16 @@ export default function Calculadora({
                       <span>Qtd.</span>
                       <input
                         className="quiz-input"
-                        inputMode="numeric"
+                        inputMode={permiteQuantidadeDecimal ? "decimal" : "numeric"}
+                        placeholder={permiteQuantidadeDecimal ? "Ex.: 1,5" : "1"}
                         value={peca.quantidade}
                         onChange={(e) =>
                           atualizarPecaAjuste(
                             peca.id,
                             "quantidade",
-                            maskIntTyping(e.target.value),
+                            permiteQuantidadeDecimal
+                              ? maskMoneyTyping(e.target.value)
+                              : maskIntTyping(e.target.value),
                           )
                         }
                       />

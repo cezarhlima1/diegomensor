@@ -32,19 +32,22 @@ const EMAILS_COM_RECURSOS_EXCLUSIVOS = new Set([
   "automecanicamensor@gmail.com",
   "mensorautomecanica@gmail.com",
 ]);
+const EMAIL_REORDENACAO_PECAS = "diegomensor@hotmail.com";
 
 export default async function CalculadoraPage() {
   // Defesa em profundidade: o middleware já bloqueia sem sessão, mas a
   // página revalida (cobre também usuário autenticado sem empresa).
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
+  const emailSessao = sessao.email.trim().toLowerCase();
   let permiteVerCustoPecas =
-    EMAILS_COM_RECURSOS_EXCLUSIVOS.has(sessao.email);
+    EMAILS_COM_RECURSOS_EXCLUSIVOS.has(emailSessao);
+  let permiteReordenarPecas = emailSessao === EMAIL_REORDENACAO_PECAS;
 
-  // Os recursos também são liberados para os funcionários das empresas
-  // administradas por uma das duas contas exclusivas. A consulta usa RLS:
+  // Os recursos também são liberados para os colaboradores das empresas
+  // administradas pelas contas correspondentes. A consulta usa RLS:
   // o usuário atual só consegue enxergar membros da própria empresa.
-  if (!permiteVerCustoPecas) {
+  if (!permiteVerCustoPecas || !permiteReordenarPecas) {
     const supabase = await createSupabaseServerClient();
     const { data: administradores } = await supabase
       .from("empresa_usuarios")
@@ -52,12 +55,16 @@ export default async function CalculadoraPage() {
       .eq("empresa_id", sessao.empresaAtiva.id)
       .eq("papel", "admin");
 
-    permiteVerCustoPecas = (administradores ?? []).some((vinculo) => {
+    const emailsAdministradores = (administradores ?? []).map((vinculo) => {
       const perfil = vinculo.profiles as unknown as { email?: string } | null;
-      return EMAILS_COM_RECURSOS_EXCLUSIVOS.has(
-        perfil?.email?.trim().toLowerCase() ?? "",
-      );
+      return perfil?.email?.trim().toLowerCase() ?? "";
     });
+    permiteVerCustoPecas ||= emailsAdministradores.some((email) =>
+      EMAILS_COM_RECURSOS_EXCLUSIVOS.has(email),
+    );
+    permiteReordenarPecas ||= emailsAdministradores.includes(
+      EMAIL_REORDENACAO_PECAS,
+    );
   }
 
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
@@ -205,6 +212,8 @@ export default async function CalculadoraPage() {
           permiteEditarOrcamentos
           historicoCompacto
           permiteVerCustoPecas={permiteVerCustoPecas}
+          permiteReordenarPecas={permiteReordenarPecas}
+          permiteQuantidadeDecimal={permiteReordenarPecas}
         />
       </main>
       <Footer />
