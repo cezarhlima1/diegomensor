@@ -47,29 +47,16 @@ export default function UpsellPage() {
   return (
     <main className={styles.page}>
       <div className={styles.glow} aria-hidden="true" />
+      <div className={styles.warningBar}>Espera! Não fecha a página.</div>
 
       <section className={styles.hero}>
         <div className={styles.wrap}>
           <div className={styles.approved}><span>✓</span> Compra aprovada</div>
-          <p className={styles.attention}>Não feche nem atualize esta página</p>
-          <h1>Antes de acessar o treinamento, <em>assista esse vídeo rápido.</em></h1>
-          <p className={styles.promise}>Tu aprendeu a calcular o preço certo. Agora pode deixar a calculadora fazer essa conta por ti.</p>
+          <h1>Eu vou te dar o acesso exclusivo a uma ferramenta que vai mudar a forma como você faz orçamentos dentro da sua oficina.</h1>
+          <p className={styles.promise}>Assista ao vídeo rápido abaixo para conhecer a ferramenta.</p>
           <VideoFrame url={VSL_URL} label="Apresentação da Calculadora de Precificação" />
           <a className={styles.primaryCta} href="#oferta">Sim, quero adicionar a calculadora</a>
           <p className={styles.microcopy}>Acesso imediato após a confirmação.</p>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <span className={styles.eyebrow}>Treinamento + aplicação</span>
-          <h2>Agora que tu vai aprender a precificar, existe uma forma <em>muito mais rápida de aplicar isso.</em></h2>
-          <p className={styles.lead}>No treinamento, tu aprende o método. Na calculadora, tu coloca os números da tua oficina e recebe o cálculo pronto para usar.</p>
-          <div className={styles.formula}>
-            <div><span>01</span><strong>Treinamento</strong><small>Tu aprende</small></div>
-            <b>+</b>
-            <div><span>02</span><strong>Calculadora</strong><small>Tu aplica</small></div>
-          </div>
         </div>
       </section>
 
@@ -79,33 +66,6 @@ export default function UpsellPage() {
           <h2>Sem promessa complicada. <em>Olha como funciona na prática.</em></h2>
           <p className={styles.lead}>Tu preenche os números da oficina, a ferramenta processa as informações e mostra o cálculo que precisa.</p>
           <VideoFrame url={DEMO_URL} label="Demonstração prática da calculadora" />
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <span className={styles.eyebrow}>O trabalho que tu ganha de volta</span>
-          <h2>Tu pode fazer tudo manualmente. <em>Ou pode simplificar.</em></h2>
-          <div className={styles.comparison}>
-            <article className={styles.without}>
-              <div className={styles.cardLabel}>Sem a calculadora</div>
-              <ul>
-                <li>Aprende o método</li>
-                <li>Pega todos os números</li>
-                <li>Faz e confere as contas</li>
-                <li>Recalcula quando os custos mudam</li>
-              </ul>
-            </article>
-            <article className={styles.with}>
-              <div className={styles.cardLabel}>Com a calculadora</div>
-              <ul>
-                <li>Coloca os números</li>
-                <li>Recebe o cálculo</li>
-                <li>Atualiza quando precisar</li>
-                <li>Aplica com mais agilidade</li>
-              </ul>
-            </article>
-          </div>
         </div>
       </section>
 
