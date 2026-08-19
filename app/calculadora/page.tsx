@@ -148,6 +148,7 @@ export default async function CalculadoraPage() {
         placa: o.placa,
         contatoCliente: pecas[0]?.contatoCliente ?? "",
         origem: pecas[0]?.origem ?? null,
+        observacao: pecas[0]?.observacao ?? "",
         valorHora: Number(o.valor_hora),
         horas: Number(o.horas),
         maoDeObra: Number(o.mao_de_obra),

@@ -616,6 +616,12 @@ a:focus-visible, button:focus-visible {
   .calc-pecas-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .calc-select-all { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--color-muted); cursor: pointer; }
   .calc-select-all input[type="checkbox"], .calc-peca-chk input[type="checkbox"] { accent-color: var(--color-blue); width: 16px; height: 16px; cursor: pointer; }
+  .calc-select-all.is-modern { padding: 8px 11px; border: 1px solid rgba(4,149,240,.2); border-radius: 10px; background: rgba(4,149,240,.055); color: #b9d8e9; transition: border-color .2s ease, background .2s ease, color .2s ease; }
+  .calc-select-all.is-modern:hover { border-color: rgba(4,149,240,.45); background: rgba(4,149,240,.1); color: #fff; }
+  input.calc-modern-checkbox[type="checkbox"] { appearance: none; display: grid; flex: none; width: 19px; height: 19px; margin: 0; place-items: center; border: 1px solid rgba(143,178,204,.42); border-radius: 6px; outline: none; background-color: rgba(7,15,22,.72); background-position: center; background-repeat: no-repeat; background-size: 12px; box-shadow: inset 0 1px 2px rgba(0,0,0,.28); cursor: pointer; transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  input.calc-modern-checkbox[type="checkbox"]:hover { border-color: rgba(79,182,246,.75); transform: translateY(-1px); }
+  input.calc-modern-checkbox[type="checkbox"]:checked { border-color: #0495f0; background-color: #0495f0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2303131f' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='m3 8 3 3 7-7'/%3E%3C/svg%3E"); box-shadow: 0 0 0 3px rgba(4,149,240,.14),0 5px 14px rgba(4,149,240,.22); }
+  input.calc-modern-checkbox[type="checkbox"]:focus-visible { border-color: #4fb6f6; box-shadow: 0 0 0 3px rgba(4,149,240,.2); }
   .calc-pecas { display: grid; gap: 10px; }
   .calc-peca { border: 1px solid var(--color-line); border-radius: 14px; background: linear-gradient(165deg, var(--color-card), #0e151c); overflow: hidden; transition: border-color .2s ease, box-shadow .25s ease, opacity .2s ease, transform .2s ease; }
   .calc-peca.is-open { border-color: rgba(4,149,240,.55); box-shadow: var(--glow); }
@@ -759,6 +765,13 @@ a:focus-visible, button:focus-visible {
   .calc-hist-total b { color: var(--color-brand-green); font-weight: 700; }
   .calc-hist-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--color-line); }
   .calc-hist-controls.is-compacto { justify-content: flex-end; }
+  .calc-hist-controls.is-compacto.has-note { justify-content: space-between; }
+  .calc-hist-note { position: relative; display: flex; flex: 1 1 260px; align-items: center; gap: 8px; min-width: 180px; max-width: 520px; }
+  .calc-hist-note > span { flex: none; color: var(--color-muted); font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .calc-hist-note > input { width: 100%; min-width: 0; height: 38px; padding: 0 11px; border: 1px solid var(--color-line); border-radius: 9px; outline: none; background: rgba(143,178,204,.045); color: var(--color-offwhite); font-size: 12px; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
+  .calc-hist-note > input::placeholder { color: var(--color-muted-dim); }
+  .calc-hist-note > input:focus { border-color: rgba(4,149,240,.55); background: rgba(4,149,240,.055); box-shadow: 0 0 0 3px rgba(4,149,240,.1); }
+  .calc-hist-note > small { position: absolute; right: 8px; bottom: -13px; color: var(--color-muted-dim); font: 8px var(--font-mono); }
   .calc-hist-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .calc-hist--compacto { gap: 0; padding: 0; overflow: hidden; }
   .calc-hist-resumo {
@@ -830,6 +843,7 @@ a:focus-visible, button:focus-visible {
     .calc-hist-vals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .calc-hist-total { grid-column: 1 / -1; }
     .calc-hist-controls { align-items: stretch; flex-direction: column; }
+    .calc-hist-note { flex-basis: auto; width: 100%; max-width: none; }
     .calc-hist-status { width: 100%; }
     .calc-hist-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .calc-hist-actions .calc-hist-wa { width: 100%; }

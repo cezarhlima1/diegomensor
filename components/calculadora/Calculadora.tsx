@@ -43,6 +43,7 @@ import {
   usePulse,
 } from "./calcUi";
 import {
+  atualizarObservacaoOrcamento,
   atualizarStatusOrcamento,
   criarOrcamento,
   editarOrcamento,
@@ -82,6 +83,7 @@ type OrcamentoAjusteRapido = {
   placa: string;
   contatoCliente: string;
   origem: OrigemCliente | "";
+  observacao: string;
   valorHora: number;
   pecas: PecaAjusteRapido[];
 };
@@ -205,6 +207,7 @@ export default function Calculadora({
   const [copiadoId, setCopiadoId] = useState("");
   const [placaCopiadaId, setPlacaCopiadaId] = useState("");
   const [orcamentoAbertoId, setOrcamentoAbertoId] = useState("");
+  const [salvandoObservacaoId, setSalvandoObservacaoId] = useState("");
   const [detalheCustoId, setDetalheCustoId] = useState("");
   const [ajusteRapido, setAjusteRapido] =
     useState<OrcamentoAjusteRapido | null>(null);
@@ -667,6 +670,7 @@ export default function Calculadora({
       placa: o.placa,
       contatoCliente: o.contatoCliente ?? "",
       origem: o.origem ?? "",
+      observacao: o.observacao ?? "",
       valorHora: o.valorHora,
       pecas: pecasRecuperadas,
     });
@@ -769,6 +773,7 @@ export default function Calculadora({
           placa: ajusteRapido.placa,
           contatoCliente: ajusteRapido.contatoCliente,
           origem: ajusteRapido.origem || null,
+          observacao: ajusteRapido.observacao,
           valorHora: ajusteRapido.valorHora,
           horas,
           maoDeObra,
@@ -850,6 +855,17 @@ export default function Calculadora({
     } catch {
       // clipboard indisponível: ignora
     }
+  }
+
+  async function salvarObservacao(o: Orcamento) {
+    setSalvandoObservacaoId(o.id);
+    const resultado = await atualizarObservacaoOrcamento(
+      empresaId,
+      o.id,
+      o.observacao ?? "",
+    );
+    if (!resultado.ok) setErroAjuste(resultado.error);
+    setSalvandoObservacaoId("");
   }
 
   async function copiarPlacaHistorico(o: Orcamento) {
@@ -1025,9 +1041,10 @@ export default function Calculadora({
 
                   {/* lista de peças (acordeão) */}
                   <div className="calc-pecas-toolbar">
-                    <label className="calc-select-all">
+                    <label className={`calc-select-all ${permiteReordenarPecas ? "is-modern" : ""}`}>
                       <input
                         type="checkbox"
+                        className={permiteReordenarPecas ? "calc-modern-checkbox" : undefined}
                         checked={
                           pecas.length > 0 && selectedIds.size === pecas.length
                         }
@@ -1075,6 +1092,7 @@ export default function Calculadora({
                             <span className="calc-peca-chk">
                               <input
                                 type="checkbox"
+                                className={permiteReordenarPecas ? "calc-modern-checkbox" : undefined}
                                 checked={selectedIds.has(p.id)}
                                 onChange={() => togglePecaSelected(p.id)}
                                 aria-label={`Selecionar ${p.nome.trim() || "peça"}`}
@@ -2072,7 +2090,7 @@ export default function Calculadora({
                           })}
                         </div>
                       )}
-                      <div className={`calc-hist-controls ${historicoCompacto ? "is-compacto" : ""}`}>
+                      <div className={`calc-hist-controls ${historicoCompacto ? "is-compacto has-note" : ""}`}>
                         {!historicoCompacto && <select
                           className={`calc-hist-status ${
                             o.status === "Aprovado"
@@ -2097,6 +2115,31 @@ export default function Calculadora({
                           <option value="Aprovado">Aprovado</option>
                           <option value="Não aprovado">Não aprovado</option>
                         </select>}
+                        {historicoCompacto && permiteReordenarPecas && (
+                          <label className="calc-hist-note">
+                            <span>Obs:</span>
+                            <input
+                              type="text"
+                              value={o.observacao ?? ""}
+                              maxLength={1000}
+                              placeholder="Informação adicional sobre o cliente"
+                              disabled={salvandoObservacaoId === o.id}
+                              onChange={(event) => {
+                                const observacao = event.target.value;
+                                setOrcamentos((atuais) =>
+                                  atuais.map((item) =>
+                                    item.id === o.id ? { ...item, observacao } : item,
+                                  ),
+                                );
+                              }}
+                              onBlur={() => void salvarObservacao(o)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") event.currentTarget.blur();
+                              }}
+                            />
+                            {salvandoObservacaoId === o.id && <small>Salvando…</small>}
+                          </label>
+                        )}
                         <div className="calc-hist-actions">
                           {permiteVerCustoPecas && (
                             <button

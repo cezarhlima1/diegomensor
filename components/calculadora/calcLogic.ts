@@ -243,6 +243,7 @@ export type PecaResumo = {
   /** Metadados do orçamento guardados no primeiro item do snapshot JSON. */
   contatoCliente?: string;
   origem?: OrigemCliente | null;
+  observacao?: string;
 };
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
@@ -256,6 +257,7 @@ export type Orcamento = {
   placa: string;
   contatoCliente?: string;
   origem?: OrigemCliente | null;
+  observacao?: string;
   valorHora: number;
   horas: number;
   maoDeObra: number;

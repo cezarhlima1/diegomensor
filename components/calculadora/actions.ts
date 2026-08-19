@@ -42,6 +42,7 @@ const MAX_CHARS_SUFIXO = 2000;
 const MAX_CHARS_NOME = 120;
 /** Teto de caracteres da placa (formato Mercosul cabe em 7; sobra folga). */
 const MAX_CHARS_PLACA = 10;
+const MAX_CHARS_OBSERVACAO = 1000;
 /** Teto de peças por orçamento — evita payload arbitrário no jsonb. */
 const MAX_PECAS = 100;
 /** Teto defensivo para impedir overflow/abuso de colunas numeric. */
@@ -55,6 +56,24 @@ const STATUS_VALIDOS: StatusOrcamento[] = [
   "Aprovado",
   "Não aprovado",
 ];
+const EMAIL_RECURSOS_PECAS = "diegomensor@hotmail.com";
+
+async function permiteRecursosPecas(
+  empresaId: string,
+  emailUsuario: string,
+): Promise<boolean> {
+  if (emailUsuario.trim().toLowerCase() === EMAIL_RECURSOS_PECAS) return true;
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("empresa_usuarios")
+    .select("profiles ( email )")
+    .eq("empresa_id", empresaId)
+    .eq("papel", "admin");
+  return (data ?? []).some((vinculo) => {
+    const perfil = vinculo.profiles as unknown as { email?: string } | null;
+    return perfil?.email?.trim().toLowerCase() === EMAIL_RECURSOS_PECAS;
+  });
+}
 
 const STATUS_VALOR_HORA_VALIDOS: StatusValorHora[] = [
   "ativo",
@@ -223,6 +242,10 @@ function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
       ORIGENS_VALIDAS.includes(p.origem as OrigemCliente)
         ? (p.origem as OrigemCliente)
         : undefined,
+    observacao:
+      p?.observacao != null
+        ? String(p.observacao).trim().slice(0, MAX_CHARS_OBSERVACAO)
+        : undefined,
   }));
 }
 
@@ -257,6 +280,7 @@ function paraOrcamento(row: {
     placa: row.placa,
     contatoCliente: ((row.pecas ?? []) as PecaResumo[])[0]?.contatoCliente ?? "",
     origem: ((row.pecas ?? []) as PecaResumo[])[0]?.origem ?? null,
+    observacao: ((row.pecas ?? []) as PecaResumo[])[0]?.observacao ?? "",
     valorHora: Number(row.valor_hora),
     horas: Number(row.horas),
     maoDeObra: Number(row.mao_de_obra),
@@ -281,6 +305,7 @@ type DadosOrcamento = {
   placa: string;
   contatoCliente?: string;
   origem?: OrigemCliente | null;
+  observacao?: string;
   valorHora: number;
   horas: number;
   maoDeObra: number;
@@ -310,6 +335,7 @@ export async function criarOrcamento(
           ...peca,
           contatoCliente: dados.contatoCliente,
           origem: dados.origem,
+          observacao: dados.observacao,
         }
       : peca,
   );
@@ -376,6 +402,7 @@ export async function editarOrcamento(
           ...peca,
           contatoCliente: dados.contatoCliente,
           origem: dados.origem,
+          observacao: dados.observacao,
         }
       : peca,
   );
@@ -419,11 +446,50 @@ export async function editarOrcamento(
   return { ok: true, orcamento: paraOrcamento(data) };
 }
 
-/**
- * Muda o status de um orçamento existente entre as opções do CHECK
- * (Aguardando aprovação / Aprovado / Não aprovado). Qualquer membro da
- * empresa pode mudar — não é restrito a admin.
- */
+/** Salva a observação livre no snapshot JSON do orçamento. */
+export async function atualizarObservacaoOrcamento(
+  empresaId: string,
+  orcamentoId: string,
+  observacao: string,
+): Promise<ResultadoAuth> {
+  const sessao = await getSessaoComEmpresa();
+  const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
+  if (!vinculo) return { ok: false, error: ERRO_SEM_VINCULO };
+  if (!(await permiteRecursosPecas(empresaId, sessao.email))) {
+    return { ok: false, error: ERRO_SEM_PERMISSAO };
+  }
+  if (!idValido(orcamentoId)) return { ok: false, error: ERRO_GENERICO };
+
+  const admin = createSupabaseAdminClient();
+  const { data: atual, error: erroLeitura } = await admin
+    .from("orcamentos")
+    .select("pecas")
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  if (erroLeitura || !atual) return { ok: false, error: ERRO_GENERICO };
+
+  const pecas = Array.isArray(atual.pecas)
+    ? [...(atual.pecas as PecaResumo[])]
+    : [];
+  if (!pecas.length) return { ok: false, error: ERRO_GENERICO };
+  pecas[0] = {
+    ...pecas[0],
+    observacao: String(observacao ?? "").trim().slice(0, MAX_CHARS_OBSERVACAO),
+  };
+
+  const { data, error } = await admin
+    .from("orcamentos")
+    .update({ pecas })
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { ok: false, error: ERRO_GENERICO };
+  return { ok: true };
+}
+
+/** Muda o status de um orçamento existente. */
 export async function atualizarStatusOrcamento(
   empresaId: string,
   orcamentoId: string,
