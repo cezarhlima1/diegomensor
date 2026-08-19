@@ -23,9 +23,6 @@ function crmSourceForAttribution(attribution: { utmSource: string; utmContent: s
 }
 
 export async function POST(request: Request) {
-  const webhook = process.env.MENTORIA_SHEETS_WEBHOOK_URL || process.env.SHEETS_WEBHOOK_URL;
-  if (!webhook?.startsWith("https://")) return NextResponse.json({ ok: false, error: "missing-webhook" }, { status: 500 });
-
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return NextResponse.json({ ok: false, error: "payload-too-large" }, { status: 413 });
 
@@ -37,6 +34,53 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: "invalid-json" }, { status: 400 });
   }
+
+  const rawAttribution = body.attribution && typeof body.attribution === "object" ? body.attribution as Record<string, unknown> : {};
+  const attribution = {
+    utmSource: safeText(rawAttribution.utmSource, 100) || "direto",
+    utmMedium: safeText(rawAttribution.utmMedium, 100),
+    utmCampaign: safeText(rawAttribution.utmCampaign, 150),
+    utmContent: safeText(rawAttribution.utmContent, 150),
+    utmTerm: safeText(rawAttribution.utmTerm, 150),
+    landingPage: safeText(rawAttribution.landingPage, 1_000),
+    referrer: safeText(rawAttribution.referrer, 1_000) || "direto",
+  };
+
+  if (body.mode === "partial") {
+    const name = safeText(body.nome, 300);
+    const phone = safeText(body.whatsapp, 300);
+    if (name.length < 2 || phone.replace(/\D/g, "").length < 10) {
+      return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 400 });
+    }
+    try {
+      const db = crmPool();
+      const existing = await db.query(
+        "select id from public.crm_leads where regexp_replace(phone,'\\D','','g')=regexp_replace($1,'\\D','','g') limit 1",
+        [phone],
+      );
+      if (!existing.rows[0]?.id) {
+        const expectedSource = crmSourceForAttribution(attribution);
+        const registeredSource = await db.query(
+          "select name from public.crm_lead_sources where lower(name)=lower($1) limit 1",
+          [expectedSource],
+        );
+        const crmSource = registeredSource.rows[0]?.name || expectedSource;
+        const tags = ["Formulário incompleto", attribution.utmSource, attribution.utmMedium, attribution.utmCampaign, attribution.utmContent]
+          .filter((value) => value && value !== "direto");
+        await db.query(
+          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,'','Iniciou o formulário e informou nome e WhatsApp.',$4,$5,'Mentoria OAG','Novo lead',0,'Morno','Concluir aplicação',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now())",
+          [crypto.randomUUID(), name, phone, tags, crmSource],
+        );
+      }
+      return NextResponse.json({ ok: true, partial: true });
+    } catch (error) {
+      console.error("Mentoria partial CRM write failed", error);
+      return NextResponse.json({ ok: false, error: "partial-save-failed" }, { status: 502 });
+    }
+  }
+
+  const webhook = process.env.MENTORIA_SHEETS_WEBHOOK_URL || process.env.SHEETS_WEBHOOK_URL;
+  if (!webhook?.startsWith("https://")) return NextResponse.json({ ok: false, error: "missing-webhook" }, { status: 500 });
 
   const answers: Record<string, string> = {};
   for (const question of allQuestions) {
@@ -50,17 +94,6 @@ export async function POST(request: Request) {
   const sessionId = SESSION_ID_RE.test(rawSessionId) ? rawSessionId : "";
 
   const readableAnswers = allQuestions.map((question) => ({ numero: question.number, pergunta: question.label, resposta: answers[question.id] }));
-  const rawAttribution = body.attribution && typeof body.attribution === "object" ? body.attribution as Record<string, unknown> : {};
-  const attribution = {
-    utmSource: safeText(rawAttribution.utmSource, 100) || "direto",
-    utmMedium: safeText(rawAttribution.utmMedium, 100),
-    utmCampaign: safeText(rawAttribution.utmCampaign, 150),
-    utmContent: safeText(rawAttribution.utmContent, 150),
-    utmTerm: safeText(rawAttribution.utmTerm, 150),
-    landingPage: safeText(rawAttribution.landingPage, 1_000),
-    referrer: safeText(rawAttribution.referrer, 1_000) || "direto",
-  };
-
   try {
     const response = await fetch(webhook, {
       method: "POST",
@@ -110,12 +143,12 @@ export async function POST(request: Request) {
     if (existing.rows[0]?.id) {
       if (supportsApplication) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=$4,application=$5::jsonb,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), JSON.stringify(application), tags, crmSource, submittedAt],
         );
       } else {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=$4,tags=coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=$4,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, answers.email.toLowerCase(), tags, crmSource, submittedAt],
         );
       }

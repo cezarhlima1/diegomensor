@@ -5,9 +5,9 @@ import Footer from "@/components/Footer";
 import ClarityScript from "@/components/ClarityScript";
 
 export const metadata: Metadata = {
-  title: "Diagnóstico da sua Oficina - Diego Mensor",
+  title: "Você está cobrando errado? | Diego Mensor",
   description:
-    "Responda 5 perguntas rápidas e descubra qual treinamento de precificação faz mais sentido pra sua oficina agora.",
+    "Em menos de 2 minutos, descubra se sua oficina está cobrando certo ou perdendo dinheiro em serviços todos os dias.",
 };
 
 export default function QuizPage() {
