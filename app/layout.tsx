@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   title: "Precificação para Oficinas - Diego Mensor",
   description:
     "Descubra quanto sua oficina realmente custa, quanto deveria cobrar e onde você está deixando dinheiro na mesa. 7 passos práticos. Acesso imediato e vitalício.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export const viewport: Viewport = {
