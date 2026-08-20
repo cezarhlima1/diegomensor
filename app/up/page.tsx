@@ -12,7 +12,7 @@ export default function UpsellPage() {
   return (
     <main className={styles.page}>
       <div className={styles.glow} aria-hidden="true" />
-      <div className={styles.warningBar}>Não fecha essa página ainda pra não PERDER!</div>
+      <div className={styles.warningBar}><strong>Não fecha essa página ainda pra não PERDER!</strong></div>
 
       <section className={styles.hero}>
         <div className={styles.wrap}>
