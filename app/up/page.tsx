@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GreennUpsellButton from "@/components/GreennUpsellButton";
 import UpsellVturbPlayer from "@/components/UpsellVturbPlayer";
 import styles from "./up.module.css";
 
@@ -22,6 +23,7 @@ export default function UpsellPage() {
           <div className={styles.videoFrame}>
             <UpsellVturbPlayer />
           </div>
+          <GreennUpsellButton className={styles.primaryCta} />
         </div>
       </section>
 
