@@ -26,47 +26,11 @@ export const metadata: Metadata = {
 // build sem env do Supabase tentaria prerender e falharia na checagem de env
 // (que roda antes de cookies() marcar a rota como dinâmica).
 export const dynamic = "force-dynamic";
-const EMAILS_COM_RECURSOS_EXCLUSIVOS = new Set([
-  "diego.mensor@hotmail.com",
-  "diegomensor@hotmail.com",
-  "automecanicamensor@gmail.com",
-  "mensorautomecanica@gmail.com",
-]);
-const EMAIL_REORDENACAO_PECAS = "diegomensor@hotmail.com";
-
 export default async function CalculadoraPage() {
   // Defesa em profundidade: o middleware já bloqueia sem sessão, mas a
   // página revalida (cobre também usuário autenticado sem empresa).
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
-  const emailSessao = sessao.email.trim().toLowerCase();
-  let permiteVerCustoPecas =
-    EMAILS_COM_RECURSOS_EXCLUSIVOS.has(emailSessao);
-  let permiteReordenarPecas = emailSessao === EMAIL_REORDENACAO_PECAS;
-
-  // Os recursos também são liberados para os colaboradores das empresas
-  // administradas pelas contas correspondentes. A consulta usa RLS:
-  // o usuário atual só consegue enxergar membros da própria empresa.
-  if (!permiteVerCustoPecas || !permiteReordenarPecas) {
-    const supabase = await createSupabaseServerClient();
-    const { data: administradores } = await supabase
-      .from("empresa_usuarios")
-      .select("papel, profiles ( email )")
-      .eq("empresa_id", sessao.empresaAtiva.id)
-      .eq("papel", "admin");
-
-    const emailsAdministradores = (administradores ?? []).map((vinculo) => {
-      const perfil = vinculo.profiles as unknown as { email?: string } | null;
-      return perfil?.email?.trim().toLowerCase() ?? "";
-    });
-    permiteVerCustoPecas ||= emailsAdministradores.some((email) =>
-      EMAILS_COM_RECURSOS_EXCLUSIVOS.has(email),
-    );
-    permiteReordenarPecas ||= emailsAdministradores.includes(
-      EMAIL_REORDENACAO_PECAS,
-    );
-  }
-
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
   // funcionário nem a query acontece, então os dados nunca saem do servidor
   // (DW-4.1). Leitura via client RLS (policy "select apenas admin da
@@ -212,9 +176,9 @@ export default async function CalculadoraPage() {
           nomeEmpresa={sessao.empresaAtiva.nome}
           permiteEditarOrcamentos
           historicoCompacto
-          permiteVerCustoPecas={permiteVerCustoPecas}
-          permiteReordenarPecas={permiteReordenarPecas}
-          permiteQuantidadeDecimal={permiteReordenarPecas}
+          permiteVerCustoPecas
+          permiteReordenarPecas
+          permiteQuantidadeDecimal
         />
       </main>
       <Footer />

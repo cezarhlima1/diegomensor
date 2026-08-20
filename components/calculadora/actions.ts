@@ -56,25 +56,6 @@ const STATUS_VALIDOS: StatusOrcamento[] = [
   "Aprovado",
   "Não aprovado",
 ];
-const EMAIL_RECURSOS_PECAS = "diegomensor@hotmail.com";
-
-async function permiteRecursosPecas(
-  empresaId: string,
-  emailUsuario: string,
-): Promise<boolean> {
-  if (emailUsuario.trim().toLowerCase() === EMAIL_RECURSOS_PECAS) return true;
-  const admin = createSupabaseAdminClient();
-  const { data } = await admin
-    .from("empresa_usuarios")
-    .select("profiles ( email )")
-    .eq("empresa_id", empresaId)
-    .eq("papel", "admin");
-  return (data ?? []).some((vinculo) => {
-    const perfil = vinculo.profiles as unknown as { email?: string } | null;
-    return perfil?.email?.trim().toLowerCase() === EMAIL_RECURSOS_PECAS;
-  });
-}
-
 const STATUS_VALOR_HORA_VALIDOS: StatusValorHora[] = [
   "ativo",
   "inativo",
@@ -455,9 +436,6 @@ export async function atualizarObservacaoOrcamento(
   const sessao = await getSessaoComEmpresa();
   const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
   if (!sessao || !vinculo) return { ok: false, error: ERRO_SEM_VINCULO };
-  if (!(await permiteRecursosPecas(empresaId, sessao.email))) {
-    return { ok: false, error: ERRO_SEM_PERMISSAO };
-  }
   if (!idValido(orcamentoId)) return { ok: false, error: ERRO_GENERICO };
 
   const admin = createSupabaseAdminClient();

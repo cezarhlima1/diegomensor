@@ -155,7 +155,7 @@ export default function Calculadora({
   permiteEditarOrcamentos: boolean;
   /** Visual resumido e expansível do histórico. */
   historicoCompacto: boolean;
-  /** Acesso restrito ao detalhamento interno de custo das peças. */
+  /** Exibe o detalhamento interno de custo das peças e dados complementares. */
   permiteVerCustoPecas: boolean;
   /** Permite alterar a ordem das peças antes de montar o orçamento. */
   permiteReordenarPecas: boolean;
