@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import UpsellVturbPlayer from "@/components/UpsellVturbPlayer";
 import styles from "./up.module.css";
 
 export const metadata: Metadata = {
@@ -6,30 +7,6 @@ export const metadata: Metadata = {
   description: "Adicione a Calculadora de Precificação ao seu treinamento.",
   robots: { index: false, follow: false },
 };
-
-// Substitua pelos links definitivos quando os vídeos e o checkout estiverem prontos.
-const VSL_URL = "";
-
-function VideoFrame({ url, label }: { url: string; label: string }) {
-  return (
-    <div className={styles.videoFrame}>
-      {url ? (
-        <iframe
-          src={url}
-          title={label}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      ) : (
-        <div className={styles.videoPlaceholder}>
-          <span className={styles.play} aria-hidden="true">▶</span>
-          <strong>{label}</strong>
-          <small>O vídeo será inserido aqui</small>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function UpsellPage() {
   return (
@@ -42,7 +19,9 @@ export default function UpsellPage() {
           <p className={styles.exclusive}>Você acaba de liberar uma condição exclusiva</p>
           <h1>Depois que você fizer o primeiro orçamento com essa ferramenta, vai ser difícil entender como conseguiu trabalhar tanto tempo sem ela.</h1>
           <p className={styles.promise}>Gravei um vídeo pra te explicar como usar ela pra agilizar e padronizar teus orçamentos.</p>
-          <VideoFrame url={VSL_URL} label="Apresentação da Calculadora de Precificação" />
+          <div className={styles.videoFrame}>
+            <UpsellVturbPlayer />
+          </div>
         </div>
       </section>
 
