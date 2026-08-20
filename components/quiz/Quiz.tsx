@@ -127,7 +127,7 @@ function ResultPage({ result, analysis, verdict, restart }: { result: QuizResult
   return <div className={`cta-reveal ${styles.resultPage}`}>
     <section className={styles.diagnosisCard}>
       <span className="limited">{result.kicker}</span><p className="font-mono text-[11px] uppercase tracking-[.14em] text-muted">Seu diagnóstico</p>
-      <p className={styles.diagnosisOpening}>Jovem, o diagnóstico está pronto. Analisamos todas as tuas respostas e acho que tu vai se identificar com várias das coisas que temos pra te mostrar agora.</p>
+      <p className={styles.diagnosisOpening}>Jovem, o diagnóstico está pronto. Analisamos tuas respostas e acho que tu vai se identificar com várias coisas que temos pra te mostrar agora.</p>
       <h2 className="font-display font-black text-[clamp(27px,5vw,44px)] text-blue mt-2">{result.course}</h2><p className="font-display font-bold text-[19px] mt-4">{result.tagline}</p><p className="lead mt-4">{result.description}</p>
       <div className={styles.analysisBox}>
         <p className="font-mono text-[10px] uppercase tracking-[.12em] text-blue">Análise geral da tua oficina</p>
