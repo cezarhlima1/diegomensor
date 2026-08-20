@@ -10,13 +10,6 @@ export const metadata: Metadata = {
 // Substitua pelos links definitivos quando os vídeos e o checkout estiverem prontos.
 const VSL_URL = "";
 
-const deliverables = [
-  "Dois acessos: um para o dono e outro para o funcionário",
-  "CRM para gestão e acompanhamento dos orçamentos",
-  "Cálculo de peças de forma automática e padronizada",
-  "Orçamento com os dados do cliente e mensagem pronta para envio",
-];
-
 function VideoFrame({ url, label }: { url: string; label: string }) {
   return (
     <div className={styles.videoFrame}>
@@ -42,27 +35,14 @@ export default function UpsellPage() {
   return (
     <main className={styles.page}>
       <div className={styles.glow} aria-hidden="true" />
-      <div className={styles.warningBar}>Espera! Não fecha a página.</div>
+      <div className={styles.warningBar}>Não fecha essa página ainda pra não PERDER!</div>
 
       <section className={styles.hero}>
         <div className={styles.wrap}>
-          <div className={styles.approved}><span>✓</span> Sua compra foi aprovada!</div>
           <p className={styles.exclusive}>Você acaba de liberar uma condição exclusiva</p>
-          <h1>A ferramenta que vai mudar a forma como você faz orçamentos na sua oficina.</h1>
-          <p className={styles.promise}>Assista ao vídeo abaixo e veja como ela funciona.</p>
+          <h1>Depois que você fizer o primeiro orçamento com essa ferramenta, vai ser difícil entender como conseguiu trabalhar tanto tempo sem ela.</h1>
+          <p className={styles.promise}>Gravei um vídeo pra te explicar como usar ela pra agilizar e padronizar teus orçamentos.</p>
           <VideoFrame url={VSL_URL} label="Apresentação da Calculadora de Precificação" />
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <span className={styles.eyebrow}>Tudo que tu recebe</span>
-          <h2>Ao adicionar a calculadora ao teu pedido, <em>isso entra no teu acesso:</em></h2>
-          <div className={styles.deliverables}>
-            {deliverables.map((item) => <div key={item}><span>✓</span><p>{item}</p></div>)}
-          </div>
-          <p className={styles.closing}>Menos tempo quebrando a cabeça com conta. Mais segurança para aplicar o preço certo na tua oficina.</p>
-          <button className={styles.primaryCta} type="button">Quero agilizar e padronizar meus orçamentos!</button>
         </div>
       </section>
 
