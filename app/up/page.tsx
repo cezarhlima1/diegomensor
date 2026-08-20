@@ -17,9 +17,9 @@ export default function UpsellPage() {
       <section className={styles.hero}>
         <div className={styles.wrap}>
           <p className={styles.exclusive}>Você acaba de liberar uma condição exclusiva</p>
-          <h1>Depois que você fizer o primeiro orçamento com essa ferramenta, vai ser difícil entender como conseguiu trabalhar tanto tempo sem ela.</h1>
+          <h1>Depois que você fizer o primeiro <span className={styles.titleHighlight}>orçamento</span> com essa ferramenta, vai ser difícil entender como conseguiu trabalhar tanto tempo <span className={styles.titleHighlight}>sem ela</span>.</h1>
           <p className={styles.promise}>Gravei um vídeo pra te explicar como usar ela pra agilizar e padronizar teus orçamentos.</p>
-          <p className={styles.rotateHint}><span aria-hidden="true">↻</span> Vire o celular para assistir ao vídeo</p>
+          <p className={styles.rotateHint}><span aria-hidden="true">↻</span> Vira o celular pra assistir o vídeo</p>
           <div className={styles.videoFrame}>
             <UpsellVturbPlayer />
           </div>
