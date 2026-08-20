@@ -62,12 +62,12 @@ export default function Quiz() {
   }
 
   return (
-    <section className={`relative min-h-[100svh] ${stage === "result" ? "py-16 md:py-24" : "flex items-center py-24"}`}>
+    <section className={`relative min-h-[100svh] ${styles.quizPage} ${stage === "result" ? `${styles.resultStage} py-16 md:py-24` : "flex items-center py-24"}`}>
       <div className="hero-bg" aria-hidden="true" />
-      <div className={`wrap relative ${stage === "result" ? "max-w-[980px]" : "max-w-[760px]"}`}>
+      <div className={`wrap relative ${styles.quizWrap} ${stage === "result" ? "max-w-[980px]" : "max-w-[760px]"}`}>
         {(stage === "quiz" || stage === "insight" || stage === "lead") && <Progress current={current} progress={stage === "lead" ? 100 : progress} label={stage === "lead" ? "Diagnóstico pronto" : stage === "insight" ? "Um dado importante" : `Pergunta ${current + 1} de ${questions.length}`} />}
 
-        {stage === "intro" && <div className="text-center cta-reveal">
+        {stage === "intro" && <div className={`text-center cta-reveal ${styles.intro}`}>
           <span className="tag">Teste gratuito · 2 minutos</span>
           <h1 className={`section-title mt-5 ${styles.introTitle}`}>Em menos de 2 minutos, descubra se você está <span className="text-blue">COBRANDO errado</span> dentro da sua oficina.</h1>
           <p className="lead mt-5 max-w-[600px] mx-auto">Responda algumas perguntas rápidas e descubra se você está cobrando certo ou perdendo dinheiro em serviços todos os dias.</p>
@@ -89,8 +89,8 @@ export default function Quiz() {
           <p className="text-offwhite text-[17px] font-bold mt-5">Tu acredita numa coisa dessa?</p>
           <p className="lead mt-4">Quando tu não sabe exatamente quanto precisa cobrar, o preço vira chute. E quando o preço vira chute... o lucro vai embora.</p>
           <p className="lead mt-4">Aí tu trabalha pra caramba, às vezes com a oficina cheia, e o dinheiro simplesmente não aparece.</p>
-          <button className="btn btn--lg mt-8" onClick={() => { setCurrent(2); setStage("quiz"); }}>Continuar o teste</button>
-          <button onClick={() => { setCurrent(1); setStage("quiz"); }} className="ml-5 font-mono text-[11px] uppercase text-muted">← Voltar</button>
+          <div className={styles.insightActions}><button className="btn btn--lg" onClick={() => { setCurrent(2); setStage("quiz"); }}>Continuar o teste</button>
+          <button onClick={() => { setCurrent(1); setStage("quiz"); }} className="font-mono text-[11px] uppercase text-muted">← Voltar</button></div>
         </div>}
 
         {stage === "lead" && <div className={`cta-reveal max-w-[560px] mx-auto ${styles.leadCapture}`}>
@@ -112,7 +112,7 @@ export default function Quiz() {
 }
 
 function Progress({ current, progress, label }: { current: number; progress: number; label: string }) {
-  return <div className="mb-9"><div className="flex items-center justify-between mb-2.5"><span className="font-mono text-[11px] tracking-[.14em] uppercase text-muted">{label}</span><span className="font-mono text-[11px] text-blue">{Math.max(progress, Math.round((current / questions.length) * 100))}%</span></div><div className="h-1.5 rounded-full bg-white/[.08] overflow-hidden"><div className="h-full rounded-full bg-blue transition-[width] duration-500" style={{ width: `${progress}%`, boxShadow: "0 0 12px var(--color-blue)" }} /></div></div>;
+  return <div className={styles.progress}><div className="flex items-center justify-between mb-2.5"><span className="font-mono text-[11px] tracking-[.14em] uppercase text-muted">{label}</span><span className="font-mono text-[11px] text-blue">{Math.max(progress, Math.round((current / questions.length) * 100))}%</span></div><div className="h-1.5 rounded-full bg-white/[.08] overflow-hidden"><div className="h-full rounded-full bg-blue transition-[width] duration-500" style={{ width: `${progress}%`, boxShadow: "0 0 12px var(--color-blue)" }} /></div></div>;
 }
 
 function LeadField({ id, label, value, error, onChange, type = "text", autoComplete }: { id: string; label: string; value: string; error?: string; onChange: (value: string) => void; type?: string; autoComplete: string }) {
