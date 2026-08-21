@@ -17,9 +17,10 @@ export default function Offer() {
   return (
     <>
       {/* dobra 1: bônus */}
-      <section className="py-[72px] md:py-24">
-        <div className="wrap max-w-3xl mx-auto text-center">
-          <span className="tag reveal">Bônus prático</span>
+      <section className="relative overflow-hidden py-[72px] md:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(4,149,240,.16),transparent_48%)]" aria-hidden="true" />
+        <div className="wrap max-w-3xl mx-auto rounded-[24px] border border-blue/35 bg-[linear-gradient(155deg,rgba(20,39,53,.96),rgba(9,16,22,.98))] px-5 py-10 text-center shadow-[0_30px_90px_-45px_rgba(4,149,240,.8)] md:px-12 md:py-14">
+          <span className="limited reveal mx-auto !border-blue/40 !bg-blue/15 !text-blue">✦ Bônus prático</span>
           <h2 className="reveal d1 font-display font-extrabold text-[clamp(28px,3.6vw,46px)] my-[18px] mx-auto max-w-[18ch]">
             Só o bônus já <span className="text-blue">vale o preço:</span>
           </h2>
@@ -28,7 +29,7 @@ export default function Offer() {
             {realChecks.map((c) => (
               <div
                 key={c}
-                className="flex items-start gap-[12px] rounded-[14px] border border-line bg-card/70 px-5 py-5 text-[16px] leading-relaxed font-semibold text-offwhite"
+                className="flex items-start gap-[12px] rounded-[14px] border border-blue/20 bg-blue/[.07] px-5 py-5 text-[16px] leading-relaxed font-semibold text-offwhite shadow-[inset_0_1px_rgba(255,255,255,.04)]"
               >
                 <span className="price-feat-ck">
                   <Check className="w-[13px] h-[13px]" />

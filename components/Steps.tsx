@@ -59,7 +59,7 @@ export default function Steps() {
           <article className="step reveal d4 flex flex-col justify-center !border-blue/50 bg-[linear-gradient(165deg,#0a2c49,#0d1c28)]">
             <div className="step-num !text-blue-soft">Resultado</div>
             <h3 className="text-[21px] font-bold mt-2 leading-tight">
-              A conta fechando, com clareza e no preto.
+              A conta fechando, com clareza e no preço.
             </h3>
             <p className="text-[#cfe2f1] text-sm mt-2.5">
               Do custo real ao preço certo, sem improviso.

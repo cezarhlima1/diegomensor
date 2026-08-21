@@ -5,7 +5,7 @@ export default function Header() {
   return (
     <header
       id="site-header"
-      className="site-header fixed top-12 inset-x-0 z-50 flex items-center justify-between px-5 py-4 sm:px-8 lg:px-12"
+      className="site-header fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 py-4 sm:px-8 lg:px-12"
     >
       <a href="#" className="brand flex items-center gap-[11px] font-display font-extrabold text-base tracking-[-.01em]">
         <span className="brand-mark">

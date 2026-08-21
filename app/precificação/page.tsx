@@ -1,6 +1,5 @@
 import FacebookPixel from "@/components/FacebookPixel";
 import ClarityScript from "@/components/ClarityScript";
-import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ForWho from "@/components/ForWho";
 import Steps from "@/components/Steps";
@@ -22,7 +21,6 @@ export default function PrecificacaoPage() {
       <div className="fixed inset-x-0 top-0 z-[60] flex h-12 items-center justify-center bg-[#d71920] px-4 text-center font-display text-[clamp(15px,2vw,20px)] font-black uppercase tracking-[.02em] text-white shadow-[0_6px_24px_rgba(215,25,32,.35)]">
         Atenção: isso vai sair fora do ar
       </div>
-      <Header />
       <main>
         <Hero />
         <ForWho />
