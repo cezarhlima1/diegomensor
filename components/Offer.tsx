@@ -2,9 +2,8 @@ import Cta from "./Cta";
 import { Check } from "./icons";
 
 const realChecks = [
-  "Quanto custa manter sua oficina aberta",
-  "Quanto sua empresa realmente deveria cobrar",
-  "Onde você pode estar deixando dinheiro na mesa",
+  "Uma aula completa de como implementar um checklist do começo ao fim, de um jeito que vai impactar no teu faturamento.",
+  "Ferramentas para usar dentro da oficina: planilha de custo de mão de obra e tabela de markup que eu aplico aqui na minha oficina.",
 ];
 
 const feats = [
@@ -17,29 +16,19 @@ const feats = [
 export default function Offer() {
   return (
     <>
-      {/* dobra 1: papo honesto */}
+      {/* dobra 1: bônus */}
       <section className="py-[72px] md:py-24">
         <div className="wrap max-w-3xl mx-auto text-center">
-          <span className="tag reveal">Na honestidade</span>
+          <span className="tag reveal">Bônus prático</span>
           <h2 className="reveal d1 font-display font-extrabold text-[clamp(28px,3.6vw,46px)] my-[18px] mx-auto max-w-[18ch]">
-            Sem 15 bônus <span className="text-blue">que você nunca vai abrir.</span>
+            Só o bônus já <span className="text-blue">vale o preço:</span>
           </h2>
 
-          <p className="reveal d2 text-muted text-[17px] mb-4">
-            Na honestidade eu te falo sem problema nenhum: nós somos donos de oficina, ninguém aqui
-            quer perder tempo com 15 bônus que nunca vai abrir. Queremos coisas simples, práticas e
-            que funcionem na nossa realidade.
-          </p>
-          <p className="reveal d2 text-muted text-[17px] mb-6">
-            Por isso eu não vou te encher de um monte de acesso inútil só pra fazer essa oferta
-            parecer maior. Eu vou te entregar exatamente o que você precisa pra entender:
-          </p>
-
-          <div className="reveal d3 grid gap-[11px] max-w-md mx-auto text-left mb-6">
+          <div className="reveal d2 grid gap-[14px] max-w-2xl mx-auto text-left mt-8">
             {realChecks.map((c) => (
               <div
                 key={c}
-                className="flex items-center gap-[11px] text-[15px] font-semibold text-offwhite"
+                className="flex items-start gap-[12px] rounded-[14px] border border-line bg-card/70 px-5 py-5 text-[16px] leading-relaxed font-semibold text-offwhite"
               >
                 <span className="price-feat-ck">
                   <Check className="w-[13px] h-[13px]" />
@@ -47,15 +36,6 @@ export default function Offer() {
                 {c}
               </div>
             ))}
-          </div>
-
-          <p className="reveal d3 text-muted text-[17px] mb-[22px]">
-            Sem enrolação, com foco na vida real de oficina, como eu aplico aqui na minha!
-          </p>
-
-          <div className="anchor-line reveal d3 text-left">
-            Existe uma <span className="text-blue">GRANDE chance</span> de uma única correção de
-            preço já pagar esse treinamento.
           </div>
         </div>
       </section>

@@ -1,43 +1,16 @@
-import FacebookPixel from "@/components/FacebookPixel";
-import ClarityScript from "@/components/ClarityScript";
-import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import ForWho from "@/components/ForWho";
-import Steps from "@/components/Steps";
-import Receive from "@/components/Receive";
-import Offer from "@/components/Offer";
-import Choice from "@/components/Choice";
-import Author from "@/components/Author";
-import FinalOffer from "@/components/FinalOffer";
-import Faq from "@/components/Faq";
-import Guarantee from "@/components/Guarantee";
-import Footer from "@/components/Footer";
-import ClientEffects from "@/components/ClientEffects";
-import BackRedirect from "@/components/BackRedirect";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return (
-    <>
-      <FacebookPixel />
-      <ClarityScript projectId="xbomd0cmow" />
-      <Header />
-      <main>
-        <Hero />
-        <ForWho />
-        <Steps />
-        <Receive />
-        <Offer />
-        <Choice />
-        <Author />
-        <FinalOffer />
-        <Faq />
-        <Guarantee />
-      </main>
-      <Footer />
-      {/* interações (reveal, count-up, magnético, glow, parallax) */}
-      <ClientEffects />
-      {/* back-redirect carregando UTMs */}
-      <BackRedirect />
-    </>
-  );
+type HomeProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const query = new URLSearchParams();
+  const params = await searchParams;
+  Object.entries(params).forEach(([key, value]) => {
+    if (Array.isArray(value)) value.forEach((item) => query.append(key, item));
+    else if (value !== undefined) query.set(key, value);
+  });
+  const suffix = query.toString();
+  redirect(`/precificação${suffix ? `?${suffix}` : ""}`);
 }
