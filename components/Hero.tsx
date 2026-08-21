@@ -10,7 +10,7 @@ export default function Hero() {
         <div className="flex flex-col items-center">
           <span className="hero-badge reveal">
             <span className="dot" />
-            Acesso imediato • Vitalício • Oferta especial
+            Precificação é o pilar principal da tua oficina
           </span>
 
           <h1 className="reveal d1 font-display font-black text-[clamp(34px,5.4vw,62px)] my-6 max-w-[22ch]">
