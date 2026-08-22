@@ -22,6 +22,34 @@ function crmSourceForAttribution(attribution: { utmSource: string; utmContent: s
   return "Formulário";
 }
 
+function comparableSourceName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\bstorie\b/g, "stories")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function sourceChannelName(value: string) {
+  return comparableSourceName(value)
+    .split(" ")
+    .filter((part) => !["form", "forms", "formulario", "instagram"].includes(part))
+    .join(" ");
+}
+
+async function registeredCrmSource(db: ReturnType<typeof crmPool>, expectedSource: string) {
+  const registered = await db.query("select name from public.crm_lead_sources order by created_at");
+  const names = registered.rows.map((row) => String(row.name || "")).filter(Boolean);
+  const exactKey = comparableSourceName(expectedSource);
+  const channelKey = sourceChannelName(expectedSource);
+  return names.find((name) => comparableSourceName(name) === exactKey)
+    || (channelKey ? names.find((name) => sourceChannelName(name) === channelKey) : undefined)
+    || names.find((name) => comparableSourceName(name) === "formulario")
+    || expectedSource;
+}
+
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return NextResponse.json({ ok: false, error: "payload-too-large" }, { status: 413 });
@@ -60,16 +88,10 @@ export async function POST(request: Request) {
       );
       if (!existing.rows[0]?.id) {
         const expectedSource = crmSourceForAttribution(attribution);
-        const registeredSource = await db.query(
-          "select name from public.crm_lead_sources where lower(name)=lower($1) limit 1",
-          [expectedSource],
-        );
-        const crmSource = registeredSource.rows[0]?.name || expectedSource;
-        const tags = ["Formulário incompleto", attribution.utmSource, attribution.utmMedium, attribution.utmCampaign, attribution.utmContent]
-          .filter((value) => value && value !== "direto");
+        const crmSource = await registeredCrmSource(db, expectedSource);
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,'','Iniciou o formulário e informou nome e WhatsApp.',$4,$5,'Mentoria OAG','Novo lead',0,'Morno','Concluir aplicação',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now())",
-          [crypto.randomUUID(), name, phone, tags, crmSource],
+          [crypto.randomUUID(), name, phone, [], crmSource],
         );
       }
       return NextResponse.json({ ok: true, partial: true });
@@ -125,44 +147,47 @@ export async function POST(request: Request) {
     const db = crmPool();
     const submittedAt = new Date().toISOString();
     const application = { submittedAt, attribution, answers: readableAnswers };
-    const tags = [attribution.utmSource, attribution.utmMedium, attribution.utmCampaign, attribution.utmContent]
-      .filter((value) => value && value !== "direto");
     const expectedSource = crmSourceForAttribution(attribution);
-    const registeredSource = await db.query(
-      "select name from public.crm_lead_sources where lower(name)=lower($1) limit 1",
-      [expectedSource],
-    );
-    const crmSource = registeredSource.rows[0]?.name || expectedSource;
+    const crmSource = await registeredCrmSource(db, expectedSource);
     const applicationColumn = await db.query(
       "select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='application' limit 1",
     );
     const supportsApplication = Boolean(applicationColumn.rows[0]);
     const existing = await db.query(
-      "select id from public.crm_leads where regexp_replace(phone,'\\D','','g')=regexp_replace($1,'\\D','','g') limit 1",
+      "select id,notes from public.crm_leads where regexp_replace(phone,'\\D','','g')=regexp_replace($1,'\\D','','g') limit 1",
       [answers.whatsapp],
     );
     if (existing.rows[0]?.id) {
-      if (supportsApplication) {
+      const isFormDraft = existing.rows[0].notes === "Iniciou o formulário e informou nome e WhatsApp.";
+      if (supportsApplication && isFormDraft) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $6::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$7,product='Mentoria OAG',stage='Novo lead',created_at=$8,display_date=to_char($8::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), tags, crmSource, submittedAt],
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes='',updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), crmSource, submittedAt],
+        );
+      } else if (supportsApplication) {
+        await db.query(
+          "update public.crm_leads set application=$2::jsonb,updated_at=now() where id=$1",
+          [existing.rows[0].id, JSON.stringify(application)],
+        );
+      } else if (isFormDraft) {
+        await db.query(
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes='',updated_at=now() where id=$1",
+          [existing.rows[0].id, answers.nome, answers.whatsapp, email, crmSource, submittedAt],
         );
       } else {
-        await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),tags=array_remove(coalesce((select array_agg(distinct value) from unnest(coalesce(tags,'{}'::text[]) || $5::text[]) value),'{}'::text[]),'Formulário incompleto'),source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then '' else notes end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt],
-        );
+        // Sem a coluna de aplicação, um lead já existente não é alterado: os
+        // dados preenchidos manualmente no CRM têm prioridade.
       }
     } else {
       if (supportsApplication) {
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7,$8::jsonb)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt, JSON.stringify(application)],
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, [], crmSource, submittedAt, JSON.stringify(application)],
         );
       } else {
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7)",
-          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, tags, crmSource, submittedAt],
+          [crypto.randomUUID(), answers.nome, answers.whatsapp, email, [], crmSource, submittedAt],
         );
       }
     }

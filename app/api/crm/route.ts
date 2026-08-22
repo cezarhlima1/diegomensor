@@ -147,7 +147,10 @@ export async function POST(request: Request) {
       const columns = await purchaseColumns(db);
       for (const lead of leads) {
         if (!lead.id) continue;
-        await upsertLeadRecord(db, lead);
+        // Na conciliação de campanhas, leads existentes carregam esta marca:
+        // somente compras/vínculos são atualizados; o cadastro cuidadosamente
+        // editado no CRM permanece intocado.
+        if (lead.preserveLeadRecord !== true) await upsertLeadRecord(db, lead);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
       }
       for (const item of traffic) {
