@@ -892,7 +892,9 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
   }
   const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
-  const pipelineClosings = leads.flatMap((lead) => purchasesForLead(lead, products).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source, traffic: (purchase.source || lead.source) === "Tráfego" || (!purchase.source && lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))) })));
+  const fallbackCampaigns = traffic.filter((item) => !purchasesForCampaignAll(leads, item.id, products).length);
+  const coveredByCampaignSummary = (purchase: Purchase) => !purchase.campaignId && Boolean(purchase.externalSaleCode) && fallbackCampaigns.some((item) => item.product === purchase.product && brazilMonthKey(item.date || `${item.month}-01`) === brazilMonthKey(purchase.closedAt));
+  const pipelineClosings = leads.flatMap((lead) => purchasesForLead(lead, products).filter((purchase) => !isCampaignPurchase(purchase) && !coveredByCampaignSummary(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source, traffic: (purchase.source || lead.source) === "Tráfego" || (!purchase.source && lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))) })));
   const organicClosings = pipelineClosings.filter((item) => !item.traffic).map((item) => item.purchase);
   const manualTrafficClosings = pipelineClosings.filter((item) => item.traffic).map((item) => item.purchase);
   const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
@@ -943,6 +945,7 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
 }
 
 function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, setGoal }: { leads: Lead[]; traffic: TrafficRecord[]; products: ProductDefinition[]; start: string; end: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
+  const fallbackCampaigns = traffic.filter((item) => !purchasesForCampaignAll(leads, item.id, products).length);
   const trafficLeads = traffic.flatMap((item) => {
     const linked = purchasesForCampaignAll(leads, item.id, products);
     // Compras conciliadas já estão nos leads reais. Só sintetizamos os totais
@@ -952,7 +955,11 @@ function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, s
     const date = item.date || `${item.month}-01`;
     return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, netValue: units ? (item.netRevenue ?? netForValue(item.revenue, item.product, products)) / units : 0, temperature: "Quente", nextAction: "Venda direta", date, closedAt: date }));
   });
-  const consolidated = [...leads, ...trafficLeads];
+  // Enquanto a campanha ainda possui apenas o resumo da planilha, ele é a
+  // fonte oficial. Registros históricos sem campaignId do mesmo produto/mês
+  // permanecem no banco, mas não são somados uma segunda vez na dashboard.
+  const consolidatedLeads = leads.map((lead) => ({ ...lead, purchases: purchasesForLead(lead, products).filter((purchase) => !(!purchase.campaignId && purchase.externalSaleCode && fallbackCampaigns.some((item) => item.product === purchase.product && brazilMonthKey(item.date || `${item.month}-01`) === brazilMonthKey(purchase.closedAt)))) }));
+  const consolidated = [...consolidatedLeads, ...trafficLeads];
   const sources = Array.from(new Set([...leadSources, "Tráfego"]));
   return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart channel="all" leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart channel="all" leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart channel="all" leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={setGoal} /></div>;
 }
