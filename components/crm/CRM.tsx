@@ -82,9 +82,7 @@ const productLadder = (catalog: ProductDefinition[]) => [...catalog];
 const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] => lead.purchases !== undefined ? lead.purchases : lead.stage === "Fechado" && lead.closedAt ? [{ id: `legacy-${lead.id}`, origin: "pipeline", product: lead.product || "Não informado", source: lead.source, value: lead.value, netValue: lead.netValue ?? netForValue(lead.value, lead.product, catalog), closedAt: lead.closedAt, repurchase: false }] : [];
 // O banco remove o campaignId quando uma campanha é excluída, mas preserva a
 // compra. O código externo mantém a origem importada identificável.
-// Código externo identifica a venda, não a campanha. Uma compra só entra nos
-// cálculos de campanha quando possui vínculo explícito com ela.
-const isCampaignPurchase = (purchase: Purchase) => purchase.origin === "campaign" || Boolean(purchase.campaignId);
+const isCampaignPurchase = (purchase: Purchase) => purchase.origin === "campaign" || (purchase.origin === undefined && !purchase.id.startsWith("ascension-") && Boolean(purchase.campaignId || purchase.externalSaleCode));
 type Channel = "organic" | "traffic" | "all";
 const isTrafficSource = (source?: string) => source?.trim().toLowerCase() === "tráfego" || source?.trim().toLowerCase() === "trafego";
 const isTrafficLead = (lead: Lead) => isTrafficSource(lead.source)
@@ -635,12 +633,13 @@ export default function CRM() {
       const existing = index >= 0 ? next[index] : undefined;
       const history = existing ? purchasesForLead(existing, catalogProducts) : [];
       if (history.some((purchase) => purchase.externalSaleCode === sale.code)) continue;
-      const matchingPurchaseIndex = history.findIndex((purchase) => !isCampaignPurchase(purchase)
-        && purchase.product === campaign.product
-        && Math.abs(purchase.value - sale.gross) < .005
-        && brazilDateKey(purchase.closedAt) === brazilDateKey(sale.date));
+      // Se o lead já possui um fechamento manual deste mesmo produto, a
+      // planilha confirma e atualiza esse fechamento. Produto diferente gera
+      // uma nova compra, preservando a esteira do cliente.
+      const matchingPurchaseIndex = history.findLastIndex((purchase) => !isCampaignPurchase(purchase)
+        && purchase.product === campaign.product);
       const purchase: Purchase = matchingPurchaseIndex >= 0
-        ? { ...history[matchingPurchaseIndex], origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, netValue: sale.net }
+        ? { ...history[matchingPurchaseIndex], origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date }
         : { id: `gateway-${sale.code}`, origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: campaign.product, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0 };
       const purchases = matchingPurchaseIndex >= 0
         ? history.map((item, purchaseIndex) => purchaseIndex === matchingPurchaseIndex ? purchase : item)
@@ -892,9 +891,7 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
   }
   const updateGoal = (month: string, value: number) => { const next = { ...goals, [month]: value }; setGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const periodTraffic = traffic.filter((item) => inRange(item.date || `${item.month}-01`, start, end));
-  const fallbackCampaigns = traffic.filter((item) => !purchasesForCampaignAll(leads, item.id, products).length);
-  const coveredByCampaignSummary = (purchase: Purchase) => !purchase.campaignId && Boolean(purchase.externalSaleCode) && fallbackCampaigns.some((item) => item.product === purchase.product && brazilMonthKey(item.date || `${item.month}-01`) === brazilMonthKey(purchase.closedAt));
-  const pipelineClosings = leads.flatMap((lead) => purchasesForLead(lead, products).filter((purchase) => !isCampaignPurchase(purchase) && !coveredByCampaignSummary(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source, traffic: (purchase.source || lead.source) === "Tráfego" || (!purchase.source && lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))) })));
+  const pipelineClosings = leads.flatMap((lead) => purchasesForLead(lead, products).filter((purchase) => !isCampaignPurchase(purchase) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source, traffic: (purchase.source || lead.source) === "Tráfego" || (!purchase.source && lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))) })));
   const organicClosings = pipelineClosings.filter((item) => !item.traffic).map((item) => item.purchase);
   const manualTrafficClosings = pipelineClosings.filter((item) => item.traffic).map((item) => item.purchase);
   const organicRevenue = organicClosings.reduce((sum, purchase) => sum + purchase.value, 0);
@@ -945,7 +942,8 @@ function ExecutiveOverview({ leads, products, allProducts, selectedProduct, setP
 }
 
 function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, setGoal }: { leads: Lead[]; traffic: TrafficRecord[]; products: ProductDefinition[]; start: string; end: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
-  const fallbackCampaigns = traffic.filter((item) => !purchasesForCampaignAll(leads, item.id, products).length);
+  const launchProduct = "Lançamento [Ingresso+Order]";
+  const launchSummaryMonths = new Set(traffic.filter((item) => item.product === launchProduct && !purchasesForCampaignAll(leads, item.id, products).length).map((item) => brazilMonthKey(item.date || `${item.month}-01`)));
   const trafficLeads = traffic.flatMap((item) => {
     const linked = purchasesForCampaignAll(leads, item.id, products);
     // Compras conciliadas já estão nos leads reais. Só sintetizamos os totais
@@ -955,10 +953,10 @@ function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, s
     const date = item.date || `${item.month}-01`;
     return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, netValue: units ? (item.netRevenue ?? netForValue(item.revenue, item.product, products)) / units : 0, temperature: "Quente", nextAction: "Venda direta", date, closedAt: date }));
   });
-  // Enquanto a campanha ainda possui apenas o resumo da planilha, ele é a
-  // fonte oficial. Registros históricos sem campaignId do mesmo produto/mês
-  // permanecem no banco, mas não são somados uma segunda vez na dashboard.
-  const consolidatedLeads = leads.map((lead) => ({ ...lead, purchases: purchasesForLead(lead, products).filter((purchase) => !(!purchase.campaignId && purchase.externalSaleCode && fallbackCampaigns.some((item) => item.product === purchase.product && brazilMonthKey(item.date || `${item.month}-01`) === brazilMonthKey(purchase.closedAt)))) }));
+  // Apenas para o lançamento legado: o resumo oficial de 40/49 vendas já
+  // representa as linhas antigas ainda sem campaignId, evitando somá-las duas
+  // vezes. Nenhum outro produto passa por esta substituição.
+  const consolidatedLeads = leads.map((lead) => ({ ...lead, purchases: purchasesForLead(lead, products).filter((purchase) => !(purchase.product === launchProduct && !purchase.campaignId && purchase.externalSaleCode && launchSummaryMonths.has(brazilMonthKey(purchase.closedAt)))) }));
   const consolidated = [...consolidatedLeads, ...trafficLeads];
   const sources = Array.from(new Set([...leadSources, "Tráfego"]));
   return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart channel="all" leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart channel="all" leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart channel="all" leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={setGoal} /></div>;
