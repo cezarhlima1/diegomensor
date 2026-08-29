@@ -1975,7 +1975,9 @@ function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { cha
     const trafficLeads = items.filter((lead) => lead.source === "Tráfego" || lead.tags?.some((tag) => ["tráfego", "trafego"].includes(tag.trim().toLowerCase()))).length;
     return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""), leads: items.length, organicLeads: items.length - trafficLeads, trafficLeads, closedValue: purchases.filter((purchase) => inMonth(purchase.closedAt, key)).reduce((sum, purchase) => sum + purchase.value, 0), goal: goals[key] || 0 };
   });
-  const maxValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
+  const highestValue = Math.max(1, ...months.flatMap((item) => [item.closedValue, item.goal]));
+  // Keep the tallest column and its value label inside the scrollable chart viewport.
+  const maxValue = highestValue * 1.15;
   const maxLeads = Math.max(1, ...months.map((item) => item.leads));
   const leadPoints = months.map((item, index) => ({ x: index * 100 + 50, y: 215 - item.leads / maxLeads * 180, value: item.leads }));
   const leadPath = leadPoints.reduce((path, point, index) => { if (!index) return `M 0 ${point.y} L ${point.x} ${point.y}`; const previous = leadPoints[index - 1]; const middle = (previous.x + point.x) / 2; return `${path} C ${middle} ${previous.y}, ${middle} ${point.y}, ${point.x} ${point.y}`; }, "") + (leadPoints.length ? ` L ${months.length * 100} ${leadPoints.at(-1)!.y}` : "");

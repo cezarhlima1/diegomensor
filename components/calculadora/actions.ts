@@ -13,7 +13,9 @@ import {
   MULT_MAX,
   MULT_MIN,
   calcCustoHora,
+  arredondarMoeda,
   parseNum,
+  somarValoresMonetarios,
   somaCustos,
   type Orcamento,
   type OrigemCliente,
@@ -191,14 +193,14 @@ export async function salvarPasso2Config(
 function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
   return pecas.slice(0, MAX_PECAS).map((p) => ({
     nome: String(p?.nome ?? "").slice(0, MAX_CHARS_NOME),
-    valor: limitarNumero(p?.valor, MAX_VALOR),
+    valor: arredondarMoeda(limitarNumero(p?.valor, MAX_VALOR)),
     quantidade:
       p?.quantidade != null
         ? limitarNumero(p.quantidade, MAX_HORAS)
         : undefined,
     maoDeObra:
       p?.maoDeObra != null
-        ? limitarNumero(p.maoDeObra, MAX_VALOR)
+        ? arredondarMoeda(limitarNumero(p.maoDeObra, MAX_VALOR))
         : undefined,
     custo:
       p?.custo != null
@@ -321,12 +323,14 @@ export async function criarOrcamento(
       : peca,
   );
   const pecas = sanitizarPecas(pecasComMetadados);
-  const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
-  const maoDeObra = pecas.reduce(
-    (total, peca) => total + (peca.maoDeObra ?? 0),
-    0
+  const valorPeca = somarValoresMonetarios(pecas.map((peca) => peca.valor));
+  const maoDeObra = somarValoresMonetarios(
+    pecas.map((peca) => peca.maoDeObra ?? 0),
   );
-  const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+  const total = Math.min(
+    somarValoresMonetarios([valorPeca, maoDeObra]),
+    MAX_VALOR,
+  );
 
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
@@ -388,12 +392,14 @@ export async function editarOrcamento(
       : peca,
   );
   const pecas = sanitizarPecas(pecasComMetadados);
-  const valorPeca = pecas.reduce((total, peca) => total + peca.valor, 0);
-  const maoDeObra = pecas.reduce(
-    (total, peca) => total + (peca.maoDeObra ?? 0),
-    0
+  const valorPeca = somarValoresMonetarios(pecas.map((peca) => peca.valor));
+  const maoDeObra = somarValoresMonetarios(
+    pecas.map((peca) => peca.maoDeObra ?? 0),
   );
-  const total = Math.min(valorPeca + maoDeObra, MAX_VALOR);
+  const total = Math.min(
+    somarValoresMonetarios([valorPeca, maoDeObra]),
+    MAX_VALOR,
+  );
   const dadosAtualizados: Record<string, unknown> = {
     nome_cliente: dados.nomeCliente.trim().slice(0, MAX_CHARS_NOME),
     nome_carro:

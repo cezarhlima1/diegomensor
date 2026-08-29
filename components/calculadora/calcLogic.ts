@@ -77,6 +77,26 @@ export function parseNum(v: string): number {
 export const brl = (n: number): string =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+/**
+ * Normaliza um valor monetário para centavos. Os cálculos da calculadora
+ * trabalham com `number`, que pode produzir resíduos binários (por exemplo,
+ * 450.00500000000005). Arredondar cada item no mesmo ponto em que ele é
+ * exibido garante que o total seja a soma dos valores vistos pelo usuário.
+ */
+export function arredondarMoeda(valor: number): number {
+  if (!Number.isFinite(valor)) return 0;
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+
+/** Soma valores monetários em centavos, sem acumular resíduos de ponto flutuante. */
+export function somarValoresMonetarios(valores: number[]): number {
+  const centavos = valores.reduce(
+    (total, valor) => total + Math.round((valor + Number.EPSILON) * 100),
+    0,
+  );
+  return centavos / 100;
+}
+
 /** Máscara de digitação: agrupa milhares e mantém a vírgula decimal (até 2 casas). */
 export function maskMoneyTyping(v: string): string {
   let s = v.replace(/[^\d,]/g, "");
@@ -212,22 +232,26 @@ export function markupDaPeca(peca: Peca, tiers: MarkupTier[]): number {
 export function precoPecaItem(peca: Peca, tiers: MarkupTier[]): number {
   const cost = parseNum(peca.custo);
   if (cost <= 0) return 0;
-  return cost * (1 + markupDaPeca(peca, tiers) / 100) * quantidadePeca(peca);
+  return arredondarMoeda(
+    cost * (1 + markupDaPeca(peca, tiers) / 100) * quantidadePeca(peca),
+  );
 }
 
 /** soma dos preços finais de todas as peças. */
 export function somaPecas(pecas: Peca[], tiers: MarkupTier[]): number {
-  return pecas.reduce((acc, p) => acc + precoPecaItem(p, tiers), 0);
+  return somarValoresMonetarios(pecas.map((p) => precoPecaItem(p, tiers)));
 }
 
 /** mão de obra de uma peça: valor da hora × horas de serviço. */
 export function maoDeObraPeca(peca: Peca, valorHora: number): number {
-  return valorHora * parseNum(peca.horas);
+  return arredondarMoeda(valorHora * parseNum(peca.horas));
 }
 
 /** soma da mão de obra de todas as peças. */
 export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
-  return pecas.reduce((acc, p) => acc + maoDeObraPeca(p, valorHora), 0);
+  return somarValoresMonetarios(
+    pecas.map((p) => maoDeObraPeca(p, valorHora)),
+  );
 }
 
 /* ---------- Histórico de orçamentos (banco: tabela orcamentos) ---------- */

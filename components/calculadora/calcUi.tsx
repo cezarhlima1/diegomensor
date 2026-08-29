@@ -73,46 +73,6 @@ export function useConfirmacaoExclusao() {
   return { pedirConfirmacao, dialogConfirmacao };
 }
 
-export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
-/* conta o número de forma animada até o alvo (easeOutCubic, via rAF) */
-export function useCountUp(target: number, duration = 650): number {
-  const [display, setDisplay] = useState(target);
-  const currentRef = useRef(target);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (prefersReducedMotion() || duration <= 0) {
-      currentRef.current = target;
-      setDisplay(target);
-      return;
-    }
-    const from = currentRef.current;
-    const delta = target - from;
-    if (delta === 0) return;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const val = from + delta * eased;
-      currentRef.current = val;
-      setDisplay(val);
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [target, duration]);
-
-  return display;
-}
-
 /* aciona um pulso de brilho quando o valor (arredondado) muda */
 export function usePulse(trigger: number): boolean {
   const [on, setOn] = useState(false);
@@ -130,8 +90,11 @@ export function usePulse(trigger: number): boolean {
 }
 
 export function AnimatedBRL({ value }: { value: number }) {
-  const v = useCountUp(value);
-  return <>{brl(v)}</>;
+  // Valores monetários precisam permanecer coerentes entre linhas, subtotais
+  // e total. A interpolação numérica podia exibir por alguns quadros R$ 450,01
+  // enquanto o alvo real já era R$ 450,00. O pulso visual continua indicando
+  // mudanças sem apresentar um centavo intermediário inexistente.
+  return <>{brl(value)}</>;
 }
 
 /* ---------- campo de moeda (R$) ---------- */

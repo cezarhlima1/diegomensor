@@ -23,6 +23,7 @@ import {
   precoPecaItem,
   quantidadePeca,
   saveInputs,
+  somarValoresMonetarios,
   somaMaoDeObra,
   somaPecas,
   tierForCost,
@@ -320,7 +321,10 @@ export default function Calculadora({
     () => somaMaoDeObra(pecasValidas, valorHoraOrcamento),
     [pecasValidas, valorHoraOrcamento],
   );
-  const totalOrcamento = maoDeObraTotal + pecasTotal;
+  const totalOrcamento = somarValoresMonetarios([
+    maoDeObraTotal,
+    pecasTotal,
+  ]);
 
   const pulsePeca = usePulse(Math.round(pecasTotal));
   const pulseTotal = usePulse(Math.round(totalOrcamento));
@@ -408,19 +412,21 @@ export default function Calculadora({
   );
   const totaisAjusteRapido = useMemo(() => {
     if (!ajusteRapido) return { pecas: 0, maoDeObra: 0, total: 0 };
-    const totalPecas = ajusteRapido.pecas.reduce(
-      (total, p) => total + valorPecaAjuste(p, tiers),
-      0,
+    const totalPecas = somarValoresMonetarios(
+      ajusteRapido.pecas.map((p) => valorPecaAjuste(p, tiers)),
     );
-    const totalMaoDeObra = ajusteRapido.pecas.reduce(
-      (total, p) =>
-        total + parseNum(p.horas) * ajusteRapido.valorHora,
-      0,
+    const totalMaoDeObra = somarValoresMonetarios(
+      ajusteRapido.pecas.map((p) =>
+        maoDeObraPeca(
+          { ...p, quantidade: p.quantidade },
+          ajusteRapido.valorHora,
+        ),
+      ),
     );
     return {
       pecas: totalPecas,
       maoDeObra: totalMaoDeObra,
-      total: totalPecas + totalMaoDeObra,
+      total: somarValoresMonetarios([totalPecas, totalMaoDeObra]),
     };
   }, [ajusteRapido, tiers]);
 
