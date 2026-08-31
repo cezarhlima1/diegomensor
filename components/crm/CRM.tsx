@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
+import CRMAdmin, { type CrmModule } from "./CRMAdmin";
 
 type Stage = string;
-type View = "geral" | "comercial" | "trafego" | "campanhas" | "pipeline" | "contatos" | "financeiro" | "mensagens";
+type View = CrmModule | "admin";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type LeadApplication = {
   submittedAt?: string;
@@ -167,6 +168,7 @@ const leadIdentityMatch = (left: Lead, right: Lead) => {
   const rightPhone = phoneKey(right.phone);
   return Boolean((leftEmail && rightEmail && leftEmail === rightEmail) || (leftPhone && rightPhone && leftPhone === rightPhone));
 };
+const isDisqualifiedLead = (lead: Lead) => (lead.tags || []).some((tag) => tag.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "desqualificado");
 const mergeLeadData = (current: Lead, incoming: Lead): Lead => {
   const purchases = [...purchasesForLead(current, [])];
   for (const purchase of purchasesForLead(incoming, [])) {
@@ -251,6 +253,7 @@ const whatsappLink = (lead: Lead) => {
 
 export default function CRM() {
   const [view, setView] = useState<View>("geral");
+  const [access, setAccess] = useState<{ isAdmin: boolean; permissions: CrmModule[] }>({ isAdmin: false, permissions: [] });
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
   const leadsRef = useRef<Lead[]>(leads);
@@ -461,6 +464,7 @@ export default function CRM() {
         if (!response.ok) { await registerDatabaseFailure(response); return; }
         const remote = await response.json();
         if (cancelled) return;
+        setAccess({ isAdmin: Boolean(remote.access?.isAdmin), permissions: Array.isArray(remote.access?.permissions) ? remote.access.permissions : [] });
         skipNextSnapshotSync.current = true;
         const remoteLeads = mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
         setLeads(remoteLeads);
@@ -493,7 +497,16 @@ export default function CRM() {
       // Leads e campanhas possuem salvamentos granulares próprios. Reenviar a
       // coleção inteira aqui permitia que uma aba antiga sobrescrevesse etapa,
       // produto ou etiquetas recém-salvos por outra operação.
-      const snapshot = JSON.stringify({ products: catalogProducts, sources: catalogSources, stages: pipelineStages, messages: JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]"), goals: JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") });
+      const mayEditDetails = access.isAdmin || access.permissions.includes("mensagens");
+      const mayEditPipeline = access.isAdmin || access.permissions.includes("pipeline");
+      const mayEditGoals = access.isAdmin || access.permissions.some((permission) => ["geral", "comercial", "trafego"].includes(permission));
+      const snapshot = JSON.stringify({
+        products: mayEditDetails ? catalogProducts : [],
+        sources: mayEditDetails ? catalogSources : [],
+        stages: mayEditPipeline ? pipelineStages : [],
+        messages: mayEditDetails ? JSON.parse(localStorage.getItem("mensor-crm-messages-v1") || "[]") : [],
+        goals: mayEditGoals ? JSON.parse(localStorage.getItem(goalsStorageKey) || "{}") : {},
+      });
       syncQueue.current = syncQueue.current.catch(() => undefined).then(async () => {
         const response = await fetch("/api/crm", { method: "PUT", headers: { "Content-Type": "application/json" }, body: snapshot });
         if (!response.ok) { if (requestId === syncRequest.current) await registerDatabaseFailure(response); throw new Error("Falha ao sincronizar CRM"); }
@@ -501,7 +514,7 @@ export default function CRM() {
       }).catch((error) => { if (requestId !== syncRequest.current) return; void registerDatabaseFailure(); console.error("Falha ao sincronizar CRM", error); });
     }, 500);
     return () => window.clearTimeout(timeout);
-  }, [databaseReady, catalogProducts, catalogSources, pipelineStages, syncRevision]);
+  }, [databaseReady, catalogProducts, catalogSources, pipelineStages, syncRevision, access.isAdmin, access.permissions]);
   useEffect(() => {
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       if (databaseStatus !== "saving") return;
@@ -528,6 +541,7 @@ export default function CRM() {
         // Se houve uma edição enquanto a leitura estava em andamento, a
         // resposta já nasceu antiga e não pode substituir o estado local.
         if (revisionAtStart !== localDataRevision.current) return;
+        setAccess({ isAdmin: Boolean(remote.access?.isAdmin), permissions: Array.isArray(remote.access?.permissions) ? remote.access.permissions : [] });
         skipNextSnapshotSync.current = true;
         setLeads(mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)));
         setTraffic(remote.traffic || []);
@@ -581,7 +595,7 @@ export default function CRM() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return leads;
+    if (!term) return leads.filter((lead) => !isDisqualifiedLead(lead));
     return leads.filter((lead) => `${lead.name} ${lead.company} ${lead.email} ${lead.phone}`.toLowerCase().includes(term));
   }, [leads, search]);
   const transitionLead = (lead: Lead, stage: Stage, now = new Date().toISOString()): Lead => {
@@ -768,7 +782,7 @@ export default function CRM() {
     updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, proposalAt: undefined, closedAt: undefined });
   };
 
-  const navigation: Array<[View, string, string]> = [
+  const allNavigation: Array<[View, string, string]> = [
     ["geral", "Visão geral", "⌂"],
     ["comercial", "Orgânico", "◫"],
     ["trafego", "Tráfego", "↗"],
@@ -777,7 +791,13 @@ export default function CRM() {
     ["contatos", "Leads", "◇"],
     ["financeiro", "Financeiro", "$"],
     ["mensagens", "Detalhes", "⚙"],
+    ["admin", "ADM", "♙"],
   ];
+  const navigation = allNavigation.filter(([id]) => id === "admin" ? access.isAdmin : access.isAdmin || access.permissions.includes(id as CrmModule));
+  useEffect(() => {
+    if (!navigation.length || navigation.some(([id]) => id === view)) return;
+    setView(navigation[0][0]);
+  }, [view, access.isAdmin, access.permissions]);
   return (
     <main className={styles.crm} data-theme={theme}>
       <aside className={styles.sidebar}>
@@ -840,6 +860,7 @@ export default function CRM() {
         )}
         {view === "financeiro" && <FinanceDashboard leads={leads} expenses={expenses} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
+        {view === "admin" && access.isAdmin && <CRMAdmin />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
       {importing && <ImportLeadsModal existing={leads} stages={pipelineStages} products={catalogProducts} sources={catalogSources} close={() => setImporting(false)} save={async (imported) => {
@@ -1182,11 +1203,20 @@ function Dashboard({
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
+  const funnelLeads = leads.filter((lead) => inRange(lead.createdAt, start, end));
+  const happenedByEnd = (date?: string) => Boolean(date && brazilDateKey(date) <= end);
+  const funnelProposals = funnelLeads.filter((lead) => happenedByEnd(lead.proposalAt) && brazilDateKey(lead.proposalAt) >= brazilDateKey(lead.createdAt));
+  const proposalAfterMeeting = (lead: Lead) => happenedByEnd(lead.meetingAt) && brazilDateKey(lead.meetingAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(lead.meetingAt) <= brazilDateKey(lead.proposalAt);
+  const meetingProposals = funnelProposals.filter(proposalAfterMeeting);
+  const directProposals = funnelProposals.filter((lead) => !proposalAfterMeeting(lead));
+  const qualifyingClosings = (items: Lead[]) => items.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.proposalAt)));
+  const meetingClosings = qualifyingClosings(meetingProposals);
+  const directClosings = qualifyingClosings(directProposals);
+  const funnelClosings = [...meetingClosings, ...directClosings];
   const funnelSteps = [
-    { label: "Leads gerados", count: leads.filter((lead) => inRange(lead.createdAt, start, end)).length, detail: "Total de oportunidades" },
-    { label: "Reuniões agendadas", count: leads.filter((lead) => inRange(lead.meetingAt, start, end)).length, detail: "Reuniões marcadas" },
-    { label: "Propostas enviadas", count: stats.proposals, detail: currency.format(stats.proposalValue) },
-    { label: "Clientes fechados", count: stats.closed, detail: `${stats.sales} vendas · ${currency.format(stats.wonValue)}` },
+    { label: "Leads do período", count: funnelLeads.length, detail: "Coorte analisada" },
+    { label: "Com proposta", count: funnelProposals.length, detail: `${meetingProposals.length} após reunião · ${directProposals.length} diretas` },
+    { label: "Clientes fechados", count: funnelClosings.length, detail: "Conversão desta coorte" },
   ];
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
@@ -1198,12 +1228,12 @@ function Dashboard({
           detail={`${stats.hot} leads quentes`}
         />
         <Kpi
-          label="Reuniões agendadas"
+          label="Reuniões no período"
           value={String(stats.meetings)}
           detail="Reuniões marcadas"
         />
         <Kpi
-          label="Propostas enviadas"
+          label="Propostas no período"
           value={String(stats.proposals)}
           detail={`${currency.format(stats.openValue)} em aberto`}
         />
@@ -1221,6 +1251,7 @@ function Dashboard({
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
         <FunnelVisualization steps={funnelSteps} total={leads.filter((lead) => inRange(lead.createdAt, start, end)).length} />
+        <ProposalPathAnalysis meetingProposals={meetingProposals.length} meetingClosings={meetingClosings.length} directProposals={directProposals.length} directClosings={directClosings.length} />
         <OriginValueChart channel={channel} leads={leads} start={start} end={end} sources={sources} />
       </section>
       <MonthlyMetricsChart channel={channel} leads={allLeads} endMonth={selectedMonth} goals={monthlyGoals} setGoal={updateMonthlyGoal} />
@@ -1248,10 +1279,9 @@ function Pipeline({
   search: string;
 }) {
   const [range, setRange] = useState({ start: "", end: "" });
-  const [archiveFilter, setArchiveFilter] = useState<"Ativos" | "Desqualificados" | "Todos">("Ativos");
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
-  const archived = (lead: Lead) => lead.tags?.includes("Desqualificado");
+  const archived = isDisqualifiedLead;
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const stageItems = useMemo(() => {
     const grouped = new Map<Stage, Lead[]>(stages.map((stage) => [stage, []]));
@@ -1264,7 +1294,7 @@ function Pipeline({
           : (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
       if (!matchesRange) continue;
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
-      if (!search && archiveFilter !== "Todos" && (archiveFilter === "Desqualificados" ? !archived(lead) : archived(lead))) continue;
+      if (!search && archived(lead)) continue;
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
     }
@@ -1274,12 +1304,12 @@ function Pipeline({
       return latestClosing(right) - latestClosing(left);
     });
     return grouped;
-  }, [leads, products, stages, range.start, range.end, productFilter, archiveFilter, search]);
+  }, [leads, products, stages, range.start, range.end, productFilter, search]);
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Status</small><select value={archiveFilter} onChange={(event) => setArchiveFilter(event.target.value as typeof archiveFilter)}><option>Ativos</option><option>Desqualificados</option><option>Todos</option></select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
@@ -1585,6 +1615,11 @@ function LeadModal({
           const email = draft.email.trim().toLowerCase(); const phone = phoneKey(draft.phone);
           const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
           if (match) {
+            if (isDisqualifiedLead(match)) {
+              window.alert("Este contato já está cadastrado e arquivado como Desqualificado. O cadastro existente será aberto sem alterar nenhuma informação.");
+              duplicate(match);
+              return;
+            }
             const updated = mergeLeadData(match, { ...match, name: match.name || draft.name.trim(), company: match.company || draft.company.trim(), phone: match.phone || draft.phone.trim(), email: match.email || email });
             setSaving(true); setSaveError("");
             try { await save(updated); window.alert("Contato já cadastrado. As novas informações foram acrescentadas ao lead existente."); duplicate(updated); }
@@ -1903,17 +1938,65 @@ function FinanceDashboard({ leads, expenses, month, setMonth, saveExpense, remov
   const receivedRevenue = monthReceivables.filter((item) => item.status === "Recebido").reduce((sum, item) => sum + item.amount, 0);
   const expectedExpenses = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
   const paidExpenses = monthExpenses.filter((item) => item.status === "Paga").reduce((sum, item) => sum + item.amount, 0);
+  const pendingRevenue = monthReceivables.filter((item) => item.status !== "Recebido").reduce((sum, item) => sum + item.amount, 0);
+  const pendingExpenses = monthExpenses.filter((item) => item.status !== "Paga").reduce((sum, item) => sum + item.amount, 0);
+  const projectedBalance = expectedRevenue - expectedExpenses;
+  const realizedBalance = receivedRevenue - paidExpenses;
+  const sortedReceivables = [...monthReceivables].sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+  const sortedExpenses = [...monthExpenses].sort((left, right) => left.dueDate.localeCompare(right.dueDate));
   const updateInstallment = (lead: Lead, purchase: Purchase, installmentId: string, status: Installment["status"]) => {
     const purchases = purchasesForLead(lead, []).map((item) => item.id === purchase.id ? { ...item, installments: (item.installments || []).map((installment) => installment.id === installmentId ? { ...installment, status, receivedAt: status === "Recebido" ? brazilDateKey(new Date()) : undefined } : installment) } : item);
     updateLead(lead.id, { purchases });
   };
   const submitExpense = async (event: React.FormEvent) => { event.preventDefault(); if (!draft.description.trim() || Number(draft.amount) <= 0 || !draft.dueDate) { window.alert("Informe descrição, valor maior que zero e vencimento."); return; } setSaving(true); try { await saveExpense({ id: `expense-${uniqueId()}`, description: draft.description.trim(), category: draft.category, amount: Number(draft.amount), dueDate: draft.dueDate, status: draft.status, paidAt: draft.status === "Paga" ? brazilDateKey(new Date()) : undefined, notes: draft.notes.trim() }); setAdding(false); setDraft({ description: "", category: "Equipe", amount: "", dueDate: `${month}-01`, status: "Prevista", notes: "" }); } finally { setSaving(false); } };
   return <div className={`${styles.content} ${styles.financeDashboard}`}>
-    <section className={styles.financeHero}><div><span>Fluxo de caixa</span><h2>Financeiro mensal</h2><p>Fechamentos mostram vendas; parcelas mostram quando o dinheiro realmente entra.</p></div><label><span>Competência</span><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label></section>
-    <div className={styles.financeKpis}><Kpi label="Receita prevista" value={currency.format(expectedRevenue)} detail={`${monthReceivables.length} recebimentos`} /><Kpi label="Receita recebida" value={currency.format(receivedRevenue)} detail={`${currency.format(expectedRevenue - receivedRevenue)} pendente`} /><Kpi label="Despesas previstas" value={currency.format(expectedExpenses)} detail={`${monthExpenses.length} lançamentos`} /><Kpi label="Saldo projetado" value={currency.format(expectedRevenue - expectedExpenses)} detail={`Realizado ${currency.format(receivedRevenue - paidExpenses)}`} /></div>
-    <section className={styles.financePanel}><header><div><span>Entradas</span><h3>Recebimentos do mês</h3></div><b>{currency.format(expectedRevenue)}</b></header><div className={styles.financeRows}>{monthReceivables.map((item) => <article key={item.id}><div><b>{item.lead.name}</b><small>{item.purchase.product} · {item.purchase.paymentMethod || "Pagamento não informado"}</small></div><span><small>Parcela</small><b>{item.number}/{item.purchase.installments?.length || 1}</b></span><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong>{item.purchase.installments?.length ? <select value={item.status} onChange={(event) => updateInstallment(item.lead, item.purchase, item.id, event.target.value as Installment["status"])}><option>Previsto</option><option>Recebido</option><option>Atrasado</option><option>Cancelado</option></select> : <em>Legado</em>}</article>)}{!monthReceivables.length && <p>Nenhum recebimento previsto neste mês.</p>}</div></section>
-    <section className={styles.financePanel}><header><div><span>Saídas</span><h3>Despesas do projeto</h3></div><button onClick={() => setAdding((value) => !value)}>{adding ? "Cancelar" : "+ Nova despesa"}</button></header>{adding && <form className={styles.expenseForm} onSubmit={submitExpense}><Input label="Descrição" value={draft.description} set={(description) => setDraft({ ...draft, description })} required /><label><span>Categoria</span><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{["Equipe","Tráfego","Ferramentas","Impostos","Operacional","Comissões","Outros"].map((category) => <option key={category}>{category}</option>)}</select></label><Input label="Valor" value={draft.amount} set={(amount) => setDraft({ ...draft, amount })} type="money" required /><Input label="Vencimento" value={draft.dueDate} set={(dueDate) => setDraft({ ...draft, dueDate })} type="date" required /><label><span>Status</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Expense["status"] })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select></label><Input label="Observações" value={draft.notes} set={(notes) => setDraft({ ...draft, notes })} /><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar despesa"}</button></form>}<div className={styles.financeRows}>{monthExpenses.map((item) => <article key={item.id}><div><b>{item.description}</b><small>{item.category}{item.notes ? ` · ${item.notes}` : ""}</small></div><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong><select value={item.status} onChange={(event) => void saveExpense({ ...item, status: event.target.value as Expense["status"], paidAt: event.target.value === "Paga" ? brazilDateKey(new Date()) : undefined })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select><button className={styles.deletePurchase} onClick={() => { if (window.confirm("Excluir esta despesa?")) void removeExpense(item.id); }}>×</button></article>)}{!monthExpenses.length && <p>Nenhuma despesa lançada neste mês.</p>}</div></section>
+    <section className={styles.financeHero}><div><span>FLUXO DE CAIXA</span><h2>Resumo financeiro do mês</h2><p>Veja primeiro o resultado geral e, abaixo, confira cada entrada e saída por vencimento.</p></div><label><span>Mês analisado</span><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label></section>
+    <section className={styles.financeExplanation}><div><span>1</span><p><b>Previsto</b><small>Tudo que vence no mês</small></p></div><i>→</i><div><span>2</span><p><b>Realizado</b><small>O que já entrou ou saiu</small></p></div><i>→</i><div><span>3</span><p><b>Saldo</b><small>Entradas menos despesas</small></p></div></section>
+    <div className={styles.financeKpis}><Kpi label="Entradas previstas" value={currency.format(expectedRevenue)} detail={`${currency.format(pendingRevenue)} ainda a receber`} /><Kpi label="Entradas recebidas" value={currency.format(receivedRevenue)} detail={`${monthReceivables.filter((item) => item.status === "Recebido").length} recebimentos confirmados`} /><Kpi label="Despesas previstas" value={currency.format(expectedExpenses)} detail={`${currency.format(pendingExpenses)} ainda a pagar`} /><Kpi label="Saldo projetado" value={currency.format(projectedBalance)} detail={`Saldo realizado: ${currency.format(realizedBalance)}`} /></div>
+    <FinanceFlowDashboard month={month} receivables={monthReceivables} expenses={monthExpenses} />
+    <section className={`${styles.financePanel} ${styles.financePanelFull}`}><header><div><span>ENTRADAS</span><h3>Valores a receber</h3><small>Ordenados pela data de vencimento</small></div><div className={styles.financePanelTotal}><small>Total previsto</small><b>{currency.format(expectedRevenue)}</b></div></header><div className={styles.financeColumnLabels}><span>Cliente / produto</span><span>Parcela</span><span>Vencimento</span><span>Valor</span><span>Status</span></div><div className={styles.financeRows}>{sortedReceivables.map((item) => <article key={item.id}><div><b>{item.lead.name}</b><small>{item.purchase.product} · {item.purchase.paymentMethod || "Pagamento não informado"}</small></div><span><small>Parcela</small><b>{item.number}/{item.purchase.installments?.length || 1}</b></span><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong>{item.purchase.installments?.length ? <select value={item.status} onChange={(event) => updateInstallment(item.lead, item.purchase, item.id, event.target.value as Installment["status"])}><option>Previsto</option><option>Recebido</option><option>Atrasado</option><option>Cancelado</option></select> : <em>Registro anterior</em>}</article>)}{!monthReceivables.length && <p>Nenhum recebimento previsto neste mês.</p>}</div></section>
+    <section className={`${styles.financePanel} ${styles.financePanelFull}`}><header><div><span>SAÍDAS</span><h3>Contas e despesas</h3><small>Custos previstos e pagamentos realizados</small></div><div className={styles.financePanelActions}><div className={styles.financePanelTotal}><small>Total previsto</small><b>{currency.format(expectedExpenses)}</b></div><button onClick={() => setAdding((value) => !value)}>{adding ? "Cancelar" : "+ Nova despesa"}</button></div></header>{adding && <form className={styles.expenseForm} onSubmit={submitExpense}><Input label="Descrição" value={draft.description} set={(description) => setDraft({ ...draft, description })} required /><label><span>Categoria</span><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>{["Equipe","Tráfego","Ferramentas","Impostos","Operacional","Comissões","Outros"].map((category) => <option key={category}>{category}</option>)}</select></label><Input label="Valor" value={draft.amount} set={(amount) => setDraft({ ...draft, amount })} type="money" required /><Input label="Vencimento" value={draft.dueDate} set={(dueDate) => setDraft({ ...draft, dueDate })} type="date" required /><label><span>Status</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Expense["status"] })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select></label><Input label="Observações" value={draft.notes} set={(notes) => setDraft({ ...draft, notes })} /><button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar despesa"}</button></form>}<div className={`${styles.financeColumnLabels} ${styles.expenseColumnLabels}`}><span>Descrição / categoria</span><span>Vencimento</span><span>Valor</span><span>Status</span><span></span></div><div className={styles.financeRows}>{sortedExpenses.map((item) => <article key={item.id}><div><b>{item.description}</b><small>{item.category}{item.notes ? ` · ${item.notes}` : ""}</small></div><span><small>Vencimento</small><b>{new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))}</b></span><strong>{currency.format(item.amount)}</strong><select value={item.status} onChange={(event) => void saveExpense({ ...item, status: event.target.value as Expense["status"], paidAt: event.target.value === "Paga" ? brazilDateKey(new Date()) : undefined })}><option>Prevista</option><option>Paga</option><option>Atrasada</option><option>Cancelada</option></select><button className={styles.deletePurchase} onClick={() => { if (window.confirm("Excluir esta despesa?")) void removeExpense(item.id); }}>×</button></article>)}{!monthExpenses.length && <p>Nenhuma despesa lançada neste mês.</p>}</div></section>
   </div>;
+}
+
+function FinanceFlowDashboard({ month, receivables, expenses }: { month: string; receivables: Array<Installment & { purchase: Purchase; lead: Lead }>; expenses: Expense[] }) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const daily = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const incoming = receivables.filter((item) => Number(item.dueDate.slice(8, 10)) === day).reduce((sum, item) => sum + item.amount, 0);
+    const outgoing = expenses.filter((item) => Number(item.dueDate.slice(8, 10)) === day).reduce((sum, item) => sum + item.amount, 0);
+    return { day, incoming, outgoing };
+  });
+  let runningBalance = 0;
+  const balances = daily.map((item) => (runningBalance += item.incoming - item.outgoing));
+  const maxBar = Math.max(1, ...daily.flatMap((item) => [item.incoming, item.outgoing]));
+  const minBalance = Math.min(0, ...balances);
+  const maxBalance = Math.max(1, ...balances);
+  const balanceRange = Math.max(1, maxBalance - minBalance);
+  const width = 960; const height = 280; const top = 24; const bottom = 42; const plotHeight = height - top - bottom; const columnWidth = width / daysInMonth;
+  const balancePoints = balances.map((balance, index) => `${index * columnWidth + columnWidth / 2},${top + (maxBalance - balance) / balanceRange * plotHeight}`).join(" ");
+  const receivedCount = receivables.filter((item) => item.status === "Recebido").length;
+  const delayedCount = receivables.filter((item) => item.status === "Atrasado").length;
+  const paidCount = expenses.filter((item) => item.status === "Paga").length;
+  const incomeTotal = daily.reduce((sum, item) => sum + item.incoming, 0);
+  const expenseTotal = daily.reduce((sum, item) => sum + item.outgoing, 0);
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, monthNumber - 1, 1));
+  return <section className={styles.financeChartPanel}>
+    <header><div><span>VISÃO DO MÊS</span><h3>Fluxo de recebimentos e despesas</h3><p>Movimentação prevista por vencimento e evolução do saldo ao longo de {monthLabel}.</p></div><div className={styles.financeChartLegend}><span><i className={styles.incomeLegend} />Entradas</span><span><i className={styles.expenseLegend} />Saídas</span><span><i className={styles.balanceLegend} />Saldo acumulado</span></div></header>
+    <div className={styles.financeChartScroller}><svg className={styles.financeFlowChart} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Fluxo financeiro de ${monthLabel}`}>
+      {[0, .25, .5, .75, 1].map((ratio) => <line key={ratio} x1="0" x2={width} y1={top + plotHeight * ratio} y2={top + plotHeight * ratio} className={styles.financeGridLine} />)}
+      {daily.map((item, index) => { const incomingHeight = item.incoming / maxBar * plotHeight * .72; const outgoingHeight = item.outgoing / maxBar * plotHeight * .72; const x = index * columnWidth; return <g key={item.day}><rect x={x + columnWidth * .17} y={top + plotHeight - incomingHeight} width={Math.max(2, columnWidth * .27)} height={incomingHeight} rx="2" className={styles.financeIncomeBar}><title>Dia {item.day}: entradas {currency.format(item.incoming)}</title></rect><rect x={x + columnWidth * .52} y={top + plotHeight - outgoingHeight} width={Math.max(2, columnWidth * .27)} height={outgoingHeight} rx="2" className={styles.financeExpenseBar}><title>Dia {item.day}: saídas {currency.format(item.outgoing)}</title></rect>{(item.day === 1 || item.day === daysInMonth || item.day % 5 === 0) && <text x={x + columnWidth / 2} y={height - 17} className={styles.financeDayLabel}>{item.day}</text>}</g>; })}
+      <polyline points={balancePoints} className={styles.financeBalanceLine} />
+      {balances.map((balance, index) => (daily[index].incoming || daily[index].outgoing) ? <circle key={index} cx={index * columnWidth + columnWidth / 2} cy={top + (maxBalance - balance) / balanceRange * plotHeight} r="3.5" className={styles.financeBalancePoint}><title>Saldo acumulado no dia {index + 1}: {currency.format(balance)}</title></circle> : null)}
+    </svg></div>
+    <div className={styles.financeChartSummary}>
+      <article><span>Volume de entradas</span><b>{currency.format(incomeTotal)}</b><small>{receivables.length} parcelas no mês</small></article>
+      <article><span>Volume de saídas</span><b>{currency.format(expenseTotal)}</b><small>{expenses.length} despesas no mês</small></article>
+      <article><span>Recebimentos</span><b>{receivedCount}<small> confirmados</small></b><em>{delayedCount ? `${delayedCount} atrasado${delayedCount > 1 ? "s" : ""}` : "Nenhum atrasado"}</em></article>
+      <article><span>Pagamentos</span><b>{paidCount}<small> realizados</small></b><em>{expenses.length - paidCount} pendente{expenses.length - paidCount === 1 ? "" : "s"}</em></article>
+    </div>
+  </section>;
 }
 
 function Input({
@@ -1951,9 +2034,18 @@ function AccountingInput({ value, set, required = false }: { value: string | num
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
 }
+function ProposalPathAnalysis({ meetingProposals, meetingClosings, directProposals, directClosings }: { meetingProposals: number; meetingClosings: number; directProposals: number; directClosings: number }) {
+  const total = meetingProposals + directProposals;
+  const rows = [
+    { label: "Após reunião", detail: "A proposta foi enviada depois de uma reunião registrada", proposals: meetingProposals, closings: meetingClosings, className: styles.meetingPath },
+    { label: "Proposta direta", detail: "A proposta foi enviada sem reunião anterior", proposals: directProposals, closings: directClosings, className: styles.directPath },
+  ];
+  return <section className={styles.proposalPaths}><header><div><span>CAMINHOS DA PROPOSTA</span><h4>Propostas dos leads que entraram no período</h4></div><b>{total}<small> propostas</small></b></header><div>{rows.map((row) => { const conversion = row.proposals ? row.closings / row.proposals * 100 : 0; return <article key={row.label} className={row.className}><div><i /><span><b>{row.label}</b><small>{row.detail}</small></span></div><div className={styles.pathNumbers}><span><b>{row.proposals}</b><small>propostas</small></span><em>→</em><span><b>{row.closings}</b><small>vendas</small></span><strong>{conversion.toFixed(1)}%</strong></div><div className={styles.pathProgress}><i style={{ width: `${Math.max(0, Math.min(100, conversion))}%` }} /></div></article>; })}</div></section>;
+}
 function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; count: number; detail: string }>; total: number }) {
   const colors = ["#1d4a5c", "#1b4556", "#193f4f", "#173a48", "#153440"];
-  return <div className={styles.funnelVisual}><svg viewBox="0 0 760 455" role="img" aria-label="Funil de conversão de leads">{steps.map((step,index) => { const width = 430 - index * 48; const x = (760 - width) / 2; const y = 18 + index * 78; const percentage = total ? step.count / total * 100 : 0; return <g key={step.label}><path d={`M ${x} ${y + 8} L ${x + width} ${y + 8} L ${x + width - 12} ${y + 60} Q 380 ${y + 65} ${x + 12} ${y + 60} Z`} fill={colors[index]} /><ellipse cx="380" cy={y + 8} rx={width / 2} ry="10" fill={colors[index]} /><ellipse cx="380" cy={y + 7} rx={width / 2 - 5} ry="6" fill="rgba(220,239,246,.04)" /><line x1={x - 7} y1={y + 35} x2={x - 36} y2={y + 35} className={styles.funnelLeader} /><text x={x - 44} y={y + 31} textAnchor="end" className={styles.funnelOutsideLabel}>{step.label}</text><text x={x - 44} y={y + 45} textAnchor="end" className={styles.funnelOutsideDetail}>{step.detail}</text><text x="380" y={y + 43} textAnchor="middle" className={styles.funnelInsideCount}>{step.count}</text><line x1={x + width + 7} y1={y + 35} x2={x + width + 36} y2={y + 35} className={styles.funnelLeader} /><text x={x + width + 44} y={y + 40} className={styles.funnelOutsidePercent}>{percentage.toFixed(1)}%</text></g>; })}</svg></div>;
+  const svgHeight = 24 + steps.length * 78;
+  return <div className={styles.funnelVisual}><svg viewBox={`0 0 760 ${svgHeight}`} role="img" aria-label="Funil de conversão de leads">{steps.map((step,index) => { const width = 430 - index * 48; const x = (760 - width) / 2; const y = 18 + index * 78; const percentage = total ? step.count / total * 100 : 0; return <g key={step.label}><path d={`M ${x} ${y + 8} L ${x + width} ${y + 8} L ${x + width - 12} ${y + 60} Q 380 ${y + 65} ${x + 12} ${y + 60} Z`} fill={colors[index]} /><ellipse cx="380" cy={y + 8} rx={width / 2} ry="10" fill={colors[index]} /><ellipse cx="380" cy={y + 7} rx={width / 2 - 5} ry="6" fill="rgba(220,239,246,.04)" /><line x1={x - 7} y1={y + 35} x2={x - 36} y2={y + 35} className={styles.funnelLeader} /><text x={x - 44} y={y + 31} textAnchor="end" className={styles.funnelOutsideLabel}>{step.label}</text><text x={x - 44} y={y + 45} textAnchor="end" className={styles.funnelOutsideDetail}>{step.detail}</text><text x="380" y={y + 43} textAnchor="middle" className={styles.funnelInsideCount}>{step.count}</text><line x1={x + width + 7} y1={y + 35} x2={x + width + 36} y2={y + 35} className={styles.funnelLeader} /><text x={x + width + 44} y={y + 40} className={styles.funnelOutsidePercent}>{percentage.toFixed(1)}%</text></g>; })}</svg></div>;
 }
 function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { channel: Channel; leads: Lead[]; endMonth: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const [year, month] = endMonth.split("-").map(Number);
@@ -1985,6 +2077,11 @@ function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { cha
   const valueTicks = [maxValue, maxValue * .75, maxValue * .5, maxValue * .25, 0];
   const leadTicks = [maxLeads, Math.round(maxLeads * .75), Math.round(maxLeads * .5), Math.round(maxLeads * .25), 0];
   const saveGoal = (value: string) => setGoal(endMonth, Number(value) || 0);
+  useEffect(() => {
+    document.querySelectorAll<HTMLDivElement>(`.${styles.comboScroller}`).forEach((scroller) => {
+      scroller.scrollLeft = scroller.scrollWidth;
+    });
+  }, [months.length, endMonth]);
   return <section className={`${styles.panel} ${styles.monthlyChart}`}><header><div><span>Performance mensal</span><h3>Valor bruto fechado × meta</h3><p>Colunas financeiras por mês e evolução dos leads gerados.</p></div><div className={styles.chartLegend}><span><i className={styles.goalLegend} />Meta</span><span><i className={styles.closedLegend} />Bruto fechado</span><span><i className={styles.leadLegend} />Leads gerados</span></div></header><div className={styles.goalControl}><div><span>Meta do mês selecionado</span><small>{endMonth.split("-").reverse().join("/")}</small></div><label>R$<input type="number" min="0" step="100" value={goals[endMonth] || ""} onChange={(event) => saveGoal(event.target.value)} placeholder="Definir meta" /></label></div><div className={styles.comboChart}><div className={styles.valueAxis}>{valueTicks.map((tick, index) => <span key={index}>{tick >= 1000 ? `R$ ${(tick / 1000).toFixed(tick % 1000 ? 1 : 0)}k` : currency.format(tick)}</span>)}</div><div className={styles.comboScroller}><div className={styles.comboPlot} style={{ gridTemplateColumns: `repeat(${months.length}, 150px)`, width: `${Math.max(360, months.length * 150)}px` }}><svg viewBox={`0 0 ${months.length * 100} 240`} preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="lead-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#62c7f2" stopOpacity=".16" /><stop offset="1" stopColor="#62c7f2" stopOpacity="0" /></linearGradient></defs><path className={styles.leadArea} d={areaPath} /><path className={styles.leadCurve} d={leadPath} /></svg>{leadPoints.map((point,index) => <span key={months[index].key} className={styles.leadPoint} style={{ left: `${(index + .5) / months.length * 100}%`, top: `${point.y / 240 * 100}%` }}><b>{point.value}</b><span className={styles.leadPointTooltip}><strong>{months[index].label} · {point.value} leads</strong><small>Orgânico <b>{months[index].organicLeads}</b></small><small>Tráfego <b>{months[index].trafficLeads}</b></small></span></span>)}{months.map((item) => <article key={item.key}><div><span className={styles.goalBar} style={{ height: `${item.goal / maxValue * 100}%` }}><b>{item.goal ? currency.format(item.goal) : ""}</b></span><span className={styles.closedBar} style={{ height: `${item.closedValue / maxValue * 100}%` }}><b>{item.closedValue ? currency.format(item.closedValue) : ""}</b></span></div><strong>{item.label}</strong><small>{item.key.slice(0,4)}</small></article>)}</div></div><div className={styles.leadAxis}>{leadTicks.map((tick,index) => <span key={index}>{tick}</span>)}</div></div></section>;
 }
 function QuickPeriodButtons({ start, end, setRange }: { start: string; end: string; setRange: (start: string, end: string) => void }) {

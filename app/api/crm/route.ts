@@ -21,24 +21,33 @@ async function authorized() {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) return { ok: false, reason: "session-missing" } as const;
-    const allowedEmails = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com")
+    const allowedEmails = `${process.env.CRM_ALLOWED_EMAIL || ""},susanesamt@gmail.com`
       .replace(/["']/g, "")
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean);
-    if (allowedEmails.includes(user.email.trim().toLowerCase())) return { ok: true } as const;
+    if (allowedEmails.includes(user.email.trim().toLowerCase())) return { ok: true, isAdmin: true, permissions: ["geral", "comercial", "trafego", "campanhas", "pipeline", "contatos", "financeiro", "mensagens"] } as const;
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_super_admin")
+      .select("is_super_admin, crm_access, crm_is_admin, crm_permissions")
       .eq("id", user.id)
       .maybeSingle();
-    if (profile?.is_super_admin) return { ok: true } as const;
+    if (profile?.is_super_admin) return { ok: true, isAdmin: true, permissions: ["geral", "comercial", "trafego", "campanhas", "pipeline", "contatos", "financeiro", "mensagens"] } as const;
+    if (profile?.crm_access) return { ok: true, isAdmin: Boolean(profile.crm_is_admin), permissions: Array.isArray(profile.crm_permissions) ? profile.crm_permissions : [] } as const;
 
     return { ok: false, reason: "email-not-allowed", account: user.email } as const;
   } catch {
     return { ok: false, reason: "auth-unavailable" } as const;
   }
+}
+
+function can(auth: { isAdmin: boolean; permissions: string[] }, ...permissions: string[]) {
+  return auth.isAdmin || permissions.some((permission) => auth.permissions.includes(permission));
+}
+
+function forbidden() {
+  return NextResponse.json({ error: "permission-denied" }, { status: 403 });
 }
 
 function databaseError(error: unknown, fallback: string) {
@@ -116,6 +125,7 @@ export async function GET() {
       historyByProduct.set(row.product_name, list);
     }
     return NextResponse.json({
+      access: { isAdmin: auth.isAdmin, permissions: auth.permissions },
       leads: leadsResult.rows.map((row) => ({ id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, notes: row.notes || "", tags: row.tags || [], source: row.source, product: row.product, campaignId: row.traffic_campaign_id, stage: row.stage, value: Number(row.gross_value), netValue: row.net_value == null ? undefined : Number(row.net_value), temperature: row.temperature, nextAction: row.next_action, date: row.display_date, createdAt: row.created_at, conversationAt: row.conversation_at, meetingAt: row.meeting_at, proposalAt: row.proposal_at, closedAt: row.closed_at, application: row.application || undefined, contactCheckpoints: row.contact_checkpoints || [], purchases: purchasesByLead.get(row.id) || [] })),
       traffic: trafficResult.rows.map((row) => ({ id: row.id, month: row.month, date: row.campaign_date ? new Date(row.campaign_date).toISOString().slice(0, 10) : undefined, status: row.status, campaign: row.name, product: row.product, investment: Number(row.investment), clicks: row.clicks, pageViews: row.page_views, checkouts: row.checkouts, sales: row.sales, revenue: Number(row.gross_revenue), netRevenue: row.net_revenue == null ? undefined : Number(row.net_revenue) })),
       products: productsResult.rows.map((row) => ({ name: row.name, price: Number(row.gross_price), netPrice: Number(row.net_price), position: row.position, priceHistory: historyByProduct.get(row.name) || [] })),
@@ -142,6 +152,8 @@ export async function POST(request: Request) {
   const leads = Array.isArray(body.leads) ? body.leads : [];
   const traffic = Array.isArray(body.traffic) ? body.traffic : [];
   if (!leads.length && !traffic.length) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  if (leads.length && !can(auth, "comercial", "pipeline", "contatos", "financeiro")) return forbidden();
+  if (traffic.length && !can(auth, "campanhas")) return forbidden();
   try {
     await withCrmTransaction(async (db) => {
       const columns = await purchaseColumns(db);
@@ -171,6 +183,8 @@ export async function PATCH(request: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   let body: { entity?: string; record?: Record<string, unknown>; oldId?: string; newId?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
+  const patchPermissions: Record<string, string[]> = { lead: ["comercial", "pipeline", "contatos", "financeiro"], expense: ["financeiro"], traffic: ["campanhas"], "tag-rename": ["contatos"], "tag-delete": ["contatos"], "product-rename": ["mensagens"], "source-rename": ["mensagens"] };
+  if (body.entity && patchPermissions[body.entity] && !can(auth, ...patchPermissions[body.entity])) return forbidden();
   if ((body.entity === "tag-rename" || body.entity === "tag-delete") && body.oldId) {
     try {
       const db = crmPool();
@@ -250,6 +264,8 @@ export async function DELETE(request: Request) {
   let body: { entity?: string; id?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
   if (!body.entity || !body.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
+  const deletePermissions: Record<string, string[]> = { lead: ["comercial", "pipeline", "contatos"], purchase: ["financeiro"], expense: ["financeiro"], traffic: ["campanhas"], product: ["mensagens"], source: ["mensagens"], message: ["mensagens"], stage: ["pipeline"] };
+  if (!deletePermissions[body.entity] || !can(auth, ...deletePermissions[body.entity])) return forbidden();
   try {
     const db = crmPool();
     const operations: Record<string, { query: string; value: string }> = {
@@ -286,6 +302,7 @@ export async function PUT(request: Request) {
   const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
   const goals = snapshot.goals && typeof snapshot.goals === "object" ? snapshot.goals : {};
   const stages = Array.isArray(snapshot.stages) ? snapshot.stages : [];
+  if ((leads.length && !can(auth, "comercial", "pipeline", "contatos", "financeiro")) || (traffic.length && !can(auth, "campanhas")) || ((products.length || sources.length || messages.length) && !can(auth, "mensagens")) || (stages.length && !can(auth, "pipeline")) || (Object.keys(goals).length > 0 && !can(auth, "geral", "comercial", "trafego"))) return forbidden();
   try {
     await withCrmTransaction(async (db) => {
       const columns = await purchaseColumns(db);

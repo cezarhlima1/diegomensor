@@ -47,12 +47,18 @@ export async function middleware(request: NextRequest) {
 
   const ehRotaCrm = request.nextUrl.pathname.startsWith("/CRM");
   if (ehRotaCrm) {
-    const emailsPermitidos = (process.env.CRM_ALLOWED_EMAIL || "susanesamt@gmail.com")
+    const emailsPermitidos = `${process.env.CRM_ALLOWED_EMAIL || ""},susanesamt@gmail.com`
       .replace(/["']/g, "")
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean);
-    if (!user.email || !emailsPermitidos.includes(user.email.trim().toLowerCase())) {
+    const emailPermitido = Boolean(user.email && emailsPermitidos.includes(user.email.trim().toLowerCase()));
+    const { data: perfilCrm } = emailPermitido ? { data: null } : await supabase
+      .from("profiles")
+      .select("is_super_admin, crm_access")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!emailPermitido && !perfilCrm?.is_super_admin && !perfilCrm?.crm_access) {
       const destino = request.nextUrl.clone();
       destino.pathname = "/login-crm";
       destino.search = "";
