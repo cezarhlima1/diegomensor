@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { crmPool } from "@/lib/crm-db";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -30,15 +29,15 @@ function validPermissions(value: unknown): CrmTab[] {
 export async function GET() {
   if (!await requireCrmAdmin()) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   try {
-    const db = crmPool();
-    const columns = await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='profiles' and column_name in ('crm_is_closer','crm_commission_rate')");
-    const available = new Set(columns.rows.map((row) => String(row.column_name)));
-    const hasCloserFields = available.has("crm_is_closer") && available.has("crm_commission_rate");
-    const result = await db.query(`select id,nome,email,crm_is_admin,crm_permissions${hasCloserFields ? ",crm_is_closer,crm_commission_rate" : ""} from public.profiles where crm_access=true order by created_at`);
-    return NextResponse.json({ users: result.rows.map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: hasCloserFields ? profile.crm_is_closer : false, commissionRate: hasCloserFields ? Number(profile.crm_commission_rate) || 0 : 0 })) });
+    const admin = createSupabaseAdminClient();
+    const full = await admin.from("profiles").select("id, nome, email, crm_access, crm_is_admin, crm_permissions, crm_is_closer, crm_commission_rate, created_at").eq("crm_access", true).order("created_at");
+    if (!full.error) return NextResponse.json({ users: (full.data || []).map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: profile.crm_is_closer, commissionRate: Number(profile.crm_commission_rate) || 0 })) });
+    const legacy = await admin.from("profiles").select("id, nome, email, crm_access, crm_is_admin, crm_permissions, created_at").eq("crm_access", true).order("created_at");
+    if (legacy.error) return NextResponse.json({ error: "database-unavailable", detail: legacy.error.message }, { status: 503 });
+    return NextResponse.json({ users: (legacy.data || []).map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: false, commissionRate: 0 })) });
   } catch (reason) {
     console.error("CRM users GET failed", reason);
-    return NextResponse.json({ error: "database-unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "database-unavailable", detail: reason instanceof Error ? reason.message : "Erro desconhecido" }, { status: 503 });
   }
 }
 
