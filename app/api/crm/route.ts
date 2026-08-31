@@ -42,7 +42,7 @@ async function authorized() {
   }
 }
 
-function can(auth: { isAdmin: boolean; permissions: string[] }, ...permissions: string[]) {
+function can(auth: { isAdmin: boolean; permissions: readonly string[] }, ...permissions: string[]) {
   return auth.isAdmin || permissions.some((permission) => auth.permissions.includes(permission));
 }
 

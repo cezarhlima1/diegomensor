@@ -1583,7 +1583,6 @@ function LeadModal({
   existing,
   products,
   sources,
-  closers,
   close,
   save,
   duplicate,
@@ -1591,7 +1590,6 @@ function LeadModal({
   existing: Lead[];
   products: ProductDefinition[];
   sources: string[];
-  closers: Closer[];
   close: () => void;
   save: (lead: Lead) => Promise<void>;
   duplicate: (lead: Lead) => void;
@@ -1730,6 +1728,7 @@ function LeadDrawer({
   lead,
   products,
   sources,
+  closers,
   availableTags,
   stages,
   close,
@@ -1744,6 +1743,7 @@ function LeadDrawer({
   lead: Lead;
   products: ProductDefinition[];
   sources: string[];
+  closers: Closer[];
   availableTags: string[];
   stages: Stage[];
   close: () => void;
