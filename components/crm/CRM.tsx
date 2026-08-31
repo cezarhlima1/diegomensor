@@ -13,7 +13,8 @@ type LeadApplication = {
   answers?: Array<{ numero: number; pergunta: string; resposta: string }>;
 };
 type Installment = { id: string; number: number; dueDate: string; amount: number; status: "Previsto" | "Recebido" | "Atrasado" | "Cancelado"; receivedAt?: string };
-type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string; paymentMethod?: PaymentMethod; paymentProvider?: string; paymentNotes?: string; installments?: Installment[] };
+type Purchase = { id: string; product: string; source?: string; value: number; netValue: number; closedAt: string; repurchase: boolean; origin?: "campaign" | "pipeline"; externalSaleCode?: string; campaignId?: string; paymentMethod?: PaymentMethod; paymentProvider?: string; paymentNotes?: string; installments?: Installment[]; closerUserId?: string; closerName?: string; commissionRate?: number; commissionBasis?: "received" };
+type Closer = { id: string; name: string; email: string; commissionRate: number };
 type Expense = { id: string; description: string; category: string; amount: number; dueDate: string; status: "Prevista" | "Paga" | "Atrasada" | "Cancelada"; paidAt?: string; notes?: string };
 type Lead = {
   id: string;
@@ -281,8 +282,10 @@ export default function CRM() {
   const leadSaveTimers = useRef<Map<string, number>>(new Map());
   const [syncRevision, setSyncRevision] = useState(0);
   const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
+  const [closers, setClosers] = useState<Closer[]>([]);
 
   useEffect(() => { leadsRef.current = leads; }, [leads]);
+  useEffect(() => { if (!loaded) return; void fetch("/api/crm/closers", { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject()).then((data) => setClosers(data.closers || [])).catch(() => setClosers([])); }, [loaded]);
 
   const registerDatabaseFailure = async (response?: Response) => {
     if (!response) { setDatabaseIssue("Falha de rede"); setDatabaseStatus("offline"); return; }
@@ -858,7 +861,7 @@ export default function CRM() {
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
-        {view === "financeiro" && <FinanceDashboard leads={leads} expenses={expenses} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} />}
+        {view === "financeiro" && <FinanceDashboard leads={leads} expenses={expenses} closers={closers} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
         {view === "admin" && access.isAdmin && <CRMAdmin />}
       </section>
@@ -874,6 +877,7 @@ export default function CRM() {
           lead={selected}
           products={catalogProducts}
           sources={catalogSources}
+          closers={closers}
           availableTags={Array.from(new Set(["Desqualificado", ...leads.flatMap((lead) => lead.tags || [])]))}
           stages={pipelineStages}
           close={() => { flushLeadSave(selected.id); setSelected(null); }}
@@ -1579,6 +1583,7 @@ function LeadModal({
   existing,
   products,
   sources,
+  closers,
   close,
   save,
   duplicate,
@@ -1586,6 +1591,7 @@ function LeadModal({
   existing: Lead[];
   products: ProductDefinition[];
   sources: string[];
+  closers: Closer[];
   close: () => void;
   save: (lead: Lead) => Promise<void>;
   duplicate: (lead: Lead) => void;
@@ -1756,7 +1762,7 @@ function LeadDrawer({
   const [tagDraft, setTagDraft] = useState("");
   const [addingClosing, setAddingClosing] = useState(false);
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
-  const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "" });
+  const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "", closerUserId: "" });
   const tags = lead.tags || [];
   const contactCheckpoints = [...(lead.contactCheckpoints || [])].sort((left, right) => new Date(right).getTime() - new Date(left).getTime());
   const today = brazilDateKey(new Date());
@@ -1801,7 +1807,8 @@ function LeadDrawer({
     let installments = buildInstallments(purchaseId, netValue, count, closingDraft.firstDueDate || closingDraft.date);
     if (entry > 0 && count > 1) installments = [{ id: `${purchaseId}-1`, number: 1, dueDate: closingDraft.date, amount: entry, status: "Recebido", receivedAt: closingDraft.date }, ...buildInstallments(purchaseId, netValue - entry, count - 1, closingDraft.firstDueDate || closingDraft.date).map((item, index) => ({ ...item, id: `${purchaseId}-${index + 2}`, number: index + 2 }))];
     if (entry === netValue && netValue > 0) installments = [{ id: `${purchaseId}-1`, number: 1, dueDate: closingDraft.date, amount: netValue, status: "Recebido", receivedAt: closingDraft.date }];
-    const purchase: Purchase = { id: purchaseId, origin: "pipeline", product: closingDraft.product, source: lead.source, value, netValue, closedAt, repurchase: purchaseHistory.length > 0, paymentMethod: closingDraft.paymentMethod, paymentProvider: closingDraft.provider.trim(), paymentNotes: closingDraft.paymentNotes.trim(), installments };
+    const closer = closers.find((item) => item.id === closingDraft.closerUserId);
+    const purchase: Purchase = { id: purchaseId, origin: "pipeline", product: closingDraft.product, source: lead.source, value, netValue, closedAt, repurchase: purchaseHistory.length > 0, paymentMethod: closingDraft.paymentMethod, paymentProvider: closingDraft.provider.trim(), paymentNotes: closingDraft.paymentNotes.trim(), installments, closerUserId: closer?.id, closerName: closer?.name, commissionRate: closer?.commissionRate || 0, commissionBasis: "received" };
     update({ stage: "Fechado", product: purchase.product, value: purchase.value, netValue: purchase.netValue, closedAt, purchases: [...purchaseHistory, purchase] });
     setAddingClosing(false);
   };
