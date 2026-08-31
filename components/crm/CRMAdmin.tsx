@@ -29,7 +29,11 @@ export default function CRMAdmin() {
 
   const load = async () => {
     const response = await fetch("/api/crm/users", { cache: "no-store" });
-    if (!response.ok) throw new Error("Não foi possível carregar os acessos.");
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 403) throw new Error("Sua sessão não possui permissão administrativa. Atualize a página e entre novamente.");
+      throw new Error(result.error === "database-unavailable" ? "Não foi possível consultar os acessos no banco de dados." : `Não foi possível carregar os acessos (erro ${response.status}).`);
+    }
     const data = await response.json();
     setUsers(data.users || []);
   };
