@@ -1973,6 +1973,7 @@ function FinanceDashboard({ leads, traffic, expenses, closers, month, setMonth, 
   const elapsedDays = month === currentMonth ? Math.max(1, Number(brazilDateKey(today).slice(8, 10))) : daysInSelectedMonth;
   const projectedRevenue = month > currentMonth ? 0 : month === currentMonth ? soldRevenue / elapsedDays * daysInSelectedMonth : soldRevenue;
   const trafficInvestment = traffic.filter((item) => (item.date ? brazilMonthKey(item.date) : item.month) === month).reduce((sum, item) => sum + item.investment, 0);
+  const normalize = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const paidExpenses = directMonthExpenses.filter((item) => item.status === "Paga" && (trafficInvestment <= 0 || normalize(item.category) !== "trafego")).reduce((sum, item) => sum + item.amount, 0);
   const paidTrafficFallback = trafficInvestment > 0 ? trafficInvestment : directMonthExpenses.filter((item) => item.status === "Paga" && normalize(item.category) === "trafego").reduce((sum, item) => sum + item.amount, 0);
   const realizedNetCash = receivedRevenue - paidExpenses - paidTrafficFallback;
