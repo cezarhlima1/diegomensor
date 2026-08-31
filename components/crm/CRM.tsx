@@ -69,7 +69,7 @@ const products = [
   { name: "Treinamento OAP", price: 1197 },
   { name: "Mentoria OAG", price: 10000 },
 ] as const;
-const leadSources = ["Formulário", "Quiz", "Cadastro", "Direct", "Tráfego"] as const;
+const leadSources = ["Quiz", "Cadastro", "Direct", "Tráfego"] as const;
 const legacySources: Record<string, string> = {
   "Formulário mentoria": "Formulário",
   Instagram: "Direct",
@@ -78,6 +78,7 @@ const legacySources: Record<string, string> = {
   YouTube: "Quiz",
 };
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
+const isGenericFormSource = (source: string) => source.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "formulario";
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog];
@@ -1534,7 +1535,7 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
         const importedName = String(get("Nome")).trim(); const company = String(get("Empresa", "Oficina")).trim(); const phone = String(get("WhatsApp", "Telefone")).trim(); const email = String(get("E-mail", "Email")).trim().toLowerCase();
         const existingLead = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phoneKey(phone)));
         const name = importedName || existingLead?.name || "";
-        const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || existingLead?.source || "Cadastro";
+        const sourceInput = String(get("Origem")).trim(); const source = sources.find((item) => normalize(item) === normalize(sourceInput)) || sourceInput || existingLead?.source || "";
         const productInput = String(get("Produto")).trim(); const catalogProduct = products.find((item) => normalize(item.name) === normalize(productInput)); const product = catalogProduct?.name || productInput || "Não informado";
         const stageInput = String(get("Etapa")).trim(); const matchedStage = stages.find((item) => normalize(item) === normalize(stageInput)); const closedStage = stages.find((item) => normalize(item) === "fechado") || "Fechado"; const closedAlias = ["fechado", "fechamento", "venda", "vendido", "cliente"].includes(normalize(stageInput));
         const temperatureInput = String(get("Temperatura")).trim(); const temperature: Lead["temperature"] = ["Quente","Morno","Frio"].find((item) => normalize(item) === normalize(temperatureInput)) as Lead["temperature"] || "Morno";
@@ -1545,6 +1546,7 @@ function ImportLeadsModal({ existing, stages, products, sources, close, save }: 
         const stage = matchedStage || (closedAlias || (!stageInput && Boolean(closedAt)) ? closedStage : "Novo lead");
         const keys = [email ? `e:${email}` : "", phone ? `p:${phoneKey(phone)}` : ""].filter(Boolean); const duplicate = keys.some((key) => existingKeys.has(key) || importedKeys.has(key)); keys.forEach((key) => importedKeys.add(key));
         let issue = !name ? "Nome não informado" : !createdAt ? "Data do lead inválida" : "";
+        if (!issue && !existingLead && (!sourceInput || isGenericFormSource(source))) issue = "Informe uma origem específica cadastrada no CRM";
         if (!issue && sourceInput && !sources.some((item) => normalize(item) === normalize(sourceInput))) issue = "Origem não cadastrada";
         if (!issue && productInput && product === productInput && !catalogProduct) issue = "Produto não cadastrado";
         if (!issue && stageInput && !matchedStage && !closedAlias) issue = "Etapa não cadastrada";
@@ -1601,7 +1603,7 @@ function LeadModal({
     company: "",
     phone: "",
     email: "",
-    source: "Formulário",
+    source: sources.find((source) => !isGenericFormSource(source)) || "",
     product: products[0]?.name || "",
     customGross: "",
     customNet: "",
@@ -1618,6 +1620,10 @@ function LeadModal({
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={async (event) => {
           event.preventDefault();
+          if (!draft.source || isGenericFormSource(draft.source)) {
+            setSaveError("Selecione uma origem específica cadastrada no CRM.");
+            return;
+          }
           const email = draft.email.trim().toLowerCase(); const phone = phoneKey(draft.phone);
           const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
           if (match) {
@@ -1686,8 +1692,9 @@ function LeadModal({
           />
           <label>
             <span>Origem</span>
-            <select value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })}>
-              {sources.map((source) => <option key={source}>{source}</option>)}
+            <select required value={draft.source} onChange={(event) => setDraft({ ...draft, source: event.target.value })}>
+              {!draft.source && <option value="">Selecione a origem</option>}
+              {sources.filter((source) => !isGenericFormSource(source)).map((source) => <option key={source}>{source}</option>)}
             </select>
           </label>
           <label>

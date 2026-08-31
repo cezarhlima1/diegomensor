@@ -55,6 +55,19 @@ function databaseError(error: unknown, fallback: string) {
   return NextResponse.json({ error: fallback, ...(code ? { code } : {}) }, { status: 503 });
 }
 
+function genericFormSource(value: unknown) {
+  return String(value || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "formulario";
+}
+
+async function assertValidSourceForNewLead(db: PoolClient, lead: Record<string, unknown>) {
+  const existing = await db.query("select 1 from public.crm_leads where id=$1", [lead.id]);
+  if (existing.rows[0]) return;
+  const source = String(lead.source || "").trim();
+  if (!source || genericFormSource(source)) throw new Error("specific-lead-source-required");
+  const registered = await db.query("select 1 from public.crm_lead_sources where lower(name)=lower($1) limit 1", [source]);
+  if (!registered.rows[0]) throw new Error("lead-source-not-registered");
+}
+
 async function purchaseColumns(db: PoolClient) {
   const result = await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='crm_purchases' and column_name in ('purchase_origin','purchase_source')");
   const columns = new Set(result.rows.map((row) => String(row.column_name)));
@@ -84,6 +97,7 @@ async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, pur
   }
 }
 async function upsertLeadRecord(db: PoolClient, lead: Record<string, unknown>) {
+  await assertValidSourceForNewLead(db, lead);
   await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
 }
 
@@ -222,6 +236,7 @@ export async function PATCH(request: Request) {
     try {
       const saved = await withCrmTransaction(async (db) => {
         const columns = await purchaseColumns(db);
+        await assertValidSourceForNewLead(db, lead);
         await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,contact_checkpoints,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,contact_checkpoints=excluded.contact_checkpoints,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null, JSON.stringify(Array.isArray(lead.contactCheckpoints) ? lead.contactCheckpoints : [])]);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
@@ -315,7 +330,7 @@ export async function PUT(request: Request) {
         for (const change of Array.isArray(product.priceHistory) ? product.priceHistory as Array<Record<string, unknown>> : []) await db.query("insert into public.crm_product_price_history(id,product_id,previous_gross_price,previous_net_price,gross_price,net_price,changed_at) values($1,$2,$3,$4,$5,$6,$7) on conflict(id) do update set product_id=excluded.product_id,previous_gross_price=excluded.previous_gross_price,previous_net_price=excluded.previous_net_price,gross_price=excluded.gross_price,net_price=excluded.net_price,changed_at=excluded.changed_at", [change.id, productRow.rows[0].id, change.previousPrice, change.previousNetPrice, change.price, change.netPrice, change.changedAt]);
       }
       for (const source of sources) await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
-      for (const lead of leads) await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
+      for (const lead of leads) await upsertLeadRecord(db, lead);
       for (const lead of leads) for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
       for (const item of traffic) { const campaignDate = /^\d{4}-\d{2}-\d{2}/.test(String(item.date || "")) ? item.date : `${item.month}-01`; await db.query("insert into public.crm_traffic_campaigns(id,campaign_date,month,status,name,product,investment,clicks,page_views,checkouts,sales,gross_revenue,net_revenue,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set campaign_date=excluded.campaign_date,month=excluded.month,status=excluded.status,name=excluded.name,product=excluded.product,investment=excluded.investment,clicks=excluded.clicks,page_views=excluded.page_views,checkouts=excluded.checkouts,sales=excluded.sales,gross_revenue=excluded.gross_revenue,net_revenue=excluded.net_revenue,updated_at=now()", [item.id, campaignDate, item.month, item.status || "Em andamento", item.campaign, item.product, Number(item.investment) || 0, Number(item.clicks) || 0, Number(item.pageViews) || 0, Number(item.checkouts) || 0, Number(item.sales) || 0, Number(item.revenue) || 0, item.netRevenue == null ? null : Number(item.netRevenue)]); }
       // Campanhas são removidas apenas pelo DELETE explícito. Um snapshot

@@ -14,12 +14,12 @@ function safeText(value: unknown, max = 4_000) {
 function crmSourceForAttribution(attribution: { utmSource: string; utmContent: string }) {
   const source = attribution.utmSource.toLowerCase();
   const content = attribution.utmContent.toLowerCase();
-  if (source === "instagram" && content === "biografia") return "forms - biografia";
-  if (source === "instagram" && content === "stories") return "forms - storie";
+  if (source === "instagram" && ["bio", "biografia"].includes(content)) return "forms - biografia";
+  if (source === "instagram" && ["storie", "stories", "story"].includes(content)) return "forms - storie";
   if (source === "instagram" && content === "feed") return "forms - feed";
   if (source === "youtube") return "forms - youtube";
   if (source === "isca") return "forms - isca";
-  return "Formulário";
+  return "";
 }
 
 function comparableSourceName(value: string) {
@@ -40,14 +40,16 @@ function sourceChannelName(value: string) {
 }
 
 async function registeredCrmSource(db: ReturnType<typeof crmPool>, expectedSource: string) {
+  if (!expectedSource) return null;
   const registered = await db.query("select name from public.crm_lead_sources order by created_at");
-  const names = registered.rows.map((row) => String(row.name || "")).filter(Boolean);
+  const names = registered.rows
+    .map((row) => String(row.name || "")).filter(Boolean)
+    .filter((name) => comparableSourceName(name) !== "formulario");
   const exactKey = comparableSourceName(expectedSource);
   const channelKey = sourceChannelName(expectedSource);
   return names.find((name) => comparableSourceName(name) === exactKey)
     || (channelKey ? names.find((name) => sourceChannelName(name) === channelKey) : undefined)
-    || names.find((name) => comparableSourceName(name) === "formulario")
-    || expectedSource;
+    || null;
 }
 
 export async function POST(request: Request) {
@@ -89,6 +91,7 @@ export async function POST(request: Request) {
       if (!existing.rows[0]?.id) {
         const expectedSource = crmSourceForAttribution(attribution);
         const crmSource = await registeredCrmSource(db, expectedSource);
+        if (!crmSource) return NextResponse.json({ ok: false, error: "source-not-registered" }, { status: 422 });
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,'','Iniciou o formulário e informou nome e WhatsApp.',$4,$5,'Mentoria OAG','Novo lead',0,'Morno','Concluir aplicação',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now())",
           [crypto.randomUUID(), name, phone, [], crmSource],
@@ -149,6 +152,7 @@ export async function POST(request: Request) {
     const application = { submittedAt, attribution, answers: readableAnswers };
     const expectedSource = crmSourceForAttribution(attribution);
     const crmSource = await registeredCrmSource(db, expectedSource);
+    if (!crmSource) throw new Error("CRM_SOURCE_NOT_REGISTERED");
     const applicationColumn = await db.query(
       "select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='application' limit 1",
     );
