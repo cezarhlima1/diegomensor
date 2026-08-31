@@ -2421,6 +2421,7 @@
 
 /* Hierarquia visual e metas individuais no financeiro. */
 .financeDashboard{gap:18px}.commissionPanel,.financePanelFull{box-shadow:0 12px 34px rgba(0,0,0,.16)}
+.financeKpis article:nth-child(3){border-color:rgba(101,201,243,.3);background:linear-gradient(145deg,rgba(101,201,243,.1),transparent)}.financeKpis article:nth-child(4){border-color:rgba(237,113,128,.3);background:linear-gradient(145deg,rgba(237,113,128,.1),transparent)}.financeKpis article:nth-child(5){border-color:rgba(55,198,139,.3);background:linear-gradient(145deg,rgba(55,198,139,.1),transparent)}
 .commissionPanel{border-color:rgba(216,182,111,.3);border-top:3px solid #d8b66f}
 .commissionPanel+.financePanel{border-color:rgba(55,198,139,.28);border-top:3px solid #37c68b}.commissionPanel+.financePanel+.financePanel{border-color:rgba(101,201,243,.28);border-top-color:#65c9f3}.commissionPanel+.financePanel+.financePanel+.financePanel{border-color:rgba(237,113,128,.28);border-top-color:#ed7180}
 .commissionPanel+.financePanel>header{background:linear-gradient(90deg,rgba(55,198,139,.09),transparent 58%)}.commissionPanel+.financePanel+.financePanel>header{background:linear-gradient(90deg,rgba(101,201,243,.09),transparent 58%)}.commissionPanel+.financePanel+.financePanel+.financePanel>header{background:linear-gradient(90deg,rgba(237,113,128,.09),transparent 58%)}
