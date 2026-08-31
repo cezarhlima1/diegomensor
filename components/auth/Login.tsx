@@ -11,7 +11,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  * inline, propositalmente genérica (não revela qual campo errou).
  */
 export default function Login({ area = "calculadora" }: { area?: "calculadora" | "crm" }) {
-  const [email, setEmail] = useState(area === "crm" ? "susanesamt@gmail.com" : "");
+  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [primeiroAcesso, setPrimeiroAcesso] = useState(false);
@@ -105,7 +105,6 @@ export default function Login({ area = "calculadora" }: { area?: "calculadora" |
             placeholder="voce@suaoficina.com.br"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            readOnly={area === "crm"}
             required
           />
         </label>
