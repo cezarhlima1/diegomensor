@@ -135,7 +135,7 @@ export async function GET() {
       goals: Object.fromEntries(goalsResult.rows.map((row) => [row.month, Number(row.amount)])),
       stages: stagesResult.rows.map((row) => row.name),
       state: Object.fromEntries(stateResult.rows.map((row) => [row.key, row.value])),
-      expenses: expensesResult.rows.map((row) => ({ id: row.id, description: row.description, category: row.category, amount: Number(row.amount), dueDate: row.due_date, status: row.status, paidAt: row.paid_at, notes: row.notes || "" })),
+      expenses: expensesResult.rows.map((row) => ({ id: row.id, description: row.description, category: row.category, amount: Number(row.amount), dueDate: row.due_date, status: row.status, fixed: Boolean(row.is_fixed), paidAt: row.paid_at, notes: row.notes || "" })),
     });
   } catch (error) {
     console.error("CRM GET failed", error);
@@ -240,7 +240,7 @@ export async function PATCH(request: Request) {
     if (!String(item.description || "").trim() || Number(item.amount) <= 0 || !/^\d{4}-\d{2}-\d{2}/.test(String(item.dueDate || ""))) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
     try {
       const db = crmPool();
-      await db.query("insert into public.crm_expenses(id,description,category,amount,due_date,status,paid_at,notes,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,now()) on conflict(id) do update set description=excluded.description,category=excluded.category,amount=excluded.amount,due_date=excluded.due_date,status=excluded.status,paid_at=excluded.paid_at,notes=excluded.notes,updated_at=now()", [item.id, item.description, item.category, Math.max(0, Number(item.amount) || 0), item.dueDate, item.status || "Prevista", item.paidAt || null, item.notes || ""]);
+      await db.query("insert into public.crm_expenses(id,description,category,amount,due_date,status,is_fixed,paid_at,notes,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,now()) on conflict(id) do update set description=excluded.description,category=excluded.category,amount=excluded.amount,due_date=excluded.due_date,status=excluded.status,is_fixed=excluded.is_fixed,paid_at=excluded.paid_at,notes=excluded.notes,updated_at=now()", [item.id, item.description, item.category, Math.max(0, Number(item.amount) || 0), item.dueDate, item.status || "Prevista", Boolean(item.fixed), item.paidAt || null, item.notes || ""]);
       return NextResponse.json({ ok: true });
     } catch (error) {
       console.error("CRM expense PATCH failed", error);
