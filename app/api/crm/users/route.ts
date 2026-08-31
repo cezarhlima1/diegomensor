@@ -29,9 +29,13 @@ function validPermissions(value: unknown): CrmTab[] {
 export async function GET() {
   if (!await requireCrmAdmin()) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.from("profiles").select("id, nome, email, crm_access, crm_is_admin, crm_permissions, crm_is_closer, crm_commission_rate, created_at").eq("crm_access", true).order("created_at");
-  if (error) return NextResponse.json({ error: "database-unavailable" }, { status: 503 });
-  return NextResponse.json({ users: (data || []).map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: profile.crm_is_closer, commissionRate: Number(profile.crm_commission_rate) || 0 })) });
+  const full = await admin.from("profiles").select("id, nome, email, crm_access, crm_is_admin, crm_permissions, crm_is_closer, crm_commission_rate, created_at").eq("crm_access", true).order("created_at");
+  if (!full.error) return NextResponse.json({ users: (full.data || []).map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: profile.crm_is_closer, commissionRate: Number(profile.crm_commission_rate) || 0 })) });
+  // Compatibilidade durante o intervalo entre o deploy da aplicação e a
+  // migração 0027, que adiciona os campos de closer aos perfis.
+  const legacy = await admin.from("profiles").select("id, nome, email, crm_access, crm_is_admin, crm_permissions, created_at").eq("crm_access", true).order("created_at");
+  if (legacy.error) return NextResponse.json({ error: "database-unavailable", detail: legacy.error.message }, { status: 503 });
+  return NextResponse.json({ users: (legacy.data || []).map((profile) => ({ id: profile.id, name: profile.nome || "", email: profile.email, isAdmin: profile.crm_is_admin, permissions: profile.crm_permissions || [], isCloser: false, commissionRate: 0 })) });
 }
 
 export async function POST(request: Request) {
@@ -49,7 +53,9 @@ export async function POST(request: Request) {
   const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nome: name } });
   if (createError || !created.user) return NextResponse.json({ error: createError?.message || "user-create-failed" }, { status: 409 });
   const effectivePermissions = body.isAdmin ? [...CRM_TABS] : permissions;
-  const { error: profileError } = await admin.from("profiles").update({ nome: name, email, crm_access: true, crm_is_admin: Boolean(body.isAdmin), crm_permissions: effectivePermissions, crm_is_closer: Boolean(body.isCloser), crm_commission_rate: body.isCloser ? commissionRate : 0 }).eq("id", created.user.id);
+  const profileValues = { nome: name, email, crm_access: true, crm_is_admin: Boolean(body.isAdmin), crm_permissions: effectivePermissions };
+  const fullProfile = await admin.from("profiles").update({ ...profileValues, crm_is_closer: Boolean(body.isCloser), crm_commission_rate: body.isCloser ? commissionRate : 0 }).eq("id", created.user.id);
+  const profileError = fullProfile.error ? (await admin.from("profiles").update(profileValues).eq("id", created.user.id)).error : null;
   if (profileError) {
     await admin.auth.admin.deleteUser(created.user.id);
     return NextResponse.json({ error: "profile-update-failed" }, { status: 503 });
@@ -72,7 +78,9 @@ export async function PATCH(request: Request) {
   const { error: authError } = await admin.auth.admin.updateUserById(id, { email, ...(password ? { password } : {}), user_metadata: { nome: name } });
   if (authError) return NextResponse.json({ error: authError.message }, { status: 409 });
   const effectivePermissions = body.isAdmin ? [...CRM_TABS] : permissions;
-  const { error } = await admin.from("profiles").update({ nome: name, email, crm_access: true, crm_is_admin: Boolean(body.isAdmin), crm_permissions: effectivePermissions, crm_is_closer: Boolean(body.isCloser), crm_commission_rate: body.isCloser ? commissionRate : 0 }).eq("id", id);
+  const profileValues = { nome: name, email, crm_access: true, crm_is_admin: Boolean(body.isAdmin), crm_permissions: effectivePermissions };
+  const fullProfile = await admin.from("profiles").update({ ...profileValues, crm_is_closer: Boolean(body.isCloser), crm_commission_rate: body.isCloser ? commissionRate : 0 }).eq("id", id);
+  const error = fullProfile.error ? (await admin.from("profiles").update(profileValues).eq("id", id)).error : null;
   if (error) return NextResponse.json({ error: "profile-update-failed" }, { status: 503 });
   return NextResponse.json({ ok: true });
 }
