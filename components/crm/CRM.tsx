@@ -281,11 +281,42 @@ export default function CRM() {
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
   const skipNextSnapshotSync = useRef(false);
   const leadSaveTimers = useRef<Map<string, number>>(new Map());
+  const notificationAudio = useRef<AudioContext | null>(null);
   const [syncRevision, setSyncRevision] = useState(0);
   const [pipelineStages, setPipelineStages] = useState<Stage[]>(defaultStages);
   const [closers, setClosers] = useState<Closer[]>([]);
 
   useEffect(() => { leadsRef.current = leads; }, [leads]);
+  useEffect(() => {
+    const enableNotificationAudio = () => {
+      if (!notificationAudio.current) notificationAudio.current = new AudioContext();
+      if (notificationAudio.current.state === "suspended") void notificationAudio.current.resume();
+    };
+    window.addEventListener("pointerdown", enableNotificationAudio, { once: true });
+    window.addEventListener("keydown", enableNotificationAudio, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", enableNotificationAudio);
+      window.removeEventListener("keydown", enableNotificationAudio);
+      if (notificationAudio.current) void notificationAudio.current.close();
+      notificationAudio.current = null;
+    };
+  }, []);
+  const playNewLeadNotification = () => {
+    const context = notificationAudio.current;
+    if (!context || context.state !== "running") return;
+    const now = context.currentTime;
+    [0, .16].forEach((delay, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(index ? 880 : 660, now + delay);
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(.16, now + delay + .015);
+      gain.gain.exponentialRampToValueAtTime(.001, now + delay + .22);
+      oscillator.connect(gain); gain.connect(context.destination);
+      oscillator.start(now + delay); oscillator.stop(now + delay + .24);
+    });
+  };
   useEffect(() => { if (!loaded) return; void fetch(`/api/crm/closers?month=${selectedMonth}`, { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject()).then((data) => setClosers(data.closers || [])).catch(() => setClosers([])); }, [loaded, selectedMonth]);
 
   const registerDatabaseFailure = async (response?: Response) => {
@@ -540,7 +571,7 @@ export default function CRM() {
       // ainda não houve nova tentativa: buscar o remoto agora sobrescreveria a
       // alteração local com o dado antigo do banco. Só atualiza quando sabemos
       // que local e remoto estão sincronizados.
-      if (refreshing || document.visibilityState === "hidden" || databaseStatus !== "connected") return;
+      if (refreshing || databaseStatus !== "connected") return;
       refreshing = true;
       const revisionAtStart = localDataRevision.current;
       try {
@@ -550,9 +581,13 @@ export default function CRM() {
         // Se houve uma edição enquanto a leitura estava em andamento, a
         // resposta já nasceu antiga e não pode substituir o estado local.
         if (revisionAtStart !== localDataRevision.current) return;
+        const remoteLeads = mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead));
+        const knownIds = new Set(leadsRef.current.map((lead) => lead.id));
+        if (remoteLeads.some((lead) => !knownIds.has(lead.id))) playNewLeadNotification();
+        leadsRef.current = remoteLeads;
         setAccess({ isAdmin: Boolean(remote.access?.isAdmin), permissions: Array.isArray(remote.access?.permissions) ? remote.access.permissions : [] });
         skipNextSnapshotSync.current = true;
-        setLeads(mergeLeadCollections([], (remote.leads || []).map((lead: Lead) => lead.stage === "Contato feito" ? { ...lead, stage: "Primeiro contato" } : lead)));
+        setLeads(remoteLeads);
         setTraffic(remote.traffic || []);
         setExpenses(remote.expenses || []);
         setCatalogProducts(remote.products?.length ? remote.products : [...products]);
@@ -572,9 +607,11 @@ export default function CRM() {
     };
     window.addEventListener("focus", refreshFromDatabase);
     document.addEventListener("visibilitychange", refreshFromDatabase);
+    const interval = window.setInterval(refreshFromDatabase, 15_000);
     return () => {
       window.removeEventListener("focus", refreshFromDatabase);
       document.removeEventListener("visibilitychange", refreshFromDatabase);
+      window.clearInterval(interval);
     };
   }, [databaseReady, databaseStatus]);
 
