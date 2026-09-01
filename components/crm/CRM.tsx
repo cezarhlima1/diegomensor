@@ -1401,6 +1401,13 @@ function Pipeline({
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
           const stageIndex = stages.indexOf(stage);
+          const allStageLeadsSelected = items.length > 0 && items.every((lead) => selectedLeadIds.has(lead.id));
+          const toggleStageSelection = () => setSelectedLeadIds((current) => {
+            const next = new Set(current);
+            if (allStageLeadsSelected) items.forEach((lead) => next.delete(lead.id));
+            else items.forEach((lead) => next.add(lead.id));
+            return next;
+          });
           return (
             <section
               key={stage}
@@ -1413,7 +1420,7 @@ function Pipeline({
                   <b>{stage}</b>
                   <span>{items.length}</span>
                 </div>
-                <div className={styles.stageActions}><button onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
+                <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
               </header>
               <div className={styles.cards}>
                 {items.map((lead) => (
