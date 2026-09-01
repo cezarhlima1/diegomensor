@@ -290,6 +290,7 @@ export type Orcamento = {
   total: number;
   status: StatusOrcamento;
   data: string; // ISO
+  approvedAt?: string | null; // ISO; ausente em aprovacoes anteriores à migration 0030
 };
 
 const STORAGE_INPUTS = "calc:inputs:v1";

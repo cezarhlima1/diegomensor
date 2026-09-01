@@ -91,13 +91,22 @@ export default async function CalculadoraPage() {
   let orcamentosIniciais: Orcamento[] = [];
   {
     const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("orcamentos")
       .select(
-        "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at"
+        "id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at, approved_at"
       )
       .eq("empresa_id", sessao.empresaAtiva.id)
       .order("created_at", { ascending: false });
+    if (error && (error.code === "PGRST204" || error.message.includes("approved_at"))) {
+      const fallback = await supabase
+        .from("orcamentos")
+        .select("id, nome_cliente, nome_carro, placa, valor_hora, horas, mao_de_obra, pecas, valor_peca, total, status, created_at")
+        .eq("empresa_id", sessao.empresaAtiva.id)
+        .order("created_at", { ascending: false });
+      data = fallback.data as typeof data;
+      error = fallback.error;
+    }
     if (error) {
       throw new Error(
         `calculadora: falha ao carregar orcamentos: ${error.message}`
@@ -121,6 +130,7 @@ export default async function CalculadoraPage() {
         total: Number(o.total),
         status: o.status as StatusOrcamento,
         data: o.created_at,
+        approvedAt: "approved_at" in o ? o.approved_at : null,
       };
     });
   }

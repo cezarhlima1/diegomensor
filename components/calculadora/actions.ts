@@ -489,13 +489,28 @@ export async function atualizarStatusOrcamento(
   }
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  const approvedAt = status === "Aprovado" ? new Date().toISOString() : null;
+  let { data, error } = await admin
     .from("orcamentos")
-    .update({ status })
+    .update({ status, approved_at: approvedAt })
     .eq("id", orcamentoId)
     .eq("empresa_id", empresaId)
     .select("id")
     .maybeSingle();
+
+  // Mantém o deploy compatível durante a janela entre o commit e a execução
+  // da migration 0030. Depois da migration, este fallback não é utilizado.
+  if (error && (error.code === "PGRST204" || error.message.includes("approved_at"))) {
+    const fallback = await admin
+      .from("orcamentos")
+      .update({ status })
+      .eq("id", orcamentoId)
+      .eq("empresa_id", empresaId)
+      .select("id")
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error || !data) {
     console.error(

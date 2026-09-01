@@ -348,7 +348,7 @@ export default function Calculadora({
     );
     const termo = busca.trim().toLowerCase();
     return orcamentos.filter((o) => {
-      const d = new Date(o.data);
+      const d = new Date(o.status === "Aprovado" && o.approvedAt ? o.approvedAt : o.data);
       let periodoOk = true;
       if (filtroPeriodo === "mes") {
         periodoOk =
@@ -897,11 +897,12 @@ export default function Calculadora({
       const fim = expFim ? new Date(`${expFim}T23:59:59.999`) : null;
       const linhas = orcamentos
         .filter((o) => {
-          const d = new Date(o.data);
+          const d = new Date(o.status === "Aprovado" && o.approvedAt ? o.approvedAt : o.data);
           return (!ini || d >= ini) && (!fim || d <= fim);
         })
         .map((o) => ({
           Data: formatData(o.data),
+          "Data de aprovação": o.approvedAt ? formatData(o.approvedAt) : "",
           Cliente: o.nomeCliente,
           ...(permiteVerCustoPecas
             ? {
@@ -960,9 +961,10 @@ export default function Calculadora({
 
   async function alterarStatusOrcamento(id: string, status: StatusOrcamento) {
     const anterior = orcamentos;
+    const approvedAt = status === "Aprovado" ? new Date().toISOString() : null;
     setAtualizandoStatusId(id);
     setOrcamentos((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status } : o)),
+      prev.map((o) => (o.id === id ? { ...o, status, approvedAt } : o)),
     );
     try {
       const resultado = await atualizarStatusOrcamento(empresaId, id, status);
