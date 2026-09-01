@@ -8,6 +8,8 @@ import {
   DEFAULT_SUFIXO_ORCAMENTO,
   MARKUP_MIN,
   MARKUP_MAX,
+  ORIGENS_CLIENTE,
+  arredondarMoeda,
   brl,
   buildOrcamentoMsg,
   clearInputs,
@@ -403,11 +405,7 @@ export default function Calculadora({
     [orcamentosFiltrados],
   );
   const saldoOrigens = useMemo(
-    () => ({
-      ligacao: orcamentosFiltrados.filter((o) => o.origem === "Ligação").length,
-      whatsapp: orcamentosFiltrados.filter((o) => o.origem === "WhatsApp").length,
-      pessoalmente: orcamentosFiltrados.filter((o) => o.origem === "Pessoalmente").length,
-    }),
+    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => [origem, orcamentosFiltrados.filter((o) => o.origem === origem).length])) as Record<OrigemCliente, number>,
     [orcamentosFiltrados],
   );
   const totaisAjusteRapido = useMemo(() => {
@@ -758,7 +756,9 @@ export default function Calculadora({
       nome: p.nome.trim() || "Peça",
       quantidade: Math.max(1, parseNum(p.quantidade)),
       valor: valorPecaAjuste(p, tiers),
-      maoDeObra: parseNum(p.horas) * ajusteRapido.valorHora,
+      maoDeObra: arredondarMoeda(
+        parseNum(p.horas) * arredondarMoeda(ajusteRapido.valorHora),
+      ),
       custo: parseNum(p.custo),
       markup:
         p.markup ?? tierForCost(parseNum(p.custo), tiers).markup,
@@ -768,7 +768,9 @@ export default function Calculadora({
       (total, p) => total + parseNum(p.horas),
       0,
     );
-    const maoDeObra = horas * ajusteRapido.valorHora;
+    const maoDeObra = arredondarMoeda(
+      horas * arredondarMoeda(ajusteRapido.valorHora),
+    );
     try {
       const resultado = await editarOrcamento(
         empresaId,
@@ -914,7 +916,7 @@ export default function Calculadora({
           Placa: o.placa,
           "Valor hora (R$)": o.valorHora,
           Horas: o.horas,
-          "Mão de obra (R$)": o.maoDeObra,
+          "Hora técnica (R$)": o.maoDeObra,
           "Peças (R$)": o.valorPeca,
           "Total (R$)": o.total,
           Status: o.status,
@@ -1374,7 +1376,7 @@ export default function Calculadora({
                   <p className="calc-card-kicker">
                     Passo {ehAdmin ? "03" : "02"} — Orçamento
                   </p>
-                  <h2 className="calc-card-title">Cliente, mão de obra e peças</h2>
+                  <h2 className="calc-card-title">Cliente, hora técnica e peças</h2>
                   <p className="calc-card-sub">
                     Informe o cliente e as horas de serviço de cada peça.{" "}
                     {ehAdmin
@@ -1430,9 +1432,7 @@ export default function Calculadora({
                             }
                           >
                             <option value="">Selecione a origem</option>
-                            <option value="Ligação">Ligação</option>
-                            <option value="WhatsApp">WhatsApp</option>
-                            <option value="Pessoalmente">Pessoalmente</option>
+                            {ORIGENS_CLIENTE.map((item) => <option key={item} value={item}>{item}</option>)}
                           </select>
                         </label>
                       </div>
@@ -1598,7 +1598,7 @@ export default function Calculadora({
                               {brl(precoPecaItem(p, tiers))}
                             </span>
                             <span>
-                              <em>Mão de obra</em>
+                              <em>Hora técnica</em>
                               {brl(maoDeObraPeca(p, valorHoraOrcamento))}
                             </span>
                           </span>
@@ -1608,7 +1608,7 @@ export default function Calculadora({
                   )}
                   <div className="calc-readout-breakdown">
                     <div>
-                      <span className="calc-readout-k">Total de mão de obra</span>
+                      <span className="calc-readout-k">Total de hora técnica</span>
                       <span className="calc-readout-v">
                         <AnimatedBRL value={maoDeObraTotal} />
                       </span>
@@ -1739,18 +1739,7 @@ export default function Calculadora({
                         <small>Quantidade por canal</small>
                       </div>
                       <div className="calc-origens-grid">
-                        <div>
-                          <span>Ligação</span>
-                          <b>{saldoOrigens.ligacao}</b>
-                        </div>
-                        <div>
-                          <span>WhatsApp</span>
-                          <b>{saldoOrigens.whatsapp}</b>
-                        </div>
-                        <div>
-                          <span>Pessoalmente</span>
-                          <b>{saldoOrigens.pessoalmente}</b>
-                        </div>
+                        {ORIGENS_CLIENTE.map((origem) => <div key={origem}><span>{origem}</span><b>{saldoOrigens[origem]}</b></div>)}
                       </div>
                     </div>
                   )}
@@ -2023,7 +2012,7 @@ export default function Calculadora({
                         >
                       <div className="calc-hist-vals">
                         <span className="calc-hist-valor">
-                          <i>Mão de obra</i>
+                          <i>Hora técnica</i>
                           <b>{brl(o.maoDeObra ?? o.valorHora ?? 0)}</b>
                         </span>
                         <span className="calc-hist-valor">
@@ -2315,9 +2304,7 @@ export default function Calculadora({
                         }
                       >
                         <option value="">Selecione a origem</option>
-                        <option value="Ligação">Ligação</option>
-                        <option value="WhatsApp">WhatsApp</option>
-                        <option value="Pessoalmente">Pessoalmente</option>
+                        {ORIGENS_CLIENTE.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
                     </label>
                   </>
@@ -2499,7 +2486,9 @@ export default function Calculadora({
                   {ajusteRapido.pecas.map((peca) => {
                     const valorPecas = valorPecaAjuste(peca, tiers);
                     const horas = parseNum(peca.horas);
-                    const maoDeObra = horas * ajusteRapido.valorHora;
+                    const maoDeObra = arredondarMoeda(
+                      horas * arredondarMoeda(ajusteRapido.valorHora),
+                    );
                     return (
                       <div className="calc-ajuste-detalhe" key={peca.id}>
                         <div>
@@ -2512,7 +2501,7 @@ export default function Calculadora({
                           </small>
                         </div>
                         <span>Peças <b>{brl(valorPecas)}</b></span>
-                        <span>Mão de obra <b>{brl(maoDeObra)}</b></span>
+                        <span>Hora técnica <b>{brl(maoDeObra)}</b></span>
                         <strong>{brl(valorPecas + maoDeObra)}</strong>
                       </div>
                     );
@@ -2522,7 +2511,7 @@ export default function Calculadora({
 
               <div className="calc-ajuste-totais">
                 <span>Peças <b>{brl(totaisAjusteRapido.pecas)}</b></span>
-                <span>Mão de obra <b>{brl(totaisAjusteRapido.maoDeObra)}</b></span>
+                <span>Hora técnica <b>{brl(totaisAjusteRapido.maoDeObra)}</b></span>
                 <span>Total <strong>{brl(totaisAjusteRapido.total)}</strong></span>
               </div>
 

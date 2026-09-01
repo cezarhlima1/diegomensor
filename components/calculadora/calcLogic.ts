@@ -149,7 +149,10 @@ export function calcCustoHora(
   // horas disponíveis somadas entre os mecânicos → mais mecânicos, menor custo/hora
   const horasEfetivas = horasMes * mecanicos;
   const custoBase = horasEfetivas > 0 ? totalCustos / horasEfetivas : 0;
-  const custoFinal = custoBase * multiplicador;
+  // O valor exibido e o valor usado nos orçamentos precisam ser idênticos.
+  // Sem esta normalização, 180,004 aparece como R$ 180,00, mas 5 horas
+  // acabam cobrando R$ 900,02.
+  const custoFinal = arredondarMoeda(custoBase * multiplicador);
   return { totalCustos, horasEfetivas, custoBase, custoFinal };
 }
 
@@ -194,7 +197,7 @@ export type Peca = {
   markup: number | null;
   /** quantidade de peças (multiplica o valor final) */
   quantidade: string;
-  /** horas de serviço da peça (define a mão de obra individual) */
+  /** horas de serviço da peça (define a hora técnica individual) */
   horas: string;
 };
 
@@ -242,12 +245,12 @@ export function somaPecas(pecas: Peca[], tiers: MarkupTier[]): number {
   return somarValoresMonetarios(pecas.map((p) => precoPecaItem(p, tiers)));
 }
 
-/** mão de obra de uma peça: valor da hora × horas de serviço. */
+/** hora técnica de uma peça: valor da hora × horas de serviço. */
 export function maoDeObraPeca(peca: Peca, valorHora: number): number {
-  return arredondarMoeda(valorHora * parseNum(peca.horas));
+  return arredondarMoeda(arredondarMoeda(valorHora) * parseNum(peca.horas));
 }
 
-/** soma da mão de obra de todas as peças. */
+/** soma da hora técnica de todas as peças. */
 export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
   return somarValoresMonetarios(
     pecas.map((p) => maoDeObraPeca(p, valorHora)),
@@ -272,7 +275,19 @@ export type PecaResumo = {
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
 export type StatusOrcamento = "Aguardando aprovação" | "Aprovado" | "Não aprovado";
-export type OrigemCliente = "Ligação" | "WhatsApp" | "Pessoalmente";
+export const ORIGENS_CLIENTE = [
+  "Ligação",
+  "WhatsApp",
+  "Pessoalmente",
+  "Já é cliente",
+  "Passou na frente",
+  "Google",
+  "Instagram",
+  "Indicação",
+  "Outdoor",
+  "Rádio",
+] as const;
+export type OrigemCliente = typeof ORIGENS_CLIENTE[number];
 
 export type Orcamento = {
   id: string;
@@ -431,7 +446,7 @@ export function buildOrcamentoMsg(o: {
     linhas.push("", nome);
     if (p.valor > 0) linhas.push(`Valor: ${brl(p.valor)}`);
     if ((p.maoDeObra ?? 0) > 0)
-      linhas.push(`Mão de obra: ${brl(p.maoDeObra ?? 0)}`);
+      linhas.push(`Hora técnica: ${brl(p.maoDeObra ?? 0)}`);
   }
 
   linhas.push("", `*Total: ${brl(o.total)}*`);
