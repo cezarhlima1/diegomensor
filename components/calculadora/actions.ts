@@ -13,6 +13,7 @@ import {
   MULT_MAX,
   MULT_MIN,
   ORIGENS_CLIENTE,
+  ORIGENS_CLIENTE_LEGADAS,
   calcCustoHora,
   arredondarMoeda,
   parseNum,
@@ -28,7 +29,7 @@ import {
   type ValorHoraSalvo,
 } from "./calcLogic";
 
-const ORIGENS_VALIDAS: readonly OrigemCliente[] = ORIGENS_CLIENTE;
+const ORIGENS_VALIDAS: readonly OrigemCliente[] = [...ORIGENS_CLIENTE, ...ORIGENS_CLIENTE_LEGADAS];
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
 const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";

@@ -276,9 +276,6 @@ export type PecaResumo = {
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
 export type StatusOrcamento = "Aguardando aprovação" | "Aprovado" | "Não aprovado";
 export const ORIGENS_CLIENTE = [
-  "Ligação",
-  "WhatsApp",
-  "Pessoalmente",
   "Já é cliente",
   "Passou na frente",
   "Google",
@@ -287,7 +284,8 @@ export const ORIGENS_CLIENTE = [
   "Outdoor",
   "Rádio",
 ] as const;
-export type OrigemCliente = typeof ORIGENS_CLIENTE[number];
+export const ORIGENS_CLIENTE_LEGADAS = ["Ligação", "WhatsApp", "Pessoalmente"] as const;
+export type OrigemCliente = typeof ORIGENS_CLIENTE[number] | typeof ORIGENS_CLIENTE_LEGADAS[number];
 
 export type Orcamento = {
   id: string;

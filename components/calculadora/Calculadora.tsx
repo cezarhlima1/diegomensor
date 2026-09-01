@@ -405,7 +405,7 @@ export default function Calculadora({
     [orcamentosFiltrados],
   );
   const saldoOrigens = useMemo(
-    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => [origem, orcamentosFiltrados.filter((o) => o.origem === origem).length])) as Record<OrigemCliente, number>,
+    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => [origem, orcamentosFiltrados.filter((o) => o.origem === origem).length])) as Record<(typeof ORIGENS_CLIENTE)[number], number>,
     [orcamentosFiltrados],
   );
   const totaisAjusteRapido = useMemo(() => {
