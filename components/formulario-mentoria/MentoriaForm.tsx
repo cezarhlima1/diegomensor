@@ -63,7 +63,7 @@ export default function MentoriaForm() {
       await fetch("/api/aplicacao-mentoria", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "partial", nome: name, whatsapp, attribution: getAttribution() }),
+        body: JSON.stringify({ mode: "partial", nome: name, whatsapp, sessionId: sessionIdRef.current, attribution: getAttribution() }),
         keepalive: true,
       });
     } catch { /* O formulário continua mesmo se a captura parcial falhar. */ }

@@ -99,9 +99,19 @@ export async function POST(request: Request) {
         const expectedSource = crmSourceForAttribution(attribution);
         const crmSource = await registeredCrmSource(db, expectedSource);
         if (!crmSource) return NextResponse.json({ ok: false, error: "source-not-registered" }, { status: 422 });
+        const partialSessionId = SESSION_ID_RE.test(safeText(body.sessionId, 100)) ? safeText(body.sessionId, 100) : "";
+        const partialApplication = {
+          sessionId: partialSessionId,
+          submittedAt: new Date().toISOString(),
+          attribution,
+          answers: [
+            { numero: 1, pergunta: "Qual é o seu WhatsApp pessoal?", resposta: phone },
+            { numero: 2, pergunta: "Qual é o seu nome?", resposta: name },
+          ],
+        };
         await db.query(
-          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at) values($1,$2,'',$3,'','Iniciou o formulário e informou nome e WhatsApp.',$4,$5,'Mentoria OAG','Novo lead',0,'Morno','Concluir aplicação',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now())",
-          [crypto.randomUUID(), name, phone, [], crmSource],
+          "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,'','Iniciou o formulário e informou nome e WhatsApp.',$4,$5,'Mentoria OAG','Novo lead',0,'Morno','Concluir aplicação',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb)",
+          [crypto.randomUUID(), name, phone, [], crmSource, JSON.stringify(partialApplication)],
         );
       }
       return NextResponse.json({ ok: true, partial: true });

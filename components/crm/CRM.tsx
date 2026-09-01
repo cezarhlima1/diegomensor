@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
+import { allQuestions } from "@/components/formulario-mentoria/questions";
 
 type Stage = string;
 type View = CrmModule | "admin";
@@ -79,6 +80,13 @@ const legacySources: Record<string, string> = {
 };
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const isGenericFormSource = (source: string) => source.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "formulario";
+const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const answersForLead = (lead: Lead) => allQuestions.map((question) => {
+  const answer = lead.application?.answers?.find((item) => normalizeQuestion(item.pergunta) === normalizeQuestion(question.label));
+  const formLead = Boolean(lead.application || lead.notes?.toLowerCase().includes("formulário") || lead.source.toLowerCase().startsWith("forms"));
+  const fallback = formLead && question.id === "whatsapp" ? lead.phone : formLead && question.id === "nome" ? lead.name : "";
+  return { numero: question.number, pergunta: question.label, resposta: answer?.resposta?.trim() || fallback.trim() || "Não preenchido" };
+});
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog];
@@ -1330,6 +1338,7 @@ function Pipeline({
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const archived = isDisqualifiedLead;
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const stageItems = useMemo(() => {
@@ -1356,9 +1365,38 @@ function Pipeline({
   }, [leads, products, stages, range.start, range.end, productFilter, search]);
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
+  const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const startLeadDrag = (event: React.DragEvent<HTMLElement>, id: string) => {
+    const ids = selectedLeadIds.has(id) ? [...selectedLeadIds] : [id];
+    if (!selectedLeadIds.has(id)) setSelectedLeadIds(new Set(ids));
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("leadIds", JSON.stringify(ids));
+    event.dataTransfer.setData("leadId", id);
+  };
+  const dropLeads = (event: React.DragEvent<HTMLElement>, stage: Stage) => {
+    event.preventDefault();
+    let ids: string[] = [];
+    try {
+      const transferred = JSON.parse(event.dataTransfer.getData("leadIds"));
+      if (Array.isArray(transferred)) ids = transferred.filter((id): id is string => typeof id === "string");
+    } catch {
+      // Compatibilidade com cards arrastados antes da selecao multipla.
+    }
+    if (!ids.length) {
+      const id = event.dataTransfer.getData("leadId");
+      if (id) ids = [id];
+    }
+    const validIds = [...new Set(ids)].filter((id) => leads.some((lead) => lead.id === id && visibleStage(lead) !== stage));
+    validIds.forEach((id) => moveLead(id, stage));
+    setSelectedLeadIds(new Set());
+  };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div><form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
@@ -1367,9 +1405,7 @@ function Pipeline({
             <section
               key={stage}
               onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) =>
-                moveLead(event.dataTransfer.getData("leadId"), stage)
-              }
+              onDrop={(event) => dropLeads(event, stage)}
             >
               <header>
                 <div>
@@ -1384,15 +1420,14 @@ function Pipeline({
                   <article
                     key={lead.id}
                     draggable
+                    className={selectedLeadIds.has(lead.id) ? styles.cardSelected : undefined}
                     style={{ borderLeft: `3px solid ${stageColor(stage)}` }}
-                    onDragStart={(event) =>
-                      event.dataTransfer.setData("leadId", lead.id)
-                    }
+                    onDragStart={(event) => startLeadDrag(event, lead.id)}
                     onClick={() => select(lead)}
                   >
                     <div className={styles.cleanCard}>
                       <div>
-                        <h3>{lead.name}</h3>
+                        <div className={styles.cardTitle}><button type="button" aria-label={`${selectedLeadIds.has(lead.id) ? "Desmarcar" : "Selecionar"} ${lead.name}`} aria-pressed={selectedLeadIds.has(lead.id)} onClick={(event) => { event.stopPropagation(); toggleLeadSelection(lead.id); }}>{selectedLeadIds.has(lead.id) ? "✓" : ""}</button><h3>{lead.name}</h3></div>
                         <p><span>Origem</span>{lead.source}</p>
                         {lead.product && lead.product !== "Não informado" && <em className={styles.productTag} style={{ color: productColor(lead.product), borderColor: `${productColor(lead.product)}66`, background: `${productColor(lead.product)}18` }}>{lead.product}</em>}
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
@@ -1815,6 +1850,9 @@ function LeadDrawer({
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
   const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "", closerUserId: "" });
   const tags = lead.tags || [];
+  const applicationAnswers = answersForLead(lead);
+  const filledApplicationAnswers = applicationAnswers.filter((answer) => answer.resposta !== "Não preenchido").length;
+  const applicationRevenue = applicationAnswers.find((answer) => normalizeQuestion(answer.pergunta) === normalizeQuestion("Qual a faixa de faturamento mensal da sua operação?"))?.resposta;
   const contactCheckpoints = [...(lead.contactCheckpoints || [])].sort((left, right) => new Date(right).getTime() - new Date(left).getTime());
   const today = brazilDateKey(new Date());
   const contactedToday = contactCheckpoints.some((checkpoint) => brazilDateKey(checkpoint) === today);
@@ -1920,20 +1958,20 @@ function LeadDrawer({
           </div>
           {contactCheckpoints.length > 0 ? <div className={styles.contactHistoryList}>{contactCheckpoints.map((checkpoint) => <article key={checkpoint}><i>✓</i><span><b>{brazilDateKey(checkpoint) === today ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(checkpoint))}</b><small>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(checkpoint))}</small></span><button type="button" aria-label="Remover contato do histórico" title="Remover contato" onClick={() => removeContactCheckpoint(checkpoint)}>×</button></article>)}</div> : <p className={styles.emptyContactHistory}>Nenhum contato registrado.</p>}
         </section>
-        {lead.application && <section className={styles.applicationSection}>
+        <section className={styles.applicationSection}>
           <small>Aplicação da mentoria</small>
           <div className={styles.applicationSummary}>
-            <span><small>Origem</small><b>{lead.application.attribution?.utmSource || "Direto"}</b></span>
-            <span><small>Canal</small><b>{lead.application.attribution?.utmMedium || "Não informado"}</b></span>
-            <span><small>Faturamento</small><b>{lead.application.answers?.find((answer) => answer.numero === 9)?.resposta || "Não informado"}</b></span>
-            <span><small>Aplicação</small><b>{lead.application.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(lead.application.submittedAt)) : "Sem data"}</b></span>
+            <span><small>Origem</small><b>{lead.application?.attribution?.utmSource || "Não preenchido"}</b></span>
+            <span><small>Canal</small><b>{lead.application?.attribution?.utmMedium || "Não preenchido"}</b></span>
+            <span><small>Faturamento</small><b>{applicationRevenue || "Não preenchido"}</b></span>
+            <span><small>Aplicação</small><b>{lead.application?.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(lead.application.submittedAt)) : "Sem data"}</b></span>
           </div>
           <details className={styles.applicationDetails}>
-            <summary>Ver respostas <b>{lead.application.answers?.length || 0}</b></summary>
-            <div>{lead.application.answers?.map((answer) => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b>{answer.resposta}</b></p></article>)}</div>
-            {(lead.application.attribution?.utmCampaign || lead.application.attribution?.utmContent) && <footer><span>Campanha</span><b>{[lead.application.attribution.utmCampaign, lead.application.attribution.utmContent].filter(Boolean).join(" · ")}</b></footer>}
+            <summary>Ver respostas <b>{filledApplicationAnswers}/{applicationAnswers.length}</b></summary>
+            <div>{applicationAnswers.map((answer) => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b className={answer.resposta === "Não preenchido" ? styles.unfilledAnswer : undefined}>{answer.resposta}</b></p></article>)}</div>
+            {(lead.application?.attribution?.utmCampaign || lead.application?.attribution?.utmContent) && <footer><span>Campanha</span><b>{[lead.application?.attribution?.utmCampaign, lead.application?.attribution?.utmContent].filter(Boolean).join(" · ")}</b></footer>}
           </details>
-        </section>}
+        </section>
         <section className={styles.leadOpportunitySection}>
           <small>Oportunidade atual</small>
           <label>
