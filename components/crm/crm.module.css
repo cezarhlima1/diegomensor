@@ -2324,7 +2324,7 @@
 
 /* Datas compactas e alinhadas. */
 .leadTimeline{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:10px!important;background:#091923!important}
-.leadTimeline label{display:grid!important;gap:4px!important;margin:0!important;padding:0!important}.leadTimeline label span{color:#78909c!important;font-size:7px!important;font-weight:750!important;text-transform:uppercase;letter-spacing:.04em}.leadTimeline input,.purchaseDate input{width:100%;height:32px!important;padding:0 7px!important;border:1px solid rgba(190,215,225,.1)!important;border-radius:7px!important;background:#102735!important;color:#dce8ed!important;color-scheme:dark;font-size:9px!important}
+.leadTimeline label{display:grid!important;gap:4px!important;margin:0!important;padding:0!important}.leadTimeline label span{color:#78909c!important;font-size:7px!important;font-weight:750!important;text-transform:uppercase;letter-spacing:.04em}.leadTimeline input,.leadTimeline select,.purchaseDate input{width:100%;height:32px!important;padding:0 7px!important;border:1px solid rgba(190,215,225,.1)!important;border-radius:7px!important;background:#102735!important;color:#dce8ed!important;color-scheme:dark;font-size:9px!important}
 
 /* Edição pontual do histórico de compras. */
 .purchaseHistory article{display:grid!important;grid-template-columns:minmax(120px,1fr) 125px minmax(190px,auto) 26px;gap:10px!important}.purchaseDate{display:grid!important;gap:3px!important;margin:0!important}.purchaseDate span{color:#78909c!important;font-size:7px!important;text-transform:uppercase}.purchaseValues{display:grid;grid-template-columns:1fr 1fr;gap:6px}.purchaseValues>span{display:grid;gap:3px;color:#78909c;font-size:7px;text-transform:uppercase}.purchaseValues b{color:#e8f2f5;font-size:10px;text-transform:none}.purchaseValues .money{white-space:nowrap}.deletePurchase{width:26px;height:26px;border:1px solid rgba(239,115,123,.22);border-radius:7px;background:rgba(239,115,123,.08);color:#ef737b;font-size:16px;cursor:pointer}
@@ -2453,6 +2453,10 @@
 .closingDetailsModal>footer{display:flex;align-items:center;justify-content:space-between}.closingDetailsModal>footer>span{color:#78909c;font-size:9px}.closingDetailsModal>footer>b{color:#62d4a6;font-size:14px}
 .crm[data-theme="light"] .closingTooltip{border-color:rgba(35,68,84,.16);background:#fff}.crm[data-theme="light"] .periodEvents>div .closingTooltip>strong,.crm[data-theme="light"] .periodEvents>div .closingTooltip b,.crm[data-theme="light"] .closingDetailsModal article b{color:#294451}.crm[data-theme="light"] .periodEvents>div .closingTooltip>span{background:#eef5f7}
 @media(max-width:700px){.closingTooltip{right:auto;left:8px}.closingDetailsModal>div{padding-inline:14px}}
+.dashboardContent .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1200px){.dashboardContent .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.dashboardContent .kpis{grid-template-columns:1fr 1fr}.dashboardContent .kpis article:last-child{grid-column:1/-1}}
+@media(max-width:560px){.dashboardContent .kpis{grid-template-columns:1fr}.dashboardContent .kpis article:last-child{grid-column:auto}}
 
 /* Hierarquia visual e metas individuais no financeiro. */
 .financeDashboard{gap:18px}.commissionPanel,.financePanelFull{box-shadow:0 12px 34px rgba(0,0,0,.16)}

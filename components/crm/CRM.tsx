@@ -8,6 +8,7 @@ import { allQuestions } from "@/components/formulario-mentoria/questions";
 type Stage = string;
 type View = CrmModule | "admin";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
+type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
   submittedAt?: string;
   attribution?: { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; landingPage?: string };
@@ -37,6 +38,7 @@ type Lead = {
   conversationAt?: string;
   meetingAt?: string;
   meetingScheduledFor?: string | null;
+  meetingOutcome?: MeetingOutcome | null;
   followUpAt?: string | null;
   proposalAt?: string;
   closedAt?: string;
@@ -752,7 +754,7 @@ export default function CRM() {
   const startBulkAscension = async (leadIds: string[], product: string) => {
     const definition = catalogProducts.find((item) => item.name === product);
     const selectedIds = new Set(leadIds);
-    const next = leads.map((lead) => selectedIds.has(lead.id) ? { ...lead, product, stage: "Novo lead", value: definition?.price || 0, netValue: definition?.netPrice ?? definition?.price ?? 0, nextAction: `Ofertar ${product}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, followUpAt: null, proposalAt: undefined, closedAt: undefined, tags: Array.from(new Set([...(lead.tags || []), `Ascensão: ${product}`])) } : lead);
+    const next = leads.map((lead) => selectedIds.has(lead.id) ? { ...lead, product, stage: "Novo lead", value: definition?.price || 0, netValue: definition?.netPrice ?? definition?.price ?? 0, nextAction: `Ofertar ${product}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, meetingOutcome: null, followUpAt: null, proposalAt: undefined, closedAt: undefined, tags: Array.from(new Set([...(lead.tags || []), `Ascensão: ${product}`])) } : lead);
     await persistImportBatch(next, traffic, next.filter((lead) => selectedIds.has(lead.id)));
   };
   const importAscensionSales = async (product: string, sales: ImportedSale[], newLeadSource: string, sourcesByCode: Record<string, string> = {}) => {
@@ -846,7 +848,7 @@ export default function CRM() {
     const currentIndex = ladder.findIndex((item) => item.name === lastProduct);
     const nextProduct = ladder[currentIndex + 1];
     if (!nextProduct) return;
-    updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, followUpAt: null, proposalAt: undefined, closedAt: undefined });
+    updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, meetingOutcome: null, followUpAt: null, proposalAt: undefined, closedAt: undefined });
   };
 
   const allNavigation: Array<[View, string, string]> = [
@@ -1273,40 +1275,22 @@ function Dashboard({
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
   const generatedLeads = leads.filter((lead) => inRange(lead.createdAt, start, end));
-  const funnelLeads = leads.filter((lead) => brazilDateKey(lead.createdAt) <= end);
-  const previousLeads = funnelLeads.filter((lead) => brazilDateKey(lead.createdAt) < start).length;
-  const happenedByEnd = (date?: string) => Boolean(date && brazilDateKey(date) <= end);
-  const funnelProposals = funnelLeads.filter((lead) => happenedByEnd(lead.proposalAt) && brazilDateKey(lead.proposalAt) >= brazilDateKey(lead.createdAt));
-  const proposalAfterMeeting = (lead: Lead) => happenedByEnd(lead.meetingAt) && brazilDateKey(lead.meetingAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(lead.meetingAt) <= brazilDateKey(lead.proposalAt);
-  const meetingProposals = funnelProposals.filter(proposalAfterMeeting);
-  const directProposals = funnelProposals.filter((lead) => !proposalAfterMeeting(lead));
-  const qualifyingClosings = (items: Lead[]) => items.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.proposalAt)));
-  const meetingClosings = qualifyingClosings(meetingProposals);
-  const directClosings = qualifyingClosings(directProposals);
-  const funnelClosings = funnelLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt)));
-  const funnelSteps = [
-    { label: "Leads totais", count: funnelLeads.length, detail: `${previousLeads} anteriores · ${generatedLeads.length} gerados no período` },
-    { label: "Com proposta", count: funnelProposals.length, detail: `${meetingProposals.length} após reunião · ${directProposals.length} diretas` },
-    { label: "Clientes fechados", count: funnelClosings.length, detail: "Fechados até o fim do período" },
-  ];
-  const periodConversations = leads.filter((lead) => inRange(lead.conversationAt, start, end)).length;
-  const periodMeetingBookings = leads.filter((lead) => inRange(lead.meetingAt, start, end)).length;
-  const periodScheduledMeetings = leads.filter((lead) => inRange(lead.meetingScheduledFor || undefined, start, end)).length;
   const periodPurchases = leads.flatMap((lead) => purchasesForLead(lead, products)
     .filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end))
     .map((purchase) => ({ lead, purchase })));
   const periodClosingLeads = new Set(periodPurchases.map(({ lead }) => lead.id)).size;
-  const cohortByEnd = (field: "conversationAt" | "meetingAt" | "proposalAt") => generatedLeads.filter((lead) => {
-    const date = lead[field];
-    return Boolean(date && brazilDateKey(date) >= brazilDateKey(lead.createdAt) && brazilDateKey(date) <= end);
-  }).length;
-  const cohortClosings = generatedLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(purchase.closedAt) <= end)).length;
-  const cohortSteps = [
-    { label: "Entraram", count: generatedLeads.length },
-    { label: "Conversaram", count: cohortByEnd("conversationAt") },
-    { label: "Agendaram", count: cohortByEnd("meetingAt") },
-    { label: "Receberam proposta", count: cohortByEnd("proposalAt") },
-    { label: "Fecharam", count: cohortClosings },
+  const periodMeetingBookings = leads.filter((lead) => inRange(lead.meetingAt, start, end));
+  const periodHeldMeetings = leads.filter((lead) => lead.meetingOutcome === "Realizada" && inRange(lead.meetingScheduledFor || undefined, start, end));
+  const periodNoShows = leads.filter((lead) => lead.meetingOutcome === "No-show" && inRange(lead.meetingScheduledFor || undefined, start, end));
+  const periodClosingIds = new Set(periodPurchases.map(({ lead }) => lead.id));
+  const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.proposalAt, start, end) || periodClosingIds.has(lead.id));
+  const priorActiveLeads = activeLeads.filter((lead) => brazilDateKey(lead.createdAt) < start);
+  const funnelSteps = [
+    { label: "Leads trabalhados", count: activeLeads.length, detail: `${generatedLeads.length} novos · ${priorActiveLeads.length} da base` },
+    { label: "Reuniões agendadas", count: periodMeetingBookings.length, detail: "Agendadas neste período" },
+    { label: "Reuniões realizadas", count: periodHeldMeetings.length, detail: "Compareceram à reunião" },
+    { label: "No-show", count: periodNoShows.length, detail: "Não compareceram" },
+    { label: "Vendas", count: periodClosingLeads, detail: "Fechadas neste período" },
   ];
   const closedCycleDays = periodPurchases.map(({ lead, purchase }) => Math.max(0, (new Date(purchase.closedAt).getTime() - new Date(lead.createdAt || purchase.closedAt).getTime()) / 86_400_000)).filter(Number.isFinite);
   const averageCycleDays = closedCycleDays.length ? closedCycleDays.reduce((sum, days) => sum + days, 0) / closedCycleDays.length : 0;
@@ -1314,64 +1298,39 @@ function Dashboard({
     <div className={`${styles.content} ${styles.dashboardContent}`}>
       <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
       <div className={styles.kpis}>
-        <Kpi
-          label="Leads gerados no mês"
-          value={String(stats.total)}
-          detail={`${stats.hot} leads quentes`}
-        />
-        <Kpi
-          label="Reuniões no período"
-          value={String(stats.meetings)}
-          detail="Reuniões marcadas"
-        />
-        <Kpi
-          label="Propostas no período"
-          value={String(stats.proposals)}
-          detail={`${currency.format(stats.openValue)} em aberto`}
-        />
-        <Kpi
-          label="Clientes fechados"
-          value={String(stats.closed)}
-          detail={`${stats.sales} vendas · ${currency.format(stats.wonValue)} recebidos`}
-        />
+        <Kpi label="Leads que entraram" value={String(generatedLeads.length)} detail={`${activeLeads.length} trabalhados no total`} />
+        <Kpi label="Reuniões agendadas" value={String(periodMeetingBookings.length)} detail="Agendadas no período" />
+        <Kpi label="Reuniões realizadas" value={String(periodHeldMeetings.length)} detail="Compareceram" />
+        <Kpi label="No-show" value={String(periodNoShows.length)} detail="Não compareceram" />
+        <Kpi label="Clientes fechados" value={String(periodClosingLeads)} detail={`${periodPurchases.length} vendas · ${currency.format(periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0))}`} />
       </div>
       <section className={styles.periodAnalysis}>
-        <header><div><span>Leitura do período</span><h3>Movimento do mês × base total</h3></div><p>Os resultados entram no mês em que aconteceram. O funil considera toda a base acumulada até o fim do período.</p></header>
+        <header><div><span>Leitura do período</span><h3>Funil de movimentação comercial</h3></div><p>Cada lead aparece uma única vez na base do período, mesmo participando de várias etapas.</p></header>
         <div className={styles.periodAnalysisColumns}>
           <article className={styles.periodEvents}>
             <header><div><small>Atividade comercial</small><b>O que aconteceu no período</b></div><em>Pela data de cada evento</em></header>
             <div>
-              <span><small>Leads gerados</small><b>{generatedLeads.length}</b><i>entraram no período</i></span>
-              <span><small>Leads totais</small><b>{funnelLeads.length}</b><i>{previousLeads} anteriores + {generatedLeads.length} do período</i></span>
-              <span><small>Conversas iniciadas</small><b>{periodConversations}</b><i>pela data da conversa</i></span>
-              <span><small>Agendamentos feitos</small><b>{periodMeetingBookings}</b><i>pela data do agendamento</i></span>
-              <span><small>Reuniões previstas</small><b>{periodScheduledMeetings}</b><i>pela data marcada</i></span>
-              <span><small>Propostas enviadas</small><b>{stats.proposals}</b><i>pela data da proposta</i></span>
-              <span className={styles.closingMetric} role="button" tabIndex={0} onClick={() => periodPurchases.length && setShowPeriodClosings(true)} onKeyDown={(event) => { if (periodPurchases.length && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setShowPeriodClosings(true); } }}><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{periodPurchases.length ? "passe o mouse ou clique para detalhar" : "pela data do fechamento"}</i>{periodPurchases.length > 0 && <div className={styles.closingTooltip}><strong>Fechamentos do período</strong>{periodPurchases.map(({ lead, purchase }, index) => <span key={`${lead.id}-${purchase.id || index}`}><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"}</small><em><Money value={purchase.value} /></em></span>)}</div>}</span>
+              <span><small>Leads que entraram</small><b>{generatedLeads.length}</b><i>novos no período</i></span>
+              <span><small>Leads trabalhados</small><b>{activeLeads.length}</b><i>{generatedLeads.length} novos + {priorActiveLeads.length} da base</i></span>
+              <span><small>Reuniões agendadas</small><b>{periodMeetingBookings.length}</b><i>pela data do agendamento</i></span>
+              <span><small>Reuniões realizadas</small><b>{periodHeldMeetings.length}</b><i>resultado “Realizada”</i></span>
+              <span><small>No-show</small><b>{periodNoShows.length}</b><i>resultado “No-show”</i></span>
+              <span className={styles.closingMetric} role="button" tabIndex={0} onClick={() => periodPurchases.length && setShowPeriodClosings(true)} onKeyDown={(event) => { if (periodPurchases.length && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setShowPeriodClosings(true); } }}><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{periodPurchases.length ? "passe o mouse ou clique para detalhar" : "pela data do fechamento"}</i>{periodPurchases.length > 0 && <div className={styles.closingTooltip}><strong>Fechamentos do período</strong>{periodPurchases.map(({ lead, purchase }, index) => <span key={`${lead.id}-${purchase.id || index}`}><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"} · {inRange(lead.createdAt, start, end) ? "Lead novo" : "Base anterior"}</small><em><Money value={purchase.value} /></em></span>)}</div>}</span>
             </div>
             <footer><span>Ciclo médio dos fechamentos</span><b>{averageCycleDays.toFixed(1)} dias</b></footer>
           </article>
-          <article className={styles.cohortAnalysis}>
-            <header><div><small>Safra de entrada</small><b>Leads captados no período</b></div><em>Avanço até {new Intl.DateTimeFormat("pt-BR").format(new Date(`${end}T12:00:00`))}</em></header>
-            <div>{cohortSteps.map((step, index) => {
-              const conversion = generatedLeads.length ? step.count / generatedLeads.length * 100 : 0;
-              const previous = cohortSteps[index - 1];
-              const gap = previous ? Math.max(0, previous.count - step.count) : 0;
-              return <span key={step.label}><i style={{ width: `${Math.max(3, conversion)}%` }} /><small>{step.label}</small><b>{step.count}</b><em>{conversion.toFixed(1)}%</em>{previous && gap > 0 ? <strong>{gap} não avançaram desde {previous.label.toLowerCase()}</strong> : <strong>{index ? "Sem perda registrada" : "Base da safra"}</strong>}</span>;
-            })}</div>
-          </article>
+          <article className={styles.cohortAnalysis}><header><div><small>Composição da base</small><b>Quem foi trabalhado no período</b></div><em>Sem duplicar pessoas</em></header><div><span><i style={{ width: "100%" }} /><small>Total movimentado</small><b>{activeLeads.length}</b><em>100%</em><strong>Todos que entraram ou tiveram uma ação no período</strong></span><span><i style={{ width: `${activeLeads.length ? generatedLeads.length / activeLeads.length * 100 : 0}%` }} /><small>Leads novos</small><b>{generatedLeads.length}</b><em>{activeLeads.length ? (generatedLeads.length / activeLeads.length * 100).toFixed(1) : "0.0"}%</em><strong>Entraram no período</strong></span><span><i style={{ width: `${activeLeads.length ? priorActiveLeads.length / activeLeads.length * 100 : 0}%` }} /><small>Base anterior</small><b>{priorActiveLeads.length}</b><em>{activeLeads.length ? (priorActiveLeads.length / activeLeads.length * 100).toFixed(1) : "0.0"}%</em><strong>Entraram antes, mas foram trabalhados agora</strong></span></div></article>
         </div>
       </section>
-      {showPeriodClosings && <div className={styles.backdrop} onMouseDown={() => setShowPeriodClosings(false)}><section className={`${styles.modal} ${styles.closingDetailsModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Fechamentos do período</span><h2>{periodClosingLeads} cliente{periodClosingLeads === 1 ? "" : "s"} fechado{periodClosingLeads === 1 ? "" : "s"}</h2><p>Contabilizados pela data do fechamento.</p></div><button onClick={() => setShowPeriodClosings(false)}>×</button></header><div>{periodPurchases.map(({ lead, purchase }, index) => <article key={`${lead.id}-${purchase.id || index}`}><span><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"}</small></span><strong><Money value={purchase.value} /></strong></article>)}</div><footer><span>Valor fechado no período</span><b><Money value={periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0)} /></b></footer></section></div>}
+      {showPeriodClosings && <div className={styles.backdrop} onMouseDown={() => setShowPeriodClosings(false)}><section className={`${styles.modal} ${styles.closingDetailsModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Fechamentos do período</span><h2>{periodClosingLeads} cliente{periodClosingLeads === 1 ? "" : "s"} fechado{periodClosingLeads === 1 ? "" : "s"}</h2><p>Contabilizados pela data do fechamento.</p></div><button onClick={() => setShowPeriodClosings(false)}>×</button></header><div>{periodPurchases.map(({ lead, purchase }, index) => <article key={`${lead.id}-${purchase.id || index}`}><span><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"} · {inRange(lead.createdAt, start, end) ? "Lead novo" : "Base anterior"}</small></span><strong><Money value={purchase.value} /></strong></article>)}</div><footer><span>Valor fechado no período</span><b><Money value={periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0)} /></b></footer></section></div>}
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart channel={channel} leads={leads} start={start} end={end} products={products} /></div>
       <section className={styles.funnelColumn}>
-        <PanelTitle eyebrow="Conversão comercial" title="Funil de leads" />
+        <PanelTitle eyebrow="Conversão comercial" title="Funil do período" />
         <p className={styles.sourceIntro}>
-          Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
+          Novos e antigos entram uma única vez quando tiveram movimentação no período.
         </p>
-        <FunnelVisualization steps={funnelSteps} total={funnelLeads.length} />
-        <ProposalPathAnalysis meetingProposals={meetingProposals.length} meetingClosings={meetingClosings.length} directProposals={directProposals.length} directClosings={directClosings.length} />
+        <FunnelVisualization steps={funnelSteps} total={activeLeads.length} />
         <OriginValueChart channel={channel} leads={leads} start={start} end={end} sources={sources} />
       </section>
       <MonthlyMetricsChart channel={channel} leads={allLeads} endMonth={selectedMonth} goals={monthlyGoals} setGoal={updateMonthlyGoal} />
@@ -2088,6 +2047,7 @@ function LeadDrawer({
             <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Data do agendamento</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null })} /></label>
+            <label><span>Resultado da reunião</span><select value={lead.meetingOutcome || ""} onChange={(event) => update({ meetingOutcome: (event.target.value || null) as MeetingOutcome | null })}><option value="">Não informado</option><option>Agendada</option><option>Realizada</option><option>No-show</option><option>Cancelada</option></select></label>
             <label><span>Data de retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={(event) => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>
             <label><span>Proposta enviada</span><input type="date" value={dateInputValue(lead.proposalAt)} onChange={(event) => update({ proposalAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
@@ -2258,14 +2218,6 @@ function AccountingInput({ value, set, required = false }: { value: string | num
 }
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
-}
-function ProposalPathAnalysis({ meetingProposals, meetingClosings, directProposals, directClosings }: { meetingProposals: number; meetingClosings: number; directProposals: number; directClosings: number }) {
-  const total = meetingProposals + directProposals;
-  const rows = [
-    { label: "Após reunião", detail: "A proposta foi enviada depois de uma reunião registrada", proposals: meetingProposals, closings: meetingClosings, className: styles.meetingPath },
-    { label: "Proposta direta", detail: "A proposta foi enviada sem reunião anterior", proposals: directProposals, closings: directClosings, className: styles.directPath },
-  ];
-  return <section className={styles.proposalPaths}><header><div><span>CAMINHOS DA PROPOSTA</span><h4>Propostas dos leads que entraram no período</h4></div><b>{total}<small> propostas</small></b></header><div>{rows.map((row) => { const conversion = row.proposals ? row.closings / row.proposals * 100 : 0; return <article key={row.label} className={row.className}><div><i /><span><b>{row.label}</b><small>{row.detail}</small></span></div><div className={styles.pathNumbers}><span><b>{row.proposals}</b><small>propostas</small></span><em>→</em><span><b>{row.closings}</b><small>vendas</small></span><strong>{conversion.toFixed(1)}%</strong></div><div className={styles.pathProgress}><i style={{ width: `${Math.max(0, Math.min(100, conversion))}%` }} /></div></article>; })}</div></section>;
 }
 function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; count: number; detail: string }>; total: number }) {
   const colors = ["#1d4a5c", "#1b4556", "#193f4f", "#173a48", "#153440"];
