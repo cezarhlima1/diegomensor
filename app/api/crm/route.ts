@@ -111,14 +111,20 @@ async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, pur
 async function upsertLeadRecord(db: PoolClient, lead: Record<string, unknown>) {
   await assertValidSourceForNewLead(db, lead);
   await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
-  if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor") && await supportsMeetingScheduledFor(db)) {
-    await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
+  if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor")) {
+    const supported = await supportsMeetingScheduledFor(db);
+    if (!supported && lead.meetingScheduledFor) throw new Error("crm-meeting-scheduled-for-migration-required");
+    if (supported) await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
   }
-  if (Object.prototype.hasOwnProperty.call(lead, "meetingOutcome") && await supportsMeetingOutcome(db)) {
-    await db.query("update public.crm_leads set meeting_outcome=$2,updated_at=now() where id=$1", [lead.id, lead.meetingOutcome || null]);
+  if (Object.prototype.hasOwnProperty.call(lead, "meetingOutcome")) {
+    const supported = await supportsMeetingOutcome(db);
+    if (!supported && lead.meetingOutcome) throw new Error("crm-meeting-outcome-migration-required");
+    if (supported) await db.query("update public.crm_leads set meeting_outcome=$2,updated_at=now() where id=$1", [lead.id, lead.meetingOutcome || null]);
   }
-  if (Object.prototype.hasOwnProperty.call(lead, "followUpAt") && await supportsFollowUpAt(db)) {
-    await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
+  if (Object.prototype.hasOwnProperty.call(lead, "followUpAt")) {
+    const supported = await supportsFollowUpAt(db);
+    if (!supported && lead.followUpAt) throw new Error("crm-follow-up-at-migration-required");
+    if (supported) await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
   }
 }
 
@@ -257,20 +263,36 @@ export async function PATCH(request: Request) {
     try {
       const saved = await withCrmTransaction(async (db) => {
         const columns = await purchaseColumns(db);
+        const meetingScheduledSupported = await supportsMeetingScheduledFor(db);
+        const meetingOutcomeSupported = await supportsMeetingOutcome(db);
+        const followUpSupported = await supportsFollowUpAt(db);
         await assertValidSourceForNewLead(db, lead);
         await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,contact_checkpoints,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,contact_checkpoints=excluded.contact_checkpoints,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null, JSON.stringify(Array.isArray(lead.contactCheckpoints) ? lead.contactCheckpoints : [])]);
-        if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor") && await supportsMeetingScheduledFor(db)) await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
-        if (Object.prototype.hasOwnProperty.call(lead, "meetingOutcome") && await supportsMeetingOutcome(db)) await db.query("update public.crm_leads set meeting_outcome=$2,updated_at=now() where id=$1", [lead.id, lead.meetingOutcome || null]);
-        if (Object.prototype.hasOwnProperty.call(lead, "followUpAt") && await supportsFollowUpAt(db)) await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
+        if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor")) {
+          if (!meetingScheduledSupported && lead.meetingScheduledFor) throw new Error("crm-meeting-scheduled-for-migration-required");
+          if (meetingScheduledSupported) await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
+        }
+        if (Object.prototype.hasOwnProperty.call(lead, "meetingOutcome")) {
+          if (!meetingOutcomeSupported && lead.meetingOutcome) throw new Error("crm-meeting-outcome-migration-required");
+          if (meetingOutcomeSupported) await db.query("update public.crm_leads set meeting_outcome=$2,updated_at=now() where id=$1", [lead.id, lead.meetingOutcome || null]);
+        }
+        if (Object.prototype.hasOwnProperty.call(lead, "followUpAt")) {
+          if (!followUpSupported && lead.followUpAt) throw new Error("crm-follow-up-at-migration-required");
+          if (followUpSupported) await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
+        }
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }
-        const verification = await db.query("select stage,product,tags,updated_at from public.crm_leads where id=$1", [lead.id]);
+        const verification = await db.query(`select stage,product,tags,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         return verification.rows[0];
       });
-      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], updatedAt: saved.updated_at } });
+      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
     } catch (error) {
       console.error("CRM lead PATCH failed", error);
+      const message = error instanceof Error ? error.message : "";
+      if (message === "crm-meeting-scheduled-for-migration-required" || message === "crm-meeting-outcome-migration-required" || message === "crm-follow-up-at-migration-required") {
+        return NextResponse.json({ error: message }, { status: 503 });
+      }
       return databaseError(error, "database-write-failed");
     }
   }

@@ -351,6 +351,9 @@ export default function CRM() {
         "auth-unavailable": "Autenticação indisponível",
         "database-unavailable": "Falha ao ler o banco",
         "database-write-failed": "Falha ao gravar no banco",
+        "crm-meeting-scheduled-for-migration-required": "A data da reunião ainda não está habilitada no banco",
+        "crm-meeting-outcome-migration-required": "O resultado da reunião ainda não está habilitado no banco",
+        "crm-follow-up-at-migration-required": "A data de retorno ainda não está habilitada no banco",
       };
       detail = labels[body.error] || detail;
       if (body.account) detail += ` · ${body.account}`;
@@ -424,8 +427,14 @@ export default function CRM() {
       const result = await response.json();
       const expectedTags = JSON.stringify([...(lead.tags || [])].sort());
       const savedTags = JSON.stringify([...(result.saved?.tags || [])].sort());
-      if (result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags) {
-        setDatabaseIssue("O banco não confirmou etapa, produto e etiquetas"); setDatabaseStatus("offline");
+      const expectedMeetingDate = lead.meetingScheduledFor ? brazilDateKey(lead.meetingScheduledFor) : null;
+      const savedMeetingDate = result.saved?.meetingScheduledFor ? brazilDateKey(result.saved.meetingScheduledFor) : null;
+      const expectedMeetingOutcome = lead.meetingOutcome || null;
+      const savedMeetingOutcome = result.saved?.meetingOutcome || null;
+      const sameDate = (expected?: string | null, saved?: string | null) => (expected ? brazilDateKey(expected) : null) === (saved ? brazilDateKey(saved) : null);
+      const journeyConfirmed = sameDate(lead.createdAt, result.saved?.createdAt) && sameDate(lead.conversationAt, result.saved?.conversationAt) && sameDate(lead.meetingAt, result.saved?.meetingAt) && savedMeetingDate === expectedMeetingDate && sameDate(lead.followUpAt, result.saved?.followUpAt) && sameDate(lead.proposalAt, result.saved?.proposalAt) && sameDate(lead.closedAt, result.saved?.closedAt);
+      if (result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
+        setDatabaseIssue("O banco não confirmou todos os dados do lead"); setDatabaseStatus("offline");
         throw new Error("Confirmação do banco divergente");
       }
       skipNextSnapshotSync.current = true;
