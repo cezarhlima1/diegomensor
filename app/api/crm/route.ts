@@ -73,6 +73,14 @@ async function purchaseColumns(db: PoolClient) {
   const columns = new Set(result.rows.map((row) => String(row.column_name)));
   return { origin: columns.has("purchase_origin"), source: columns.has("purchase_source") };
 }
+async function supportsMeetingScheduledFor(db: PoolClient) {
+  const result = await db.query("select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='meeting_scheduled_for' limit 1");
+  return Boolean(result.rows[0]);
+}
+async function supportsFollowUpAt(db: PoolClient) {
+  const result = await db.query("select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='follow_up_at' limit 1");
+  return Boolean(result.rows[0]);
+}
 async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, purchase: Record<string, unknown>, columns: { origin: boolean; source: boolean }) {
   const campaign = purchase.origin === "campaign" || (purchase.origin == null && !String(purchase.id || "").startsWith("ascension-") && Boolean(purchase.externalSaleCode || purchase.campaignId));
   const base = [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase)];
@@ -99,6 +107,12 @@ async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, pur
 async function upsertLeadRecord(db: PoolClient, lead: Record<string, unknown>) {
   await assertValidSourceForNewLead(db, lead);
   await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null]);
+  if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor") && await supportsMeetingScheduledFor(db)) {
+    await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
+  }
+  if (Object.prototype.hasOwnProperty.call(lead, "followUpAt") && await supportsFollowUpAt(db)) {
+    await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
+  }
 }
 
 export async function GET() {
@@ -141,7 +155,7 @@ export async function GET() {
     }
     return NextResponse.json({
       access: { isAdmin: auth.isAdmin, permissions: auth.permissions },
-      leads: leadsResult.rows.map((row) => ({ id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, notes: row.notes || "", tags: row.tags || [], source: row.source, product: row.product, campaignId: row.traffic_campaign_id, stage: row.stage, value: Number(row.gross_value), netValue: row.net_value == null ? undefined : Number(row.net_value), temperature: row.temperature, nextAction: row.next_action, date: row.display_date, createdAt: row.created_at, conversationAt: row.conversation_at, meetingAt: row.meeting_at, proposalAt: row.proposal_at, closedAt: row.closed_at, application: row.application || undefined, contactCheckpoints: row.contact_checkpoints || [], purchases: purchasesByLead.get(row.id) || [] })),
+      leads: leadsResult.rows.map((row) => ({ id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, notes: row.notes || "", tags: row.tags || [], source: row.source, product: row.product, campaignId: row.traffic_campaign_id, stage: row.stage, value: Number(row.gross_value), netValue: row.net_value == null ? undefined : Number(row.net_value), temperature: row.temperature, nextAction: row.next_action, date: row.display_date, createdAt: row.created_at, conversationAt: row.conversation_at, meetingAt: row.meeting_at, meetingScheduledFor: row.meeting_scheduled_for || null, followUpAt: row.follow_up_at || null, proposalAt: row.proposal_at, closedAt: row.closed_at, application: row.application || undefined, contactCheckpoints: row.contact_checkpoints || [], purchases: purchasesByLead.get(row.id) || [] })),
       traffic: trafficResult.rows.map((row) => ({ id: row.id, month: row.month, date: row.campaign_date ? new Date(row.campaign_date).toISOString().slice(0, 10) : undefined, status: row.status, campaign: row.name, product: row.product, investment: Number(row.investment), clicks: row.clicks, pageViews: row.page_views, checkouts: row.checkouts, sales: row.sales, revenue: Number(row.gross_revenue), netRevenue: row.net_revenue == null ? undefined : Number(row.net_revenue) })),
       products: productsResult.rows.map((row) => ({ name: row.name, price: Number(row.gross_price), netPrice: Number(row.net_price), position: row.position, priceHistory: historyByProduct.get(row.name) || [] })),
       sources: sourcesResult.rows.map((row) => row.name),
@@ -238,6 +252,8 @@ export async function PATCH(request: Request) {
         const columns = await purchaseColumns(db);
         await assertValidSourceForNewLead(db, lead);
         await db.query("insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,traffic_campaign_id,stage,gross_value,net_value,temperature,next_action,display_date,created_at,conversation_at,meeting_at,proposal_at,closed_at,contact_checkpoints,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,now()) on conflict(id) do update set name=excluded.name,company=excluded.company,phone=excluded.phone,email=excluded.email,notes=excluded.notes,tags=excluded.tags,source=excluded.source,product=excluded.product,traffic_campaign_id=excluded.traffic_campaign_id,stage=excluded.stage,gross_value=excluded.gross_value,net_value=excluded.net_value,temperature=excluded.temperature,next_action=excluded.next_action,display_date=excluded.display_date,created_at=excluded.created_at,conversation_at=excluded.conversation_at,meeting_at=excluded.meeting_at,proposal_at=excluded.proposal_at,closed_at=excluded.closed_at,contact_checkpoints=excluded.contact_checkpoints,updated_at=now()", [lead.id, lead.name, lead.company || "", lead.phone || "", String(lead.email || "").trim().toLowerCase(), lead.notes || "", Array.isArray(lead.tags) ? lead.tags : [], lead.source || "Cadastro", lead.product || null, lead.campaignId || null, lead.stage, Number(lead.value) || 0, lead.netValue == null ? null : Number(lead.netValue), lead.temperature, lead.nextAction || "", lead.date || "", lead.createdAt || null, lead.conversationAt || null, lead.meetingAt || null, lead.proposalAt || null, lead.closedAt || null, JSON.stringify(Array.isArray(lead.contactCheckpoints) ? lead.contactCheckpoints : [])]);
+        if (Object.prototype.hasOwnProperty.call(lead, "meetingScheduledFor") && await supportsMeetingScheduledFor(db)) await db.query("update public.crm_leads set meeting_scheduled_for=$2,updated_at=now() where id=$1", [lead.id, lead.meetingScheduledFor || null]);
+        if (Object.prototype.hasOwnProperty.call(lead, "followUpAt") && await supportsFollowUpAt(db)) await db.query("update public.crm_leads set follow_up_at=$2,updated_at=now() where id=$1", [lead.id, lead.followUpAt || null]);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }

@@ -36,6 +36,8 @@ type Lead = {
   createdAt?: string;
   conversationAt?: string;
   meetingAt?: string;
+  meetingScheduledFor?: string | null;
+  followUpAt?: string | null;
   proposalAt?: string;
   closedAt?: string;
   purchases?: Purchase[];
@@ -741,7 +743,7 @@ export default function CRM() {
   const startBulkAscension = async (leadIds: string[], product: string) => {
     const definition = catalogProducts.find((item) => item.name === product);
     const selectedIds = new Set(leadIds);
-    const next = leads.map((lead) => selectedIds.has(lead.id) ? { ...lead, product, stage: "Novo lead", value: definition?.price || 0, netValue: definition?.netPrice ?? definition?.price ?? 0, nextAction: `Ofertar ${product}`, conversationAt: undefined, meetingAt: undefined, proposalAt: undefined, closedAt: undefined, tags: Array.from(new Set([...(lead.tags || []), `Ascensão: ${product}`])) } : lead);
+    const next = leads.map((lead) => selectedIds.has(lead.id) ? { ...lead, product, stage: "Novo lead", value: definition?.price || 0, netValue: definition?.netPrice ?? definition?.price ?? 0, nextAction: `Ofertar ${product}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, followUpAt: null, proposalAt: undefined, closedAt: undefined, tags: Array.from(new Set([...(lead.tags || []), `Ascensão: ${product}`])) } : lead);
     await persistImportBatch(next, traffic, next.filter((lead) => selectedIds.has(lead.id)));
   };
   const importAscensionSales = async (product: string, sales: ImportedSale[], newLeadSource: string, sourcesByCode: Record<string, string> = {}) => {
@@ -835,7 +837,7 @@ export default function CRM() {
     const currentIndex = ladder.findIndex((item) => item.name === lastProduct);
     const nextProduct = ladder[currentIndex + 1];
     if (!nextProduct) return;
-    updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, proposalAt: undefined, closedAt: undefined });
+    updateLead(id, { stage: "Novo lead", product: nextProduct.name, value: nextProduct.price, nextAction: `Ofertar ${nextProduct.name}`, conversationAt: undefined, meetingAt: undefined, meetingScheduledFor: null, followUpAt: null, proposalAt: undefined, closedAt: undefined });
   };
 
   const allNavigation: Array<[View, string, string]> = [
@@ -1423,7 +1425,11 @@ function Pipeline({
                 <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
               </header>
               <div className={styles.cards}>
-                {items.map((lead) => (
+                {items.map((lead) => {
+                  const followUpKey = brazilDateKey(lead.followUpAt || undefined);
+                  const todayKey = brazilDateKey(new Date());
+                  const followUpState = followUpKey < todayKey ? "late" : followUpKey === todayKey ? "today" : "future";
+                  return (
                   <article
                     key={lead.id}
                     draggable
@@ -1438,6 +1444,7 @@ function Pipeline({
                         <p><span>Origem</span>{lead.source}</p>
                         {lead.product && lead.product !== "Não informado" && <em className={styles.productTag} style={{ color: productColor(lead.product), borderColor: `${productColor(lead.product)}66`, background: `${productColor(lead.product)}18` }}>{lead.product}</em>}
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
+                        {followUpKey && <div className={`${styles.followUpAlert} ${styles[`followUp_${followUpState}`]}`}><i>↗</i><span>{followUpState === "late" ? "Retorno atrasado" : followUpState === "today" ? "Retornar hoje" : "Retornar"}</span><b>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(lead.followUpAt!))}</b></div>}
                       </div>
                       {lead.phone && (
                         <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
@@ -1447,7 +1454,8 @@ function Pipeline({
                     </div>
                     {!['fechado', 'nao fechou', 'desqualificado'].includes(stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) && <ContactCheckpoint lead={lead} toggle={() => toggleContactToday(lead.id)} />}
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           );
@@ -2017,7 +2025,9 @@ function LeadDrawer({
           <div className={styles.leadTimeline}>
             <label><span>Lead gerado</span><input type="date" value={dateInputValue(lead.createdAt)} onChange={(event) => update({ createdAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
-            <label><span>Reunião agendada</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Data do agendamento</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
+            <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null })} /></label>
+            <label><span>Data de retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={(event) => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>
             <label><span>Proposta enviada</span><input type="date" value={dateInputValue(lead.proposalAt)} onChange={(event) => update({ proposalAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
