@@ -2427,6 +2427,33 @@
 
 .applicationDetails p .unfilledAnswer{color:#718995;font-style:italic;font-weight:600}
 
+/* Origem: nome consolidado, volume de leads e receita na mesma leitura. */
+.originBars button{grid-template-columns:minmax(118px,1fr) 68px minmax(70px,1.15fr) 92px}
+.originLeadCount{display:flex;align-items:baseline;gap:3px;color:#78909c;font-size:7px;white-space:nowrap}
+.originLeadCount b{color:#72ccef;font-size:11px}
+.crm[data-theme="light"] .originLeadCount{color:#718692}
+.crm[data-theme="light"] .originLeadCount b{color:#267da3}
+@media(max-width:700px){.originBars button{grid-template-columns:minmax(100px,1fr) 55px 92px}.originBars button>span{grid-column:1;grid-row:1}.originLeadCount{grid-column:2;grid-row:1}.originBars button>div{grid-column:1/-1;grid-row:2}.originBars button>strong{grid-column:3;grid-row:1}}
+
+/* Detalhamento rápido dos clientes fechados no período. */
+.periodEvents{overflow:visible}
+.closingMetric{position:relative;cursor:pointer;outline:0}
+.closingMetric:focus-visible{box-shadow:inset 0 0 0 2px rgba(105,205,245,.55)}
+.closingTooltip{position:absolute;right:8px;top:calc(100% - 5px);z-index:20;display:none!important;width:min(330px,calc(100vw - 48px));padding:11px;border:1px solid rgba(105,205,245,.2);border-radius:10px;background:#0b202c;box-shadow:0 18px 45px rgba(0,0,0,.45)}
+.closingMetric:hover .closingTooltip,.closingMetric:focus .closingTooltip{display:grid!important;gap:7px}
+.periodEvents>div .closingTooltip>strong{color:#dfeef3;font-size:8px;text-transform:uppercase}
+.periodEvents>div .closingTooltip>span{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px;border-radius:7px;background:rgba(105,205,245,.055)}
+.periodEvents>div .closingTooltip b{overflow:hidden;color:#edf6f9;font:750 9px var(--font-manrope);text-overflow:ellipsis;white-space:nowrap}
+.periodEvents>div .closingTooltip small{grid-column:1;color:#78909c;font-size:7px}
+.periodEvents>div .closingTooltip em{grid-column:2;grid-row:1/3;align-self:center;color:#62d4a6;font-size:9px;font-style:normal;font-weight:800}
+.closingDetailsModal{width:min(100%,620px)}
+.closingDetailsModal>div{display:grid;max-height:min(52vh,430px);overflow-y:auto;padding:8px 20px}
+.closingDetailsModal article{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 4px;border-bottom:1px solid var(--line)}
+.closingDetailsModal article>span{display:grid;gap:4px}.closingDetailsModal article b{color:#e7f1f4;font-size:10px}.closingDetailsModal article small{color:#78909c;font-size:8px}.closingDetailsModal article>strong{color:#62d4a6;font-size:11px;white-space:nowrap}
+.closingDetailsModal>footer{display:flex;align-items:center;justify-content:space-between}.closingDetailsModal>footer>span{color:#78909c;font-size:9px}.closingDetailsModal>footer>b{color:#62d4a6;font-size:14px}
+.crm[data-theme="light"] .closingTooltip{border-color:rgba(35,68,84,.16);background:#fff}.crm[data-theme="light"] .periodEvents>div .closingTooltip>strong,.crm[data-theme="light"] .periodEvents>div .closingTooltip b,.crm[data-theme="light"] .closingDetailsModal article b{color:#294451}.crm[data-theme="light"] .periodEvents>div .closingTooltip>span{background:#eef5f7}
+@media(max-width:700px){.closingTooltip{right:auto;left:8px}.closingDetailsModal>div{padding-inline:14px}}
+
 /* Hierarquia visual e metas individuais no financeiro. */
 .financeDashboard{gap:18px}.commissionPanel,.financePanelFull{box-shadow:0 12px 34px rgba(0,0,0,.16)}
 .financeKpis article:nth-child(3){border-color:rgba(101,201,243,.3);background:linear-gradient(145deg,rgba(101,201,243,.1),transparent)}.financeKpis article:nth-child(4){border-color:rgba(237,113,128,.3);background:linear-gradient(145deg,rgba(237,113,128,.1),transparent)}.financeKpis article:nth-child(5){border-color:rgba(55,198,139,.3);background:linear-gradient(145deg,rgba(55,198,139,.1),transparent)}

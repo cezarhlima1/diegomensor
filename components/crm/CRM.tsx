@@ -82,6 +82,15 @@ const legacySources: Record<string, string> = {
 };
 const normalizeSource = (source: string) => legacySources[source] || (leadSources.includes(source as typeof leadSources[number]) ? source : "Cadastro");
 const isGenericFormSource = (source: string) => source.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "formulario";
+const groupedOriginName = (source: string) => {
+  const normalized = source.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (/\b(manychat|many chat)\b/.test(normalized)) return "Forms - Manychat";
+  if (/\b(story|stories|storie)\b/.test(normalized)) return "Forms - Story";
+  if (/\b(bio|biografia)\b/.test(normalized)) return "Forms - Biografia";
+  if (/\byoutube\b/.test(normalized)) return "Forms - Youtube";
+  if (normalized === "formulario" || normalized === "forms" || normalized === "form") return "Forms - Sem especificação";
+  return source.trim() || "Origem não informada";
+};
 const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const answersForLead = (lead: Lead) => allQuestions.map((question) => {
   const answer = lead.application?.answers?.find((item) => normalizeQuestion(item.pergunta) === normalizeQuestion(question.label));
@@ -1260,9 +1269,12 @@ function Dashboard({
   sources: string[];
 }) {
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, number>>({});
+  const [showPeriodClosings, setShowPeriodClosings] = useState(false);
   useEffect(() => { const load = () => { try { const saved = localStorage.getItem(goalsStorageKey); if (saved) setMonthlyGoals(JSON.parse(saved)); } catch {} }; load(); window.addEventListener("mensor-crm-database-loaded", load); return () => window.removeEventListener("mensor-crm-database-loaded", load); }, []);
   const updateMonthlyGoal = (month: string, value: number) => { const next = { ...monthlyGoals, [month]: value }; setMonthlyGoals(next); localStorage.setItem(goalsStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event("mensor-crm-change")); };
-  const funnelLeads = leads.filter((lead) => inRange(lead.createdAt, start, end));
+  const generatedLeads = leads.filter((lead) => inRange(lead.createdAt, start, end));
+  const funnelLeads = leads.filter((lead) => brazilDateKey(lead.createdAt) <= end);
+  const previousLeads = funnelLeads.filter((lead) => brazilDateKey(lead.createdAt) < start).length;
   const happenedByEnd = (date?: string) => Boolean(date && brazilDateKey(date) <= end);
   const funnelProposals = funnelLeads.filter((lead) => happenedByEnd(lead.proposalAt) && brazilDateKey(lead.proposalAt) >= brazilDateKey(lead.createdAt));
   const proposalAfterMeeting = (lead: Lead) => happenedByEnd(lead.meetingAt) && brazilDateKey(lead.meetingAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(lead.meetingAt) <= brazilDateKey(lead.proposalAt);
@@ -1271,11 +1283,11 @@ function Dashboard({
   const qualifyingClosings = (items: Lead[]) => items.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.proposalAt)));
   const meetingClosings = qualifyingClosings(meetingProposals);
   const directClosings = qualifyingClosings(directProposals);
-  const funnelClosings = [...meetingClosings, ...directClosings];
+  const funnelClosings = funnelLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt)));
   const funnelSteps = [
-    { label: "Leads do período", count: funnelLeads.length, detail: "Coorte analisada" },
+    { label: "Leads totais", count: funnelLeads.length, detail: `${previousLeads} anteriores · ${generatedLeads.length} gerados no período` },
     { label: "Com proposta", count: funnelProposals.length, detail: `${meetingProposals.length} após reunião · ${directProposals.length} diretas` },
-    { label: "Clientes fechados", count: funnelClosings.length, detail: "Conversão desta coorte" },
+    { label: "Clientes fechados", count: funnelClosings.length, detail: "Fechados até o fim do período" },
   ];
   const periodConversations = leads.filter((lead) => inRange(lead.conversationAt, start, end)).length;
   const periodMeetingBookings = leads.filter((lead) => inRange(lead.meetingAt, start, end)).length;
@@ -1284,15 +1296,13 @@ function Dashboard({
     .filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end))
     .map((purchase) => ({ lead, purchase })));
   const periodClosingLeads = new Set(periodPurchases.map(({ lead }) => lead.id)).size;
-  const recoveredClosings = new Set(periodPurchases.filter(({ lead }) => brazilDateKey(lead.createdAt) < start).map(({ lead }) => lead.id)).size;
-  const samePeriodClosings = periodClosingLeads - recoveredClosings;
-  const cohortByEnd = (field: "conversationAt" | "meetingAt" | "proposalAt") => funnelLeads.filter((lead) => {
+  const cohortByEnd = (field: "conversationAt" | "meetingAt" | "proposalAt") => generatedLeads.filter((lead) => {
     const date = lead[field];
     return Boolean(date && brazilDateKey(date) >= brazilDateKey(lead.createdAt) && brazilDateKey(date) <= end);
   }).length;
-  const cohortClosings = funnelLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(purchase.closedAt) <= end)).length;
+  const cohortClosings = generatedLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(purchase.closedAt) <= end)).length;
   const cohortSteps = [
-    { label: "Entraram", count: funnelLeads.length },
+    { label: "Entraram", count: generatedLeads.length },
     { label: "Conversaram", count: cohortByEnd("conversationAt") },
     { label: "Agendaram", count: cohortByEnd("meetingAt") },
     { label: "Receberam proposta", count: cohortByEnd("proposalAt") },
@@ -1326,24 +1336,25 @@ function Dashboard({
         />
       </div>
       <section className={styles.periodAnalysis}>
-        <header><div><span>Leitura do período</span><h3>Movimento mensal × safra de entrada</h3></div><p>Os eventos usam a data em que aconteceram. A safra acompanha apenas os leads que entraram no período.</p></header>
+        <header><div><span>Leitura do período</span><h3>Movimento do mês × base total</h3></div><p>Os resultados entram no mês em que aconteceram. O funil considera toda a base acumulada até o fim do período.</p></header>
         <div className={styles.periodAnalysisColumns}>
           <article className={styles.periodEvents}>
-            <header><div><small>Atividade comercial</small><b>O que aconteceu no período</b></div><em>Sem misturar datas</em></header>
+            <header><div><small>Atividade comercial</small><b>O que aconteceu no período</b></div><em>Pela data de cada evento</em></header>
             <div>
-              <span><small>Novos leads</small><b>{funnelLeads.length}</b><i>entrada no período</i></span>
+              <span><small>Leads gerados</small><b>{generatedLeads.length}</b><i>entraram no período</i></span>
+              <span><small>Leads totais</small><b>{funnelLeads.length}</b><i>{previousLeads} anteriores + {generatedLeads.length} do período</i></span>
               <span><small>Conversas iniciadas</small><b>{periodConversations}</b><i>pela data da conversa</i></span>
               <span><small>Agendamentos feitos</small><b>{periodMeetingBookings}</b><i>pela data do agendamento</i></span>
               <span><small>Reuniões previstas</small><b>{periodScheduledMeetings}</b><i>pela data marcada</i></span>
               <span><small>Propostas enviadas</small><b>{stats.proposals}</b><i>pela data da proposta</i></span>
-              <span><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{samePeriodClosings} do mês · {recoveredClosings} anteriores</i></span>
+              <span className={styles.closingMetric} role="button" tabIndex={0} onClick={() => periodPurchases.length && setShowPeriodClosings(true)} onKeyDown={(event) => { if (periodPurchases.length && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setShowPeriodClosings(true); } }}><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{periodPurchases.length ? "passe o mouse ou clique para detalhar" : "pela data do fechamento"}</i>{periodPurchases.length > 0 && <div className={styles.closingTooltip}><strong>Fechamentos do período</strong>{periodPurchases.map(({ lead, purchase }, index) => <span key={`${lead.id}-${purchase.id || index}`}><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"}</small><em><Money value={purchase.value} /></em></span>)}</div>}</span>
             </div>
             <footer><span>Ciclo médio dos fechamentos</span><b>{averageCycleDays.toFixed(1)} dias</b></footer>
           </article>
           <article className={styles.cohortAnalysis}>
             <header><div><small>Safra de entrada</small><b>Leads captados no período</b></div><em>Avanço até {new Intl.DateTimeFormat("pt-BR").format(new Date(`${end}T12:00:00`))}</em></header>
             <div>{cohortSteps.map((step, index) => {
-              const conversion = funnelLeads.length ? step.count / funnelLeads.length * 100 : 0;
+              const conversion = generatedLeads.length ? step.count / generatedLeads.length * 100 : 0;
               const previous = cohortSteps[index - 1];
               const gap = previous ? Math.max(0, previous.count - step.count) : 0;
               return <span key={step.label}><i style={{ width: `${Math.max(3, conversion)}%` }} /><small>{step.label}</small><b>{step.count}</b><em>{conversion.toFixed(1)}%</em>{previous && gap > 0 ? <strong>{gap} não avançaram desde {previous.label.toLowerCase()}</strong> : <strong>{index ? "Sem perda registrada" : "Base da safra"}</strong>}</span>;
@@ -1351,6 +1362,7 @@ function Dashboard({
           </article>
         </div>
       </section>
+      {showPeriodClosings && <div className={styles.backdrop} onMouseDown={() => setShowPeriodClosings(false)}><section className={`${styles.modal} ${styles.closingDetailsModal}`} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Fechamentos do período</span><h2>{periodClosingLeads} cliente{periodClosingLeads === 1 ? "" : "s"} fechado{periodClosingLeads === 1 ? "" : "s"}</h2><p>Contabilizados pela data do fechamento.</p></div><button onClick={() => setShowPeriodClosings(false)}>×</button></header><div>{periodPurchases.map(({ lead, purchase }, index) => <article key={`${lead.id}-${purchase.id || index}`}><span><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"}</small></span><strong><Money value={purchase.value} /></strong></article>)}</div><footer><span>Valor fechado no período</span><b><Money value={periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0)} /></b></footer></section></div>}
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart channel={channel} leads={leads} start={start} end={end} products={products} /></div>
       <section className={styles.funnelColumn}>
@@ -1358,7 +1370,7 @@ function Dashboard({
         <p className={styles.sourceIntro}>
           Acompanhe quantos leads avançam em cada etapa, do primeiro contato ao fechamento.
         </p>
-        <FunnelVisualization steps={funnelSteps} total={leads.filter((lead) => inRange(lead.createdAt, start, end)).length} />
+        <FunnelVisualization steps={funnelSteps} total={funnelLeads.length} />
         <ProposalPathAnalysis meetingProposals={meetingProposals.length} meetingClosings={meetingClosings.length} directProposals={directProposals.length} directClosings={directClosings.length} />
         <OriginValueChart channel={channel} leads={leads} start={start} end={end} sources={sources} />
       </section>
@@ -2333,12 +2345,12 @@ function ProductValueChart({ channel, leads, start, end, products }: { channel: 
 }
 function OriginValueChart({ channel, leads, start, end, sources }: { channel: Channel; leads: Lead[]; start: string; end: string; sources: string[] }) {
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
-  const closings = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: purchase.source || lead.source })));
-  const originNames = Array.from(new Set([...sources, ...leads.map((lead) => lead.source).filter(Boolean), ...closings.map((item) => item.source).filter(Boolean)]));
-  const origins = originNames.map((source) => { const items = leads.filter((lead) => lead.source === source); const closedItems = closings.filter((item) => item.source === source).map((item) => item.purchase); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).sort((a,b) => b.value - a.value || b.leads - a.leads);
+  const closings = leads.flatMap((lead) => purchasesForLead(lead, []).filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end)).map((purchase) => ({ purchase, source: groupedOriginName(purchase.source || lead.source) })));
+  const originNames = Array.from(new Set([...sources.map(groupedOriginName), ...leads.map((lead) => groupedOriginName(lead.source)), ...closings.map((item) => item.source)]));
+  const origins = originNames.map((source) => { const items = leads.filter((lead) => groupedOriginName(lead.source) === source); const closedItems = closings.filter((item) => item.source === source).map((item) => item.purchase); return { source, leads: items.filter((lead) => inRange(lead.createdAt, start, end)).length, conversations: items.filter((lead) => inRange(lead.conversationAt, start, end)).length, proposals: items.filter((lead) => inRange(lead.proposalAt, start, end)).length, closed: closedItems.length, value: closedItems.reduce((sum, purchase) => sum + purchase.value, 0) }; }).filter((origin) => origin.leads > 0 || origin.closed > 0 || origin.value > 0).sort((a,b) => Number(b.source.startsWith("Forms -")) - Number(a.source.startsWith("Forms -")) || b.leads - a.leads || b.value - a.value || a.source.localeCompare(b.source, "pt-BR"));
   const maximum = Math.max(1, ...origins.map((origin) => origin.value));
   const selected = origins.find((origin) => origin.source === selectedOrigin);
-  return <section className={styles.originAnalysis}><header><div><span>Receita por origem</span><h4>Valor fechado × origem do lead</h4></div><small>Clique em uma barra para ver os detalhes</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Vendas</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
+  return <section className={styles.originAnalysis}><header><div><span>Leads e receita por origem</span><h4>Quantidade de leads × valor fechado</h4></div><small>Origens equivalentes foram agrupadas. Clique para detalhar.</small></header><div className={styles.originBars}>{origins.map((origin) => <button key={origin.source} onClick={() => setSelectedOrigin(origin.source)}><span>{origin.source}</span><small className={styles.originLeadCount}><b>{origin.leads}</b> lead{origin.leads === 1 ? "" : "s"}</small><div><i style={{ width: `${origin.value ? Math.max(7, origin.value / maximum * 100) : 2}%` }} /></div><strong><Money value={origin.value} /></strong></button>)}</div>{selected && <div className={styles.backdrop} onMouseDown={() => setSelectedOrigin(null)}><section className={styles.originDetail} onMouseDown={(event) => event.stopPropagation()}><header><div><span>Análise da origem</span><h2>{selected.source}</h2></div><button onClick={() => setSelectedOrigin(null)}>×</button></header><strong><Money value={selected.value} /><small>valor final fechado</small></strong><div><article><span>Leads</span><b>{selected.leads}</b></article><article><span>Conversas</span><b>{selected.conversations}</b></article><article><span>Propostas</span><b>{selected.proposals}</b></article><article><span>Vendas</span><b>{selected.closed}</b></article></div><footer><span>Conversão final</span><b>{selected.leads ? (selected.closed / selected.leads * 100).toFixed(1) : "0.0"}%</b></footer></section></div>}</section>;
 }
 function FinancialSummary({
   stats,
