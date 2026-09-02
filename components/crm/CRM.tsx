@@ -1295,7 +1295,7 @@ function Dashboard({
   const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.proposalAt, start, end) || periodClosingIds.has(lead.id));
   const priorActiveLeads = activeLeads.filter((lead) => brazilDateKey(lead.createdAt) < start);
   const funnelSteps = [
-    { label: "Leads trabalhados", count: activeLeads.length, detail: `${generatedLeads.length} novos · ${priorActiveLeads.length} da base` },
+    { label: "Leads totais", count: activeLeads.length, detail: `${generatedLeads.length} novos + ${priorActiveLeads.length} da base` },
     { label: "Reuniões agendadas", count: periodMeetingBookings.length, detail: "Agendadas neste período" },
     { label: "Reuniões realizadas", count: periodHeldMeetings.length, detail: "Compareceram à reunião" },
     { label: "No-show", count: periodNoShows.length, detail: "Não compareceram" },
@@ -1307,7 +1307,8 @@ function Dashboard({
     <div className={`${styles.content} ${styles.dashboardContent}`}>
       <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
       <div className={styles.kpis}>
-        <Kpi label="Leads que entraram" value={String(generatedLeads.length)} detail={`${activeLeads.length} trabalhados no total`} />
+        <Kpi label="Leads novos" value={String(generatedLeads.length)} detail="Entraram no período" />
+        <Kpi label="Leads da base" value={String(priorActiveLeads.length)} detail="Antigos movimentados no período" />
         <Kpi label="Reuniões agendadas" value={String(periodMeetingBookings.length)} detail="Agendadas no período" />
         <Kpi label="Reuniões realizadas" value={String(periodHeldMeetings.length)} detail="Compareceram" />
         <Kpi label="No-show" value={String(periodNoShows.length)} detail="Não compareceram" />
@@ -1319,8 +1320,9 @@ function Dashboard({
           <article className={styles.periodEvents}>
             <header><div><small>Atividade comercial</small><b>O que aconteceu no período</b></div><em>Pela data de cada evento</em></header>
             <div>
-              <span><small>Leads que entraram</small><b>{generatedLeads.length}</b><i>novos no período</i></span>
-              <span><small>Leads trabalhados</small><b>{activeLeads.length}</b><i>{generatedLeads.length} novos + {priorActiveLeads.length} da base</i></span>
+              <span><small>Leads novos</small><b>{generatedLeads.length}</b><i>entraram no período</i></span>
+              <span><small>Leads da base</small><b>{priorActiveLeads.length}</b><i>antigos movimentados no período</i></span>
+              <span><small>Leads totais</small><b>{activeLeads.length}</b><i>{generatedLeads.length} novos + {priorActiveLeads.length} da base</i></span>
               <span><small>Reuniões agendadas</small><b>{periodMeetingBookings.length}</b><i>pela data do agendamento</i></span>
               <span><small>Reuniões realizadas</small><b>{periodHeldMeetings.length}</b><i>resultado “Realizada”</i></span>
               <span><small>No-show</small><b>{periodNoShows.length}</b><i>resultado “No-show”</i></span>
