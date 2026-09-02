@@ -1277,6 +1277,29 @@ function Dashboard({
     { label: "Com proposta", count: funnelProposals.length, detail: `${meetingProposals.length} após reunião · ${directProposals.length} diretas` },
     { label: "Clientes fechados", count: funnelClosings.length, detail: "Conversão desta coorte" },
   ];
+  const periodConversations = leads.filter((lead) => inRange(lead.conversationAt, start, end)).length;
+  const periodMeetingBookings = leads.filter((lead) => inRange(lead.meetingAt, start, end)).length;
+  const periodScheduledMeetings = leads.filter((lead) => inRange(lead.meetingScheduledFor || undefined, start, end)).length;
+  const periodPurchases = leads.flatMap((lead) => purchasesForLead(lead, products)
+    .filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end))
+    .map((purchase) => ({ lead, purchase })));
+  const periodClosingLeads = new Set(periodPurchases.map(({ lead }) => lead.id)).size;
+  const recoveredClosings = new Set(periodPurchases.filter(({ lead }) => brazilDateKey(lead.createdAt) < start).map(({ lead }) => lead.id)).size;
+  const samePeriodClosings = periodClosingLeads - recoveredClosings;
+  const cohortByEnd = (field: "conversationAt" | "meetingAt" | "proposalAt") => funnelLeads.filter((lead) => {
+    const date = lead[field];
+    return Boolean(date && brazilDateKey(date) >= brazilDateKey(lead.createdAt) && brazilDateKey(date) <= end);
+  }).length;
+  const cohortClosings = funnelLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && brazilDateKey(purchase.closedAt) >= brazilDateKey(lead.createdAt) && brazilDateKey(purchase.closedAt) <= end)).length;
+  const cohortSteps = [
+    { label: "Entraram", count: funnelLeads.length },
+    { label: "Conversaram", count: cohortByEnd("conversationAt") },
+    { label: "Agendaram", count: cohortByEnd("meetingAt") },
+    { label: "Receberam proposta", count: cohortByEnd("proposalAt") },
+    { label: "Fecharam", count: cohortClosings },
+  ];
+  const closedCycleDays = periodPurchases.map(({ lead, purchase }) => Math.max(0, (new Date(purchase.closedAt).getTime() - new Date(lead.createdAt || purchase.closedAt).getTime()) / 86_400_000)).filter(Number.isFinite);
+  const averageCycleDays = closedCycleDays.length ? closedCycleDays.reduce((sum, days) => sum + days, 0) / closedCycleDays.length : 0;
   return (
     <div className={`${styles.content} ${styles.dashboardContent}`}>
       <DashboardProductFilter products={allProducts} value={selectedProduct} set={setProduct} />
@@ -1302,6 +1325,32 @@ function Dashboard({
           detail={`${stats.sales} vendas · ${currency.format(stats.wonValue)} recebidos`}
         />
       </div>
+      <section className={styles.periodAnalysis}>
+        <header><div><span>Leitura do período</span><h3>Movimento mensal × safra de entrada</h3></div><p>Os eventos usam a data em que aconteceram. A safra acompanha apenas os leads que entraram no período.</p></header>
+        <div className={styles.periodAnalysisColumns}>
+          <article className={styles.periodEvents}>
+            <header><div><small>Atividade comercial</small><b>O que aconteceu no período</b></div><em>Sem misturar datas</em></header>
+            <div>
+              <span><small>Novos leads</small><b>{funnelLeads.length}</b><i>entrada no período</i></span>
+              <span><small>Conversas iniciadas</small><b>{periodConversations}</b><i>pela data da conversa</i></span>
+              <span><small>Agendamentos feitos</small><b>{periodMeetingBookings}</b><i>pela data do agendamento</i></span>
+              <span><small>Reuniões previstas</small><b>{periodScheduledMeetings}</b><i>pela data marcada</i></span>
+              <span><small>Propostas enviadas</small><b>{stats.proposals}</b><i>pela data da proposta</i></span>
+              <span><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{samePeriodClosings} do mês · {recoveredClosings} anteriores</i></span>
+            </div>
+            <footer><span>Ciclo médio dos fechamentos</span><b>{averageCycleDays.toFixed(1)} dias</b></footer>
+          </article>
+          <article className={styles.cohortAnalysis}>
+            <header><div><small>Safra de entrada</small><b>Leads captados no período</b></div><em>Avanço até {new Intl.DateTimeFormat("pt-BR").format(new Date(`${end}T12:00:00`))}</em></header>
+            <div>{cohortSteps.map((step, index) => {
+              const conversion = funnelLeads.length ? step.count / funnelLeads.length * 100 : 0;
+              const previous = cohortSteps[index - 1];
+              const gap = previous ? Math.max(0, previous.count - step.count) : 0;
+              return <span key={step.label}><i style={{ width: `${Math.max(3, conversion)}%` }} /><small>{step.label}</small><b>{step.count}</b><em>{conversion.toFixed(1)}%</em>{previous && gap > 0 ? <strong>{gap} não avançaram desde {previous.label.toLowerCase()}</strong> : <strong>{index ? "Sem perda registrada" : "Base da safra"}</strong>}</span>;
+            })}</div>
+          </article>
+        </div>
+      </section>
       <FinancialSummary stats={stats} />
       <div className={styles.analysisColumn}><ProductValueChart channel={channel} leads={leads} start={start} end={end} products={products} /></div>
       <section className={styles.funnelColumn}>
