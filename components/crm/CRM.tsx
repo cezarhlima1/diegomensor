@@ -1292,14 +1292,22 @@ function Dashboard({
   const periodHeldMeetings = leads.filter((lead) => lead.meetingOutcome === "Realizada" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodNoShows = leads.filter((lead) => lead.meetingOutcome === "No-show" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodClosingIds = new Set(periodPurchases.map(({ lead }) => lead.id));
-  const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.proposalAt, start, end) || periodClosingIds.has(lead.id));
+  const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.followUpAt || undefined, start, end) || inRange(lead.proposalAt, start, end) || (lead.contactCheckpoints || []).some((date) => inRange(date, start, end)) || periodClosingIds.has(lead.id));
   const priorActiveLeads = activeLeads.filter((lead) => brazilDateKey(lead.createdAt) < start);
+  const happenedByEnd = (date?: string | null) => Boolean(date && brazilDateKey(date) <= end);
+  const journeyConversations = activeLeads.filter((lead) => happenedByEnd(lead.conversationAt));
+  const journeyMeetingBookings = activeLeads.filter((lead) => happenedByEnd(lead.meetingAt));
+  const journeyHeldMeetings = activeLeads.filter((lead) => lead.meetingOutcome === "Realizada" && happenedByEnd(lead.meetingScheduledFor));
+  const journeyNoShows = activeLeads.filter((lead) => lead.meetingOutcome === "No-show" && happenedByEnd(lead.meetingScheduledFor));
+  const journeyProposals = activeLeads.filter((lead) => happenedByEnd(lead.proposalAt));
+  const journeyClosings = activeLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt)));
   const funnelSteps = [
     { label: "Leads totais", count: activeLeads.length, detail: `${generatedLeads.length} novos + ${priorActiveLeads.length} da base` },
-    { label: "Reuniões agendadas", count: periodMeetingBookings.length, detail: "Agendadas neste período" },
-    { label: "Reuniões realizadas", count: periodHeldMeetings.length, detail: "Compareceram à reunião" },
-    { label: "No-show", count: periodNoShows.length, detail: "Não compareceram" },
-    { label: "Vendas", count: periodClosingLeads, detail: "Fechadas neste período" },
+    { label: "Conversaram", count: journeyConversations.length, detail: "Na jornada desses leads" },
+    { label: "Reuniões agendadas", count: journeyMeetingBookings.length, detail: `${journeyNoShows.length} no-show na jornada` },
+    { label: "Reuniões realizadas", count: journeyHeldMeetings.length, detail: "Compareceram à reunião" },
+    { label: "Propostas", count: journeyProposals.length, detail: "Receberam proposta" },
+    { label: "Vendas", count: journeyClosings.length, detail: "Fecharam dentro da jornada" },
   ];
   const closedCycleDays = periodPurchases.map(({ lead, purchase }) => Math.max(0, (new Date(purchase.closedAt).getTime() - new Date(lead.createdAt || purchase.closedAt).getTime()) / 86_400_000)).filter(Number.isFinite);
   const averageCycleDays = closedCycleDays.length ? closedCycleDays.reduce((sum, days) => sum + days, 0) / closedCycleDays.length : 0;
@@ -1339,7 +1347,7 @@ function Dashboard({
       <section className={styles.funnelColumn}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil do período" />
         <p className={styles.sourceIntro}>
-          Novos e antigos entram uma única vez quando tiveram movimentação no período.
+          O período escolhe os leads ativos; as etapas mostram a jornada completa deles até o fim do período.
         </p>
         <FunnelVisualization steps={funnelSteps} total={activeLeads.length} />
         <OriginValueChart channel={channel} leads={leads} start={start} end={end} sources={sources} />
@@ -2231,7 +2239,7 @@ function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
 }
 function FunnelVisualization({ steps, total }: { steps: Array<{ label: string; count: number; detail: string }>; total: number }) {
-  const colors = ["#1d4a5c", "#1b4556", "#193f4f", "#173a48", "#153440"];
+  const colors = ["#1d4a5c", "#1c4859", "#1b4556", "#193f4f", "#173a48", "#153440"];
   const svgHeight = 24 + steps.length * 78;
   return <div className={styles.funnelVisual}><svg viewBox={`0 0 760 ${svgHeight}`} role="img" aria-label="Funil de conversão de leads">{steps.map((step,index) => { const width = 430 - index * 48; const x = (760 - width) / 2; const y = 18 + index * 78; const percentage = total ? step.count / total * 100 : 0; return <g key={step.label}><path d={`M ${x} ${y + 8} L ${x + width} ${y + 8} L ${x + width - 12} ${y + 60} Q 380 ${y + 65} ${x + 12} ${y + 60} Z`} fill={colors[index]} /><ellipse cx="380" cy={y + 8} rx={width / 2} ry="10" fill={colors[index]} /><ellipse cx="380" cy={y + 7} rx={width / 2 - 5} ry="6" fill="rgba(220,239,246,.04)" /><line x1={x - 7} y1={y + 35} x2={x - 36} y2={y + 35} className={styles.funnelLeader} /><text x={x - 44} y={y + 31} textAnchor="end" className={styles.funnelOutsideLabel}>{step.label}</text><text x={x - 44} y={y + 45} textAnchor="end" className={styles.funnelOutsideDetail}>{step.detail}</text><text x="380" y={y + 43} textAnchor="middle" className={styles.funnelInsideCount}>{step.count}</text><line x1={x + width + 7} y1={y + 35} x2={x + width + 36} y2={y + 35} className={styles.funnelLeader} /><text x={x + width + 44} y={y + 40} className={styles.funnelOutsidePercent}>{percentage.toFixed(1)}%</text></g>; })}</svg></div>;
 }
