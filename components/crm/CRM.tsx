@@ -1302,9 +1302,20 @@ function Dashboard({
   const heldBefore = (lead: Lead, date?: string | null) => Boolean(lead.meetingOutcome === "Realizada" && lead.meetingScheduledFor && date && brazilDateKey(lead.meetingScheduledFor) <= brazilDateKey(date));
   const meetingProposals = activeLeads.filter((lead) => happenedByEnd(lead.proposalAt) && heldBefore(lead, lead.proposalAt));
   const directProposals = activeLeads.filter((lead) => happenedByEnd(lead.proposalAt) && !heldBefore(lead, lead.proposalAt));
-  const meetingSales = activeLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && heldBefore(lead, purchase.closedAt)));
-  const directSales = activeLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && happenedByEnd(purchase.closedAt) && !heldBefore(lead, purchase.closedAt)));
+  const meetingSales = activeLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end) && heldBefore(lead, purchase.closedAt)));
+  const directSales = activeLeads.filter((lead) => purchasesForLead(lead, products).some((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end) && !heldBefore(lead, purchase.closedAt)));
   const directConversations = activeLeads.filter((lead) => happenedByEnd(lead.conversationAt) && !heldBefore(lead, end));
+  const journeyProposalLeads = [...meetingProposals, ...directProposals];
+  const periodProposalClosingLeads = journeyProposalLeads.filter((lead) => periodClosingIds.has(lead.id));
+  const journeyStats = {
+    ...stats,
+    total: activeLeads.length,
+    closed: periodClosingLeads,
+    proposalClosed: periodProposalClosingLeads.length,
+    proposals: journeyProposalLeads.length,
+    conversion: activeLeads.length ? periodClosingLeads / activeLeads.length * 100 : 0,
+    proposalConversion: journeyProposalLeads.length ? periodProposalClosingLeads.length / journeyProposalLeads.length * 100 : 0,
+  };
   const meetingConversion = journeyHeldMeetings.length ? meetingSales.length / journeyHeldMeetings.length * 100 : 0;
   const directConversion = directConversations.length ? directSales.length / directConversations.length * 100 : 0;
   return (
@@ -1316,16 +1327,16 @@ function Dashboard({
         <Kpi label="Reuniões agendadas" value={String(periodMeetingBookings.length)} detail="Marcadas para o período" />
         <Kpi label="Reuniões realizadas" value={String(periodHeldMeetings.length)} detail="Compareceram" />
         <Kpi label="No-show" value={String(periodNoShows.length)} detail="Não compareceram" />
-        <Kpi label="Clientes fechados" value={String(periodClosingLeads)} detail={`${periodPurchases.length} vendas · ${currency.format(periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0))}`} />
+        <Kpi label="Clientes fechados" value={String(periodClosingLeads)} detail={`${periodPurchases.length} vendas no período · ${currency.format(periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0))}`} />
       </div>
-      <FinancialSummary stats={stats} />
-      <div className={styles.analysisColumn}><ProductValueChart channel={channel} leads={leads} start={start} end={end} products={products} /></div>
+      <FinancialSummary stats={journeyStats} />
+      <div className={`${styles.journeyBase} ${styles.journeyBaseOverview}`}><span>Leads totais</span><strong>{activeLeads.length}</strong><small>{generatedLeads.length} novos + {priorActiveLeads.length} da base movimentados</small></div>
       <section className={`${styles.funnelColumn} ${styles.journeyFunnelColumn}`}>
         <PanelTitle eyebrow="Conversão comercial" title="Funil do período" />
         <p className={styles.sourceIntro}>
           O período escolhe os leads ativos; cada venda pertence exclusivamente ao caminho com reunião ou ao caminho direto.
         </p>
-        <div className={styles.journeyBase}><span>Leads totais</span><strong>{activeLeads.length}</strong><small>{generatedLeads.length} novos + {priorActiveLeads.length} da base movimentados</small></div>
+        <ProductValueChart channel={channel} leads={leads} start={start} end={end} products={products} />
         <div className={styles.journeyPaths}>
           <article className={styles.meetingJourney}><header><span>CAMINHO 1</span><h4>Venda com reunião</h4><p>Quando houve reunião realizada antes da proposta ou venda.</p></header><div><button onClick={() => setJourneyDetail({ title: "Reuniões realizadas", leads: journeyHeldMeetings })}><small>Reuniões realizadas</small><b>{journeyHeldMeetings.length}</b></button><i>→</i><button onClick={() => setJourneyDetail({ title: "Propostas após reunião", leads: meetingProposals })}><small>Propostas após reunião</small><b>{meetingProposals.length}</b></button><i>→</i><button onClick={() => setJourneyDetail({ title: "Vendas após reunião", leads: meetingSales })}><small>Vendas</small><b>{meetingSales.length}</b></button></div><footer><span>Conversão reunião → venda</span><b>{meetingConversion.toFixed(1)}%</b><small>{meetingProposals.length ? `${(meetingSales.length / meetingProposals.length * 100).toFixed(1)}% proposta → venda` : "Sem propostas após reunião"}</small></footer></article>
           <article className={styles.directJourney}><header><span>CAMINHO 2</span><h4>Venda direta no WhatsApp</h4><p>Quando a negociação avançou sem reunião realizada.</p></header><div><button onClick={() => setJourneyDetail({ title: "Conversas diretas", leads: directConversations })}><small>Conversas diretas</small><b>{directConversations.length}</b></button><i>→</i><button onClick={() => setJourneyDetail({ title: "Propostas diretas", leads: directProposals })}><small>Propostas diretas</small><b>{directProposals.length}</b></button><i>→</i><button onClick={() => setJourneyDetail({ title: "Vendas diretas", leads: directSales })}><small>Vendas</small><b>{directSales.length}</b></button></div><footer><span>Conversão conversa → venda</span><b>{directConversion.toFixed(1)}%</b><small>{directProposals.length ? `${(directSales.length / directProposals.length * 100).toFixed(1)}% proposta → venda` : "Sem propostas diretas"}</small></footer></article>
@@ -2312,6 +2323,7 @@ function FinancialSummary({
     proposalValue: number;
     conversion: number;
     proposalConversion: number;
+    proposalClosed?: number;
     valueConversion: number;
   };
 }) {
@@ -2335,14 +2347,14 @@ function FinancialSummary({
           <span>Fechamento sobre leads</span>
           <strong>{stats.conversion.toFixed(1)}%</strong>
           <small>
-            {stats.closed} de {stats.total} leads gerados
+            {stats.closed} de {stats.total} leads trabalhados
           </small>
         </article>
         <article>
           <span>Fechamento sobre propostas</span>
           <strong>{stats.proposalConversion.toFixed(1)}%</strong>
           <small>
-            {stats.closed} de {stats.proposals} propostas enviadas
+            {stats.proposalClosed ?? stats.closed} de {stats.proposals} leads que passaram por proposta
           </small>
         </article>
       </div>
