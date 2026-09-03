@@ -1288,7 +1288,7 @@ function Dashboard({
     .filter((purchase) => purchaseMatchesChannel(purchase, lead, channel) && inRange(purchase.closedAt, start, end))
     .map((purchase) => ({ lead, purchase })));
   const periodClosingLeads = new Set(periodPurchases.map(({ lead }) => lead.id)).size;
-  const periodMeetingBookings = leads.filter((lead) => inRange(lead.meetingAt, start, end));
+  const periodMeetingBookings = leads.filter((lead) => lead.meetingOutcome !== "Cancelada" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodHeldMeetings = leads.filter((lead) => lead.meetingOutcome === "Realizada" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodNoShows = leads.filter((lead) => lead.meetingOutcome === "No-show" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodClosingIds = new Set(periodPurchases.map(({ lead }) => lead.id));
@@ -1317,7 +1317,7 @@ function Dashboard({
       <div className={styles.kpis}>
         <Kpi label="Leads novos" value={String(generatedLeads.length)} detail="Entraram no período" />
         <Kpi label="Leads da base" value={String(priorActiveLeads.length)} detail="Antigos movimentados no período" />
-        <Kpi label="Reuniões agendadas" value={String(periodMeetingBookings.length)} detail="Agendadas no período" />
+        <Kpi label="Reuniões agendadas" value={String(periodMeetingBookings.length)} detail="Marcadas para o período" />
         <Kpi label="Reuniões realizadas" value={String(periodHeldMeetings.length)} detail="Compareceram" />
         <Kpi label="No-show" value={String(periodNoShows.length)} detail="Não compareceram" />
         <Kpi label="Clientes fechados" value={String(periodClosingLeads)} detail={`${periodPurchases.length} vendas · ${currency.format(periodPurchases.reduce((sum, { purchase }) => sum + purchase.value, 0))}`} />
@@ -1331,7 +1331,7 @@ function Dashboard({
               <span><small>Leads novos</small><b>{generatedLeads.length}</b><i>entraram no período</i></span>
               <span><small>Leads da base</small><b>{priorActiveLeads.length}</b><i>antigos movimentados no período</i></span>
               <span><small>Leads totais</small><b>{activeLeads.length}</b><i>{generatedLeads.length} novos + {priorActiveLeads.length} da base</i></span>
-              <span><small>Reuniões agendadas</small><b>{periodMeetingBookings.length}</b><i>pela data do agendamento</i></span>
+              <span><small>Reuniões agendadas</small><b>{periodMeetingBookings.length}</b><i>pela data marcada da reunião</i></span>
               <span><small>Reuniões realizadas</small><b>{periodHeldMeetings.length}</b><i>resultado “Realizada”</i></span>
               <span><small>No-show</small><b>{periodNoShows.length}</b><i>resultado “No-show”</i></span>
               <span className={styles.closingMetric} role="button" tabIndex={0} onClick={() => periodPurchases.length && setShowPeriodClosings(true)} onKeyDown={(event) => { if (periodPurchases.length && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setShowPeriodClosings(true); } }}><small>Clientes fechados</small><b>{periodClosingLeads}</b><i>{periodPurchases.length ? "passe o mouse ou clique para detalhar" : "pela data do fechamento"}</i>{periodPurchases.length > 0 && <div className={styles.closingTooltip}><strong>Fechamentos do período</strong>{periodPurchases.map(({ lead, purchase }, index) => <span key={`${lead.id}-${purchase.id || index}`}><b>{lead.name}</b><small>{purchase.product || lead.product || "Produto não informado"} · {inRange(lead.createdAt, start, end) ? "Lead novo" : "Base anterior"}</small><em><Money value={purchase.value} /></em></span>)}</div>}</span>
