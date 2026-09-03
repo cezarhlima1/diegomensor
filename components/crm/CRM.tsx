@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
+import CommercialActions from "./CommercialActions";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
 
 type Stage = string;
-type View = CrmModule | "admin";
+type View = CrmModule | "acoes" | "admin";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
@@ -865,13 +866,14 @@ export default function CRM() {
     ["comercial", "Orgânico", "◫"],
     ["trafego", "Tráfego", "↗"],
     ["campanhas", "Campanhas", "◎"],
+    ["acoes", "Ação comercial", "▣"],
     ["pipeline", "Pipeline", "▦"],
     ["contatos", "Leads", "◇"],
     ["financeiro", "Financeiro", "$"],
     ["mensagens", "Detalhes", "⚙"],
     ["admin", "ADM", "♙"],
   ];
-  const navigation = allNavigation.filter(([id]) => id === "admin" ? access.isAdmin : access.isAdmin || access.permissions.includes(id as CrmModule));
+  const navigation = allNavigation.filter(([id]) => id === "admin" ? access.isAdmin : id === "acoes" ? access.isAdmin || access.permissions.includes("campanhas") : access.isAdmin || access.permissions.includes(id as CrmModule));
   useEffect(() => {
     if (!navigation.length || navigation.some(([id]) => id === view)) return;
     setView(navigation[0][0]);
@@ -930,6 +932,7 @@ export default function CRM() {
         )}
         {view === "trafego" && <Dashboard channel="traffic" leads={filteredTrafficDashboardLeads} allLeads={filteredTrafficDashboardLeads} stats={trafficStats} selectedMonth={selectedMonth} start={dateRange.start} end={dateRange.end} products={filteredCatalogProducts} allProducts={catalogProducts} selectedProduct={dashboardProduct} setProduct={setDashboardProduct} sources={["Tráfego"]} />}
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
+        {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
           <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} select={setSelected} search={search} />
         )}
