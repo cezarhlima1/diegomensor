@@ -34,6 +34,13 @@ const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
+const dateKey = (value?: string | null) => String(value || "").slice(0, 10);
+const formatShortDate = (value?: string | null) => {
+  const key = dateKey(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return "Sem data";
+  const date = new Date(`${key}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? "Sem data" : shortDate.format(date);
+};
 
 function initialDraft(month: string): Action {
   return {
@@ -80,7 +87,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
   }, []);
 
   const monthActions = useMemo(
-    () => actions.filter((action) => action.startsOn.slice(0, 7) === month).sort((a, b) => a.startsOn.localeCompare(b.startsOn)),
+    () => actions.filter((action) => dateKey(action.startsOn).slice(0, 7) === month).sort((a, b) => dateKey(a.startsOn).localeCompare(dateKey(b.startsOn))),
     [actions, month],
   );
 
@@ -193,7 +200,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
             </div>
             <div className={styles.monthControls}>
               <button type="button" aria-label="Mês anterior" onClick={() => moveMonth(-1)}>‹</button>
-              <input type="month" aria-label="Selecionar mês" value={month} onChange={(event) => setMonth(event.target.value)} />
+              <input type="month" aria-label="Selecionar mês" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} />
               <button type="button" aria-label="Próximo mês" onClick={() => moveMonth(1)}>›</button>
             </div>
           </header>
@@ -206,7 +213,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
                     <>
                       <time>{day}</time>
                       {monthActions
-                        .filter((action) => action.startsOn === `${month}-${String(day).padStart(2, "0")}`)
+                        .filter((action) => dateKey(action.startsOn) === `${month}-${String(day).padStart(2, "0")}`)
                         .map((action) => (
                           <button type="button" key={action.id} onClick={() => setSelected(action)}>
                             <span />
@@ -229,7 +236,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
             {monthActions.length === 0 && <p>Nenhuma ação cadastrada neste mês.</p>}
             {monthActions.map((action) => (
               <button type="button" key={action.id} onClick={() => setSelected(action)}>
-                <time>{shortDate.format(new Date(`${action.startsOn}T12:00:00`))}</time>
+                <time>{formatShortDate(action.startsOn)}</time>
                 <span><b>{action.name}</b><small>{action.accessType} · {participantCount(action.id)} participantes</small></span>
                 <em>{action.status}</em>
               </button>
@@ -263,7 +270,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
         <div className={styles.backdrop} onMouseDown={() => setSelected(null)}>
           <section className={`${styles.modal} ${styles.actionDetail}`} onMouseDown={(event) => event.stopPropagation()}>
             <header>
-              <div><span>{selected.status}</span><h2>{selected.name}</h2><p>{shortDate.format(new Date(`${selected.startsOn}T12:00:00`))} · {selected.accessType}{selected.ticketValue ? ` · ${money.format(selected.ticketValue)}` : ""}</p></div>
+              <div><span>{selected.status}</span><h2>{selected.name}</h2><p>{formatShortDate(selected.startsOn)} · {selected.accessType}{selected.ticketValue ? ` · ${money.format(selected.ticketValue)}` : ""}</p></div>
               <button type="button" aria-label="Fechar" onClick={() => setSelected(null)}>×</button>
             </header>
             {selected.description && <p className={styles.actionDetailDescription}>{selected.description}</p>}
