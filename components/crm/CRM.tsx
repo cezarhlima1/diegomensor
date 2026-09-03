@@ -1292,7 +1292,7 @@ function Dashboard({
   const periodHeldMeetings = leads.filter((lead) => lead.meetingOutcome === "Realizada" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodNoShows = leads.filter((lead) => lead.meetingOutcome === "No-show" && inRange(lead.meetingScheduledFor || undefined, start, end));
   const periodClosingIds = new Set(periodPurchases.map(({ lead }) => lead.id));
-  const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.followUpAt || undefined, start, end) || inRange(lead.proposalAt, start, end) || (lead.contactCheckpoints || []).some((date) => inRange(date, start, end)) || periodClosingIds.has(lead.id));
+  const activeLeads = leads.filter((lead) => inRange(lead.createdAt, start, end) || inRange(lead.conversationAt, start, end) || inRange(lead.meetingAt, start, end) || inRange(lead.meetingScheduledFor || undefined, start, end) || inRange(lead.proposalAt, start, end) || periodClosingIds.has(lead.id));
   const priorActiveLeads = activeLeads.filter((lead) => brazilDateKey(lead.createdAt) < start);
   const happenedByEnd = (date?: string | null) => Boolean(date && brazilDateKey(date) <= end);
   const journeyConversations = activeLeads.filter((lead) => happenedByEnd(lead.conversationAt));
