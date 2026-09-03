@@ -12,6 +12,8 @@ type Action = {
   offeredProduct?: string;
   accessType: "Gratuita" | "Paga" | "Mista";
   ticketValue: number;
+  confirmedCount: number;
+  attendedCount: number;
   status: "Planejada" | "Em andamento" | "Finalizada" | "Cancelada";
 };
 
@@ -22,7 +24,6 @@ type Participant = {
   phone: string;
   email: string;
   source: string;
-  participationStatus: "Inscrito" | "Confirmado" | "Participou" | "Não compareceu" | "Cancelado";
   ticketType: string;
   ticketAmount: number;
   paymentStatus: string;
@@ -53,6 +54,8 @@ function initialDraft(month: string): Action {
     description: "",
     accessType: "Gratuita",
     ticketValue: 0,
+    confirmedCount: 0,
+    attendedCount: 0,
     status: "Planejada",
   };
 }
@@ -65,7 +68,6 @@ function initialParticipant(action: Action): Participant {
     phone: "",
     email: "",
     source: "",
-    participationStatus: "Inscrito",
     ticketType: action.accessType === "Gratuita" ? "Gratuito" : "Pago",
     ticketAmount: action.accessType === "Gratuita" ? 0 : action.ticketValue,
     paymentStatus: action.accessType === "Gratuita" ? "Recebido" : "Pendente",
@@ -90,8 +92,10 @@ export default function CommercialActions({ products }: { products: Array<{ name
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selected, setSelected] = useState<Action | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editingAction, setEditingAction] = useState(false);
   const [addingParticipant, setAddingParticipant] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingMetrics, setSavingMetrics] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [draft, setDraft] = useState<Action>(() => initialDraft(new Date().toISOString().slice(0, 7)));
@@ -135,6 +139,15 @@ export default function CommercialActions({ products }: { products: Array<{ name
     setError("");
     setSuccess("");
     setDraft(initialDraft(month));
+    setEditingAction(false);
+    setAdding(true);
+  };
+
+  const openEditAction = (action: Action) => {
+    setError("");
+    setSuccess("");
+    setDraft({ ...action, startsOn: dateKey(action.startsOn), endsOn: dateKey(action.endsOn) || undefined });
+    setEditingAction(true);
     setAdding(true);
   };
 
@@ -151,15 +164,43 @@ export default function CommercialActions({ products }: { products: Array<{ name
       });
       if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível salvar a ação."));
       setAdding(false);
+      setEditingAction(false);
       setDraft(initialDraft(month));
-      setSuccess("Ação salva com sucesso.");
+      setSuccess(editingAction ? "Ação atualizada com sucesso." : "Ação salva com sucesso.");
       try {
         await load();
+        if (editingAction) setSelected(draft);
       } catch {
         setError("A ação foi salva, mas a agenda não conseguiu atualizar. Recarregue a página para visualizá-la.");
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível salvar a ação.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteAction = async (action: Action) => {
+    const linked = participantCount(action.id);
+    const warning = linked
+      ? `Excluir “${action.name}” e seus ${linked} participante${linked === 1 ? "" : "s"} vinculado${linked === 1 ? "" : "s"}? Leads já liberados no CRM não serão apagados.`
+      : `Excluir definitivamente a ação “${action.name}”?`;
+    if (!confirm(warning)) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/crm/actions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionId: action.id }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível excluir a ação."));
+      setSelected(null);
+      setActions((current) => current.filter((item) => item.id !== action.id));
+      setPeople((current) => current.filter((person) => person.actionId !== action.id));
+      setSuccess("Ação excluída.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível excluir a ação.");
     } finally {
       setSaving(false);
     }
@@ -218,10 +259,51 @@ export default function CommercialActions({ products }: { products: Array<{ name
     }
   };
 
+  const saveActionMetrics = async () => {
+    if (!selected) return;
+    setSavingMetrics(true);
+    setError("");
+    try {
+      const response = await fetch("/api/crm/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entity: "action", record: selected }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível salvar os números da ação."));
+      setActions((current) => current.map((action) => action.id === selected.id ? selected : action));
+      setSuccess("Números gerais da ação atualizados.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível salvar os números da ação.");
+    } finally {
+      setSavingMetrics(false);
+    }
+  };
+
+  const deleteParticipant = async (participant: Participant) => {
+    if (!confirm(`Excluir ${participant.name} desta ação? Se essa pessoa já estiver no CRM, o lead não será apagado.`)) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/crm/actions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantId: participant.id }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível excluir o participante."));
+      setPeople((current) => current.filter((person) => person.id !== participant.id));
+      setAddingParticipant(false);
+      setParticipantDraft(null);
+      setSuccess("Participante removido da ação.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível excluir o participante.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const participantCount = (actionId: string) => people.filter((person) => person.actionId === actionId).length;
   const waitingCount = (actionId: string) => people.filter((person) => person.actionId === actionId && person.crmStatus === "Aguardando liberação").length;
   const selectedPeople = selected ? people.filter((person) => person.actionId === selected.id) : [];
-  const attendedPeople = selectedPeople.filter((person) => person.participationStatus === "Participou");
   const buyers = selectedPeople.filter((person) => Boolean(person.boughtProduct) || Number(person.saleAmount) > 0);
   const ticketRevenue = selectedPeople.filter((person) => person.paymentStatus === "Recebido").reduce((total, person) => total + Number(person.ticketAmount || 0), 0);
   const salesRevenue = buyers.reduce((total, person) => total + Number(person.saleAmount || 0), 0);
@@ -302,8 +384,8 @@ export default function CommercialActions({ products }: { products: Array<{ name
         <div className={styles.backdrop}>
           <form className={`${styles.modal} ${styles.actionModal}`} onSubmit={save}>
             <header>
-              <div><span>AÇÃO COMERCIAL</span><h2>Nova ação</h2><p>Cadastre o planejamento. Nenhum participante será enviado ao CRM agora.</p></div>
-              <button type="button" aria-label="Fechar" onClick={() => setAdding(false)}>×</button>
+              <div><span>AÇÃO COMERCIAL</span><h2>{editingAction ? "Editar ação" : "Nova ação"}</h2><p>{editingAction ? "Atualize as informações desta ação." : "Cadastre o planejamento. Nenhum participante será enviado ao CRM agora."}</p></div>
+              <button type="button" aria-label="Fechar" onClick={() => { setAdding(false); setEditingAction(false); }}>×</button>
             </header>
             <div className={styles.formGrid}>
               <label className={styles.actionNameField}><span>Nome da ação</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required /></label>
@@ -314,7 +396,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
               <label className={styles.actionDescription}><span>Descrição / objetivo</span><textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Ex.: Workshop de precificação para gerar oportunidades..." /></label>
             </div>
             {error && <p className={styles.actionModalError}>{error}</p>}
-            <footer><button type="button" onClick={() => setAdding(false)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar ação"}</button></footer>
+            <footer><button type="button" onClick={() => { setAdding(false); setEditingAction(false); }} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando..." : editingAction ? "Salvar alterações" : "Salvar ação"}</button></footer>
           </form>
         </div>
       )}
@@ -324,24 +406,30 @@ export default function CommercialActions({ products }: { products: Array<{ name
           <section className={`${styles.modal} ${styles.actionDetail}`} onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div><span>{selected.status}</span><h2>{selected.name}</h2><p>{formatShortDate(selected.startsOn)} · {selected.accessType}{selected.ticketValue ? ` · ${money.format(selected.ticketValue)}` : ""}</p></div>
-              <button type="button" aria-label="Fechar" onClick={() => setSelected(null)}>×</button>
+              <div className={styles.actionDetailActions}><button type="button" onClick={() => openEditAction(selected)}>Editar</button><button type="button" className={styles.actionDeleteButton} onClick={() => deleteAction(selected)} disabled={saving}>Excluir</button><button type="button" aria-label="Fechar" onClick={() => setSelected(null)}>×</button></div>
             </header>
             {selected.description && <p className={styles.actionDetailDescription}>{selected.description}</p>}
             <div className={styles.actionSummary}>
               <article><span>Cadastrados</span><b>{selectedPeople.length}</b><small>participantes na ação</small></article>
-              <article><span>Participaram</span><b>{attendedPeople.length}</b><small>{selectedPeople.length ? `${(attendedPeople.length / selectedPeople.length * 100).toFixed(1)}% dos cadastrados` : "Sem cadastros"}</small></article>
-              <article><span>Compraram</span><b>{buyers.length}</b><small>{attendedPeople.length ? `${(buyers.length / attendedPeople.length * 100).toFixed(1)}% dos presentes` : "Sem presença registrada"}</small></article>
+              <article><span>Confirmados</span><b>{selected.confirmedCount}</b><small>número geral informado</small></article>
+              <article><span>Participaram</span><b>{selected.attendedCount}</b><small>{selected.confirmedCount ? `${(selected.attendedCount / selected.confirmedCount * 100).toFixed(1)}% dos confirmados` : "Sem confirmados informados"}</small></article>
+              <article><span>Compraram</span><b>{buyers.length}</b><small>{selected.attendedCount ? `${(buyers.length / selected.attendedCount * 100).toFixed(1)}% dos participantes` : "Sem participantes informados"}</small></article>
               <article><span>Aguardando CRM</span><b>{waitingCount(selected.id)}</b><small>liberação manual</small></article>
               <article><span>Ingressos recebidos</span><b>{money.format(ticketRevenue)}</b><small>pagamentos recebidos</small></article>
               <article><span>Vendas da oferta</span><b>{money.format(salesRevenue)}</b><small>{buyers.length} compra{buyers.length === 1 ? "" : "s"}</small></article>
             </div>
+            <section className={styles.actionGeneralMetrics}>
+              <div><span>NÚMEROS GERAIS DA AÇÃO</span><p>Informe apenas os totais. Nenhuma presença será atribuída a uma pessoa específica.</p></div>
+              <label><span>Confirmados</span><input type="number" min="0" step="1" value={selected.confirmedCount} onChange={(event) => setSelected({ ...selected, confirmedCount: Number(event.target.value) })} /></label>
+              <label><span>Participaram</span><input type="number" min="0" step="1" value={selected.attendedCount} onChange={(event) => setSelected({ ...selected, attendedCount: Number(event.target.value) })} /></label>
+              <button type="button" onClick={saveActionMetrics} disabled={savingMetrics}>{savingMetrics ? "Salvando..." : "Salvar números"}</button>
+            </section>
             <section className={styles.actionParticipants}>
               <header><div><span>PARTICIPANTES</span><h3>Pessoas vinculadas a esta ação</h3></div><button type="button" onClick={() => openParticipant(selected)}>+ Cadastrar participante</button></header>
               <div>
                 {selectedPeople.map((person) => (
                   <button type="button" key={person.id} onClick={() => openParticipant(selected, person)}>
                     <span><b>{person.name}</b><small>{person.email || person.phone || "Contato não informado"}</small></span>
-                    <em>{person.participationStatus}</em>
                     <span><small>Ingresso</small><b>{person.ticketType} · {money.format(person.ticketAmount)}</b></span>
                     <span><small>Resultado</small><b>{person.boughtProduct || "Não comprou"}</b></span>
                     <strong>{person.crmStatus}</strong>
@@ -364,7 +452,6 @@ export default function CommercialActions({ products }: { products: Array<{ name
               <label><span>Telefone</span><input value={participantDraft.phone} onChange={(event) => setParticipantDraft({ ...participantDraft, phone: event.target.value })} /></label>
               <label><span>E-mail</span><input type="email" value={participantDraft.email} onChange={(event) => setParticipantDraft({ ...participantDraft, email: event.target.value })} /></label>
               <label><span>Origem</span><input value={participantDraft.source} onChange={(event) => setParticipantDraft({ ...participantDraft, source: event.target.value })} placeholder="Tráfego, indicação, Instagram..." /></label>
-              <label><span>Participação</span><select value={participantDraft.participationStatus} onChange={(event) => setParticipantDraft({ ...participantDraft, participationStatus: event.target.value as Participant["participationStatus"] })}><option>Inscrito</option><option>Confirmado</option><option>Participou</option><option>Não compareceu</option><option>Cancelado</option></select></label>
               <label><span>Tipo de ingresso</span><select value={participantDraft.ticketType} onChange={(event) => setParticipantDraft({ ...participantDraft, ticketType: event.target.value })}><option>Gratuito</option><option>Pago</option><option>Cortesia</option></select></label>
               <label><span>Valor do ingresso</span><input type="number" min="0" step="0.01" value={participantDraft.ticketAmount} onChange={(event) => setParticipantDraft({ ...participantDraft, ticketAmount: Number(event.target.value) })} /></label>
               <label><span>Status do pagamento</span><select value={participantDraft.paymentStatus} onChange={(event) => setParticipantDraft({ ...participantDraft, paymentStatus: event.target.value })}><option>Pendente</option><option>Recebido</option><option>Atrasado</option><option>Cancelado</option></select></label>
@@ -374,7 +461,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
               <label><span>Data da venda</span><input type="date" value={dateKey(participantDraft.saleDate)} onChange={(event) => setParticipantDraft({ ...participantDraft, saleDate: event.target.value })} /></label>
             </div>
             {error && <p className={styles.actionModalError}>{error}</p>}
-            <footer><button type="button" onClick={() => setAddingParticipant(false)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar participante"}</button></footer>
+            <footer>{people.some((person) => person.id === participantDraft.id) && <button type="button" className={styles.participantDeleteButton} onClick={() => deleteParticipant(participantDraft)} disabled={saving}>Excluir participante</button>}<button type="button" onClick={() => setAddingParticipant(false)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar participante"}</button></footer>
           </form>
         </div>
       )}
