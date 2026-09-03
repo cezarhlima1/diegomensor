@@ -22,11 +22,14 @@ type Participant = {
   phone: string;
   email: string;
   source: string;
+  participationStatus: "Inscrito" | "Confirmado" | "Participou" | "Não compareceu" | "Cancelado";
   ticketType: string;
   ticketAmount: number;
   paymentStatus: string;
+  paymentDate?: string;
   boughtProduct?: string;
   saleAmount: number;
+  saleDate?: string;
   crmStatus: string;
 };
 
@@ -54,6 +57,24 @@ function initialDraft(month: string): Action {
   };
 }
 
+function initialParticipant(action: Action): Participant {
+  return {
+    id: makeId(),
+    actionId: action.id,
+    name: "",
+    phone: "",
+    email: "",
+    source: "",
+    participationStatus: "Inscrito",
+    ticketType: action.accessType === "Gratuita" ? "Gratuito" : "Pago",
+    ticketAmount: action.accessType === "Gratuita" ? 0 : action.ticketValue,
+    paymentStatus: action.accessType === "Gratuita" ? "Recebido" : "Pendente",
+    boughtProduct: "",
+    saleAmount: 0,
+    crmStatus: "Aguardando liberação",
+  };
+}
+
 async function responseMessage(response: Response, fallback: string) {
   try {
     const body = await response.json();
@@ -69,10 +90,12 @@ export default function CommercialActions({ products }: { products: Array<{ name
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selected, setSelected] = useState<Action | null>(null);
   const [adding, setAdding] = useState(false);
+  const [addingParticipant, setAddingParticipant] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [draft, setDraft] = useState<Action>(() => initialDraft(new Date().toISOString().slice(0, 7)));
+  const [participantDraft, setParticipantDraft] = useState<Participant | null>(null);
 
   const load = async () => {
     const response = await fetch("/api/crm/actions", { cache: "no-store" });
@@ -97,11 +120,6 @@ export default function CommercialActions({ products }: { products: Array<{ name
     const totalDays = new Date(year, monthNumber, 0).getDate();
     return [...Array(firstWeekday).fill(null), ...Array.from({ length: totalDays }, (_, index) => index + 1)];
   }, [month]);
-
-  const monthPeople = useMemo(() => {
-    const actionIds = new Set(monthActions.map((action) => action.id));
-    return people.filter((person) => actionIds.has(person.actionId));
-  }, [monthActions, people]);
 
   const monthDate = useMemo(() => {
     const [year, monthNumber] = month.split("-").map(Number);
@@ -167,8 +185,46 @@ export default function CommercialActions({ products }: { products: Array<{ name
     }
   };
 
+  const openParticipant = (action: Action, participant?: Participant) => {
+    setError("");
+    setParticipantDraft(participant ? { ...participant } : initialParticipant(action));
+    setAddingParticipant(true);
+  };
+
+  const saveParticipant = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!participantDraft) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/crm/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entity: "participant", record: participantDraft }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível salvar o participante."));
+      setAddingParticipant(false);
+      setParticipantDraft(null);
+      setSuccess("Participante cadastrado na ação. Ele ainda não entrou no CRM.");
+      try {
+        await load();
+      } catch {
+        setError("O participante foi salvo, mas a tela não conseguiu atualizar. Recarregue a página para visualizá-lo.");
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível salvar o participante.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const participantCount = (actionId: string) => people.filter((person) => person.actionId === actionId).length;
   const waitingCount = (actionId: string) => people.filter((person) => person.actionId === actionId && person.crmStatus === "Aguardando liberação").length;
+  const selectedPeople = selected ? people.filter((person) => person.actionId === selected.id) : [];
+  const attendedPeople = selectedPeople.filter((person) => person.participationStatus === "Participou");
+  const buyers = selectedPeople.filter((person) => Boolean(person.boughtProduct) || Number(person.saleAmount) > 0);
+  const ticketRevenue = selectedPeople.filter((person) => person.paymentStatus === "Recebido").reduce((total, person) => total + Number(person.ticketAmount || 0), 0);
+  const salesRevenue = buyers.reduce((total, person) => total + Number(person.saleAmount || 0), 0);
 
   return (
     <div className={`${styles.content} ${styles.actionCalendar}`}>
@@ -186,9 +242,6 @@ export default function CommercialActions({ products }: { products: Array<{ name
 
       <section className={styles.actionKpis}>
         <article><span>Ações no mês</span><b>{monthActions.length}</b><small>planejadas e realizadas</small></article>
-        <article><span>Participantes</span><b>{monthPeople.length}</b><small>vinculados às ações</small></article>
-        <article><span>Aguardando CRM</span><b>{monthPeople.filter((person) => person.crmStatus === "Aguardando liberação").length}</b><small>entram somente após liberação</small></article>
-        <article><span>Ingressos cadastrados</span><b>{money.format(monthPeople.reduce((total, person) => total + Number(person.ticketAmount || 0), 0))}</b><small>valor dos participantes do mês</small></article>
       </section>
 
       <section className={styles.actionCalendarLayout}>
@@ -275,11 +328,54 @@ export default function CommercialActions({ products }: { products: Array<{ name
             </header>
             {selected.description && <p className={styles.actionDetailDescription}>{selected.description}</p>}
             <div className={styles.actionSummary}>
-              <b>{participantCount(selected.id)}<small>participantes</small></b>
-              <b>{waitingCount(selected.id)}<small>aguardando CRM</small></b>
+              <article><span>Cadastrados</span><b>{selectedPeople.length}</b><small>participantes na ação</small></article>
+              <article><span>Participaram</span><b>{attendedPeople.length}</b><small>{selectedPeople.length ? `${(attendedPeople.length / selectedPeople.length * 100).toFixed(1)}% dos cadastrados` : "Sem cadastros"}</small></article>
+              <article><span>Compraram</span><b>{buyers.length}</b><small>{attendedPeople.length ? `${(buyers.length / attendedPeople.length * 100).toFixed(1)}% dos presentes` : "Sem presença registrada"}</small></article>
+              <article><span>Aguardando CRM</span><b>{waitingCount(selected.id)}</b><small>liberação manual</small></article>
+              <article><span>Ingressos recebidos</span><b>{money.format(ticketRevenue)}</b><small>pagamentos recebidos</small></article>
+              <article><span>Vendas da oferta</span><b>{money.format(salesRevenue)}</b><small>{buyers.length} compra{buyers.length === 1 ? "" : "s"}</small></article>
             </div>
+            <section className={styles.actionParticipants}>
+              <header><div><span>PARTICIPANTES</span><h3>Pessoas vinculadas a esta ação</h3></div><button type="button" onClick={() => openParticipant(selected)}>+ Cadastrar participante</button></header>
+              <div>
+                {selectedPeople.map((person) => (
+                  <button type="button" key={person.id} onClick={() => openParticipant(selected, person)}>
+                    <span><b>{person.name}</b><small>{person.email || person.phone || "Contato não informado"}</small></span>
+                    <em>{person.participationStatus}</em>
+                    <span><small>Ingresso</small><b>{person.ticketType} · {money.format(person.ticketAmount)}</b></span>
+                    <span><small>Resultado</small><b>{person.boughtProduct || "Não comprou"}</b></span>
+                    <strong>{person.crmStatus}</strong>
+                  </button>
+                ))}
+                {!selectedPeople.length && <p>Nenhum participante cadastrado nesta ação.</p>}
+              </div>
+            </section>
             <footer><button type="button" onClick={() => setSelected(null)}>Fechar</button><button type="button" onClick={() => release(selected)} disabled={waitingCount(selected.id) === 0}>Liberar pendentes para o CRM</button></footer>
           </section>
+        </div>
+      )}
+
+      {addingParticipant && participantDraft && selected && (
+        <div className={`${styles.backdrop} ${styles.participantBackdrop}`}>
+          <form className={`${styles.modal} ${styles.participantModal}`} onSubmit={saveParticipant}>
+            <header><div><span>PARTICIPANTE</span><h2>{people.some((person) => person.id === participantDraft.id) ? "Editar participante" : "Novo participante"}</h2><p>{selected.name} · permanece fora do CRM até a liberação.</p></div><button type="button" onClick={() => setAddingParticipant(false)}>×</button></header>
+            <div className={styles.participantForm}>
+              <label className={styles.participantWide}><span>Nome</span><input required value={participantDraft.name} onChange={(event) => setParticipantDraft({ ...participantDraft, name: event.target.value })} /></label>
+              <label><span>Telefone</span><input value={participantDraft.phone} onChange={(event) => setParticipantDraft({ ...participantDraft, phone: event.target.value })} /></label>
+              <label><span>E-mail</span><input type="email" value={participantDraft.email} onChange={(event) => setParticipantDraft({ ...participantDraft, email: event.target.value })} /></label>
+              <label><span>Origem</span><input value={participantDraft.source} onChange={(event) => setParticipantDraft({ ...participantDraft, source: event.target.value })} placeholder="Tráfego, indicação, Instagram..." /></label>
+              <label><span>Participação</span><select value={participantDraft.participationStatus} onChange={(event) => setParticipantDraft({ ...participantDraft, participationStatus: event.target.value as Participant["participationStatus"] })}><option>Inscrito</option><option>Confirmado</option><option>Participou</option><option>Não compareceu</option><option>Cancelado</option></select></label>
+              <label><span>Tipo de ingresso</span><select value={participantDraft.ticketType} onChange={(event) => setParticipantDraft({ ...participantDraft, ticketType: event.target.value })}><option>Gratuito</option><option>Pago</option><option>Cortesia</option></select></label>
+              <label><span>Valor do ingresso</span><input type="number" min="0" step="0.01" value={participantDraft.ticketAmount} onChange={(event) => setParticipantDraft({ ...participantDraft, ticketAmount: Number(event.target.value) })} /></label>
+              <label><span>Status do pagamento</span><select value={participantDraft.paymentStatus} onChange={(event) => setParticipantDraft({ ...participantDraft, paymentStatus: event.target.value })}><option>Pendente</option><option>Recebido</option><option>Atrasado</option><option>Cancelado</option></select></label>
+              <label><span>Data do pagamento</span><input type="date" value={dateKey(participantDraft.paymentDate)} onChange={(event) => setParticipantDraft({ ...participantDraft, paymentDate: event.target.value })} /></label>
+              <label><span>Produto comprado</span><select value={participantDraft.boughtProduct || ""} onChange={(event) => setParticipantDraft({ ...participantDraft, boughtProduct: event.target.value })}><option value="">Não comprou</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label>
+              <label><span>Valor da venda</span><input type="number" min="0" step="0.01" value={participantDraft.saleAmount} onChange={(event) => setParticipantDraft({ ...participantDraft, saleAmount: Number(event.target.value) })} /></label>
+              <label><span>Data da venda</span><input type="date" value={dateKey(participantDraft.saleDate)} onChange={(event) => setParticipantDraft({ ...participantDraft, saleDate: event.target.value })} /></label>
+            </div>
+            {error && <p className={styles.actionModalError}>{error}</p>}
+            <footer><button type="button" onClick={() => setAddingParticipant(false)} disabled={saving}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar participante"}</button></footer>
+          </form>
         </div>
       )}
     </div>
