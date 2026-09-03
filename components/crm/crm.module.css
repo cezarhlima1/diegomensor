@@ -2475,6 +2475,15 @@
 @media(max-width:900px){.journeyPaths{grid-template-columns:1fr}}
 @media(max-width:600px){.journeyFunnelColumn{padding:16px}.journeyBase{grid-template-columns:auto 1fr}.journeyBase>small{grid-column:1/-1}.journeyPaths article>div{grid-template-columns:1fr}.journeyPaths article>div>i{display:none}.journeyPaths article>div>button{min-height:64px}.journeyDetailModal>div{padding-inline:14px}}
 
+/* Card do lead: mesma informação, hierarquia previsível na visualização web. */
+@media(min-width:801px){
+  .drawer{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start;gap:14px;padding:0 18px 20px!important}
+  .drawer>header,.drawer>.leadEditSection,.drawer>.applicationSection,.drawer>.contactHistorySection,.drawer>.leadDatesSection,.drawer>.leadNotesSection,.drawer>.closingsSection,.drawer>.closerAssignments{grid-column:1/-1}
+  .drawer>header{order:0;margin:0 -18px}.drawer>.leadEditSection{order:1}.drawer>.applicationSection{order:2}.drawer>.contactHistorySection{order:3}.drawer>.leadContactSection{order:4;grid-column:1}.drawer>.leadOpportunitySection{order:4;grid-column:2}.drawer>.leadDatesSection{order:5}.drawer>.leadNotesSection{order:6}.drawer>.closingsSection{order:7}.drawer>.closerAssignments{order:8}
+  .leadNotesSection .leadFollowupGrid{grid-template-columns:1fr!important}.leadNotesSection textarea{min-height:110px}
+  .applicationSection,.contactHistorySection,.leadContactSection,.leadOpportunitySection,.leadDatesSection,.leadNotesSection,.closingsSection{margin:0!important}
+}
+
 /* Hierarquia visual e metas individuais no financeiro. */
 .financeDashboard{gap:18px}.commissionPanel,.financePanelFull{box-shadow:0 12px 34px rgba(0,0,0,.16)}
 .financeKpis article:nth-child(3){border-color:rgba(101,201,243,.3);background:linear-gradient(145deg,rgba(101,201,243,.1),transparent)}.financeKpis article:nth-child(4){border-color:rgba(237,113,128,.3);background:linear-gradient(145deg,rgba(237,113,128,.1),transparent)}.financeKpis article:nth-child(5){border-color:rgba(55,198,139,.3);background:linear-gradient(145deg,rgba(55,198,139,.1),transparent)}
