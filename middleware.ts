@@ -7,6 +7,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * config.matcher no fim do arquivo.
  */
 export async function middleware(request: NextRequest) {
+  // Rota chamada pelo Apps Script da planilha, autenticada com um segredo
+  // próprio (header Authorization) em vez de sessão Supabase — ver
+  // app/api/crm/sheets-sync/route.ts.
+  if (request.nextUrl.pathname === "/api/crm/sheets-sync") {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
