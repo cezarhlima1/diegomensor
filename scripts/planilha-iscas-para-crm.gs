@@ -20,7 +20,10 @@
  *    existiam antes de instalar o acionador.
  */
 
-const CRM_ENDPOINT_URL = "https://mensortreinamentos.com.br/api/crm/sheets-sync";
+// Precisa ser o domínio canônico (www): o domínio sem www redireciona (308)
+// para este, e o UrlFetchApp do Apps Script rebaixa POST para GET ao seguir
+// o redirecionamento, o que fazia a rota responder 405.
+const CRM_ENDPOINT_URL = "https://www.mensortreinamentos.com.br/api/crm/sheets-sync";
 const SHEET_NAME = "Leads";
 
 function onOpen() {
