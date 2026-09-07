@@ -7,17 +7,20 @@
  * Como instalar:
  * 1. Na planilha, abra Extensões > Apps Script.
  * 2. Cole este arquivo no editor (substitua o Code.gs padrão) e salve.
- * 3. Na barra lateral, clique no relógio (Acionadores) > Adicionar acionador.
+ * 3. Clique no ícone de engrenagem (Configurações do projeto) > Propriedades
+ *    do script > Adicionar propriedade do script. Nome: CRM_SECRET.
+ *    Valor: o mesmo de SHEETS_TO_CRM_SECRET no ambiente do site (não
+ *    commitar esse valor em lugar nenhum do código).
+ * 4. Na barra lateral, clique no relógio (Acionadores) > Adicionar acionador.
  *    Função a executar: aoEditarLinha
  *    Evento: Do Google Sheets > Ao editar
  *    Salve e autorize o script quando o Google pedir.
- * 4. (Opcional) Recarregue a planilha, abra o menu "CRM ISCAS" que aparece
+ * 5. (Opcional) Recarregue a planilha, abra o menu "CRM ISCAS" que aparece
  *    e clique em "Sincronizar tudo agora" para importar as linhas que já
  *    existiam antes de instalar o acionador.
  */
 
 const CRM_ENDPOINT_URL = "https://mensortreinamentos.com.br/api/crm/sheets-sync";
-const CRM_SECRET = "9febea0335b410af7c6a2bfdf80c5d4b767e8e3f2dea5e36";
 const SHEET_NAME = "Leads";
 
 function onOpen() {
@@ -49,6 +52,12 @@ function sincronizarTodasAsLinhas() {
 }
 
 function enviarLinha(sheet, linha) {
+  const segredo = PropertiesService.getScriptProperties().getProperty("CRM_SECRET");
+  if (!segredo) {
+    Logger.log("CRM_SECRET não configurado em Configurações do projeto > Propriedades do script.");
+    return;
+  }
+
   const valores = sheet.getRange(linha, 1, 1, 7).getValues()[0];
   const [username, oficina, celular, pessoas, funil, faturamento, problema] = valores;
 
@@ -67,7 +76,7 @@ function enviarLinha(sheet, linha) {
     method: "post",
     contentType: "application/json",
     payload: JSON.stringify(payload),
-    headers: { Authorization: "Bearer " + CRM_SECRET },
+    headers: { Authorization: "Bearer " + segredo },
     muteHttpExceptions: true,
   });
 
