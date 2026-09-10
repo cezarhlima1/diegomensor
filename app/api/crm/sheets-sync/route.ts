@@ -1,95 +1,51 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { withCrmTransaction } from "@/lib/crm-db";
-import { upsertLeadRecord } from "@/lib/crm-leads";
+import { sheetApplication, sheetContact, sheetProduct } from "@/lib/crm-sheets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Fonte fixa para leads recebidos da planilha "Automações de cadastro ISCAS".
-// Já existe cadastrada em crm_lead_sources — ver app/api/crm/route.ts.
-const SOURCE = "Forms - Manychat";
-
-// "Funil" da planilha traz o nome da campanha; mapeamos para o produto
-// correspondente quando reconhecido. Fora esses casos, produto fica em branco.
-const PRODUCT_BY_FUNNEL_HINT: Array<{ hint: string; product: string }> = [
-  { hint: "calculadora", product: "Calculadora de precificação" },
-  { hint: "mentoria", product: "Mentoria OAG" },
-];
-
-function productForFunnel(funil: string) {
-  const normalized = funil.toLowerCase();
-  return PRODUCT_BY_FUNNEL_HINT.find(({ hint }) => normalized.includes(hint))?.product;
-}
-
-type SheetRow = {
-  rowNumber?: number;
-  username?: string;
-  oficina?: string;
-  celular?: string;
-  pessoas?: string;
-  funil?: string;
-  faturamento?: string;
-  problema?: string;
-};
-
 export async function POST(request: Request) {
   const secret = process.env.SHEETS_TO_CRM_SECRET;
-  if (!secret) return NextResponse.json({ ok: false, error: "missing-secret" }, { status: 500 });
+  if (!secret) return NextResponse.json({ ok: false, error: "sync-not-configured" }, { status: 503 });
+  const supplied = Buffer.from(request.headers.get("authorization") || "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
 
-  const authHeader = request.headers.get("authorization") || "";
-  if (authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
-
-  let body: SheetRow;
+  let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (Buffer.byteLength(raw) > 16384) return NextResponse.json({ ok: false, error: "payload-too-large" }, { status: 413 });
+    body = JSON.parse(raw);
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid-body");
   } catch {
     return NextResponse.json({ ok: false, error: "invalid-json" }, { status: 400 });
   }
-
-  const rowNumber = Number(body.rowNumber);
-  const username = String(body.username || "").trim();
-  const celular = String(body.celular || "").replace(/\D/g, "");
-  if (!rowNumber || (!username && !celular)) {
-    // Linha ainda incompleta (edição parcial) — não é erro, só não sincroniza ainda.
-    return NextResponse.json({ ok: true, skipped: true });
-  }
-
-  const oficina = String(body.oficina || "").trim();
-  const funil = String(body.funil || "").trim();
-  const pessoas = String(body.pessoas || "").trim();
-  const faturamento = String(body.faturamento || "").trim();
-  const problema = String(body.problema || "").trim();
-
-  const notes = [
-    funil && `Funil: ${funil}`,
-    pessoas && `Pessoas na operação: ${pessoas}`,
-    faturamento && `Faturamento médio: ${faturamento}`,
-    problema && `Principal problema: ${problema}`,
-  ].filter(Boolean).join("\n");
-
-  const lead = {
-    id: `sheet-iscas-${rowNumber}`,
-    name: username || oficina,
-    company: oficina,
-    phone: celular,
-    source: SOURCE,
-    product: funil ? productForFunnel(funil) : undefined,
-    stage: "Novo lead",
-    value: 0,
-    temperature: "Morno",
-    date: new Date().toISOString().slice(0, 10),
-    notes,
-    tags: ["Planilha ISCAS"],
-  };
-
+  const contact = sheetContact(body);
+  // A username can identify a contact while its phone is still missing.
+  if ((!contact.phone && !contact.name) || (contact.phone && !/^\d{10,11}$/.test(contact.phone))) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 422 });
   try {
-    await withCrmTransaction((db) => upsertLeadRecord(db, lead));
-  } catch (error) {
-    console.error("CRM sheets-sync failed", error);
-    return NextResponse.json({ ok: false, error: "database-write-failed" }, { status: 503 });
+    const result = await withCrmTransaction(async (db) => {
+      await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", ["sheets-iscas-sync"]);
+      const matches = await db.query("select id,name,company,application from public.crm_leads where ($1<>'' and public.crm_normalized_phone(phone)=$1) or ($2<>'' and source='Forms - Manychat' and lower(name)=lower($2) and (phone='' or $1='') and (company='' or $3='' or lower(company)=lower($3))) for update", [contact.phone, contact.name, contact.company]);
+      if (matches.rows.length > 1) return { conflict: true };
+      const existing = matches.rows[0];
+      const application = sheetApplication(contact, existing?.application || {});
+      if (existing) {
+        await db.query("update public.crm_leads set name=coalesce(nullif(name,''),$2),company=coalesce(nullif(company,''),$3),application=$4::jsonb,phone=coalesce(nullif(phone,''),$5),updated_at=now() where id=$1", [existing.id, contact.name, contact.company, JSON.stringify(application), contact.phone]);
+        return { id: existing.id, created: false };
+      }
+      const source = "Forms - Manychat";
+      await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
+      const id = crypto.randomUUID();
+      await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,'Novo lead','Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,array['Planilha ISCAS'])", [id, contact.name, contact.company, contact.phone, source, JSON.stringify(application), sheetProduct(contact.funnel)]);
+      return { id, created: true };
+    });
+    if (result.conflict) return NextResponse.json({ ok: false, error: "duplicate-phone-conflict" }, { status: 409 });
+    return NextResponse.json({ ok: true, ...result });
+  } catch {
+    console.error("Sheets CRM synchronization failed");
+    return NextResponse.json({ ok: false, error: "sync-failed" }, { status: 503 });
   }
-
-  return NextResponse.json({ ok: true });
 }

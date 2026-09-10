@@ -1,89 +1,92 @@
 /**
- * Google Apps Script da planilha "Automações de cadastro ISCAS".
- *
- * Sincroniza cada linha (nova ou editada) da aba "Leads" com o CRM,
- * chamando /api/crm/sheets-sync no site.
- *
- * Como instalar:
- * 1. Na planilha, abra Extensões > Apps Script.
- * 2. Cole este arquivo no editor (substitua o Code.gs padrão) e salve.
- * 3. Clique no ícone de engrenagem (Configurações do projeto) > Propriedades
- *    do script > Adicionar propriedade do script. Nome: CRM_SECRET.
- *    Valor: o mesmo de SHEETS_TO_CRM_SECRET no ambiente do site (não
- *    commitar esse valor em lugar nenhum do código).
- * 4. Na barra lateral, clique no relógio (Acionadores) > Adicionar acionador.
- *    Função a executar: aoEditarLinha
- *    Evento: Do Google Sheets > Ao editar
- *    Salve e autorize o script quando o Google pedir.
- * 5. (Opcional) Recarregue a planilha, abra o menu "CRM ISCAS" que aparece
- *    e clique em "Sincronizar tudo agora" para importar as linhas que já
- *    existiam antes de instalar o acionador.
+ * Planilha Automações de cadastro ISCAS, aba Leads (colunas A:G):
+ * username, oficina, celular, pessoas, funil, faturamento, problema.
+ * Substitua o script antigo por este. Mantenha CRM_SECRET nas propriedades
+ * do script, igual a SHEETS_TO_CRM_SECRET no servidor. Execute instalarSincronizacao
+ * uma vez e autorize. O relógio captura também inclusões feitas por API/scripts.
+ * Nenhum segredo deve ser colocado neste arquivo.
  */
-
-// Precisa ser o domínio canônico (www): o domínio sem www redireciona (308)
-// para este, e o UrlFetchApp do Apps Script rebaixa POST para GET ao seguir
-// o redirecionamento, o que fazia a rota responder 405.
 const CRM_ENDPOINT_URL = "https://www.mensortreinamentos.com.br/api/crm/sheets-sync";
 const SHEET_NAME = "Leads";
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu("CRM ISCAS")
-    .addItem("Sincronizar tudo agora", "sincronizarTodasAsLinhas")
-    .addToUi();
+  SpreadsheetApp.getUi().createMenu("CRM ISCAS")
+    .addItem("Ativar sincronização automática", "instalarSincronizacao")
+    .addItem("Sincronizar tudo agora", "sincronizarTodasAsLinhas").addToUi();
+}
+
+function instalarSincronizacao() {
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty("CRM_SECRET")) throw new Error("Configure CRM_SECRET nas propriedades do script.");
+  const spreadsheet = SpreadsheetApp.getActive();
+  if (!spreadsheet.getSheetByName(SHEET_NAME)) throw new Error("Aba Leads não encontrada.");
+  props.setProperty("CRM_SPREADSHEET_ID", spreadsheet.getId());
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (["sincronizarPendentes", "aoEditarLinha"].indexOf(trigger.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger("sincronizarPendentes").timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger("aoEditarLinha").forSpreadsheet(spreadsheet).onEdit().create();
+  sincronizarPendentes();
 }
 
 function aoEditarLinha(e) {
-  const range = e.range;
-  const sheet = range.getSheet();
-  if (sheet.getName() !== SHEET_NAME) return;
-
-  const primeiraLinha = Math.max(2, range.getRow());
-  const ultimaLinha = range.getRow() + range.getNumRows() - 1;
-  for (let linha = primeiraLinha; linha <= ultimaLinha; linha++) {
-    enviarLinha(sheet, linha);
-  }
+  if (e && e.range && e.range.getSheet().getName() === SHEET_NAME) sincronizarPendentes();
 }
 
 function sincronizarTodasAsLinhas() {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
-  const ultimaLinha = sheet.getLastRow();
-  for (let linha = 2; linha <= ultimaLinha; linha++) {
-    enviarLinha(sheet, linha);
-  }
-  SpreadsheetApp.getUi().alert("Sincronização concluída até a linha " + ultimaLinha + ".");
+  const result = sincronizarPendentes();
+  SpreadsheetApp.getUi().alert(result || "Já existe uma sincronização em execução.");
 }
 
-function enviarLinha(sheet, linha) {
-  const segredo = PropertiesService.getScriptProperties().getProperty("CRM_SECRET");
-  if (!segredo) {
-    Logger.log("CRM_SECRET não configurado em Configurações do projeto > Propriedades do script.");
-    return;
-  }
-
-  const valores = sheet.getRange(linha, 1, 1, 7).getValues()[0];
-  const [username, oficina, celular, pessoas, funil, faturamento, problema] = valores;
-
-  const payload = {
-    rowNumber: linha,
-    username: String(username || ""),
-    oficina: String(oficina || ""),
-    celular: String(celular || ""),
-    pessoas: String(pessoas || ""),
-    funil: String(funil || ""),
-    faturamento: String(faturamento || ""),
-    problema: String(problema || ""),
-  };
-
-  const resposta = UrlFetchApp.fetch(CRM_ENDPOINT_URL, {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    headers: { Authorization: "Bearer " + segredo },
-    muteHttpExceptions: true,
-  });
-
-  if (resposta.getResponseCode() !== 200) {
-    Logger.log("Falha ao sincronizar linha " + linha + ": " + resposta.getContentText());
+function sincronizarPendentes() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const state = props.getProperties();
+    if (!state.CRM_SECRET) throw new Error("CRM_SECRET não configurado.");
+    const spreadsheet = state.CRM_SPREADSHEET_ID ? SpreadsheetApp.openById(state.CRM_SPREADSHEET_ID) : SpreadsheetApp.getActive();
+    const sheet = spreadsheet.getSheetByName(SHEET_NAME);
+    if (!sheet) throw new Error("Aba Leads não encontrada.");
+    const count = sheet.getLastRow() - 1;
+    if (count <= 0) return "Nenhuma linha para sincronizar.";
+    const rows = sheet.getRange(2, 1, count, 7).getDisplayValues();
+    const start = Math.min(Number(state.CRM_CURSOR) || 0, count - 1);
+    const deadline = Date.now() + 240000;
+    let sent = 0, failed = 0, scanned = 0;
+    for (; scanned < count && Date.now() < deadline; scanned++) {
+      const index = (start + scanned) % count;
+      const values = rows[index];
+      if (values.every(function(value) { return !value.trim(); })) continue;
+      const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(values)));
+      const key = "CRM_ROW_" + sheet.getSheetId() + "_" + (index + 2);
+      if (state[key] === hash) continue;
+      const payload = { rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
+      try {
+        const response = UrlFetchApp.fetch(CRM_ENDPOINT_URL, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), headers: { Authorization: "Bearer " + state.CRM_SECRET }, muteHttpExceptions: true });
+        const code = response.getResponseCode();
+        if (code !== 200 || JSON.parse(response.getContentText()).ok !== true) {
+          failed++;
+          console.error("Falha na linha " + (index + 2) + ": HTTP " + code);
+          // Stop global failures, but keep invalid/incomplete rows pending.
+          if (code === 401 || code === 404 || code >= 500) break;
+          continue;
+        }
+        props.setProperty(key, hash);
+        sent++;
+      } catch (error) {
+        failed++;
+        console.error("Falha na linha " + (index + 2) + ". Será tentada novamente.");
+        break;
+      }
+    }
+    props.setProperty("CRM_CURSOR", String((start + scanned) % count));
+    const status = sent + " linha(s) enviada(s); " + failed + " falha(s). Linhas pendentes serão tentadas na próxima execução.";
+    props.setProperty("CRM_LAST_RUN", new Date().toISOString());
+    props.setProperty("CRM_LAST_RESULT", status);
+    if (failed) throw new Error(status);
+    return status;
+  } finally {
+    lock.releaseLock();
   }
 }
