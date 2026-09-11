@@ -1026,6 +1026,19 @@ a:focus-visible, button:focus-visible {
 
   /* select nativo com a mesma cara dos inputs (popup escuro onde suportado) */
   select.quiz-input { color-scheme: dark; cursor: pointer; }
+  /* Fundo sólido também no menu nativo: options não herdam o gradiente. */
+  .calc-page select { color-scheme: dark; }
+  .calc-page select.quiz-input,
+  .calc-page select.quiz-input:focus { background: var(--color-bg); }
+  .calc-page select option,
+  .calc-page select optgroup {
+    background-color: var(--color-card);
+    color: var(--color-offwhite);
+  }
+  .calc-page select option:checked {
+    background-color: var(--color-blue-deep);
+    color: #fff;
+  }
 
   /* cabeçalho de card com contagem X/limite à direita */
   .conta-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
