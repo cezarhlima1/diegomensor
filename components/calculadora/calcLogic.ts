@@ -258,6 +258,11 @@ export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
 }
 
 /* ---------- Histórico de orçamentos (banco: tabela orcamentos) ---------- */
+export const AVISOS_PREENCHIMENTO = {
+  origem: "A origem do cliente é importante, preencha para seguir.",
+  motivo: "O motivo da reprovação do cliente é importante, preencha para seguir.",
+} as const;
+
 export type PecaResumo = {
   nome: string;
   valor: number;
@@ -271,6 +276,7 @@ export type PecaResumo = {
   contatoCliente?: string;
   origem?: OrigemCliente | null;
   observacao?: string;
+  motivoRecusa?: string;
 };
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
@@ -295,6 +301,7 @@ export type Orcamento = {
   contatoCliente?: string;
   origem?: OrigemCliente | null;
   observacao?: string;
+  motivoRecusa?: string;
   valorHora: number;
   horas: number;
   maoDeObra: number;

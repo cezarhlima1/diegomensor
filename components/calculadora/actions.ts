@@ -5,6 +5,7 @@ import { getSessaoComEmpresa } from "@/lib/auth/sessao";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import type { ResultadoAuth } from "@/components/auth/actions";
 import {
+  AVISOS_PREENCHIMENTO,
   CUSTO_FIELDS,
   DEFAULT_MARKUP_TIERS,
   MARKUP_MAX,
@@ -227,6 +228,7 @@ function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
       p?.observacao != null
         ? String(p.observacao).trim().slice(0, MAX_CHARS_OBSERVACAO)
         : undefined,
+    motivoRecusa: p?.motivoRecusa != null ? String(p.motivoRecusa).trim().slice(0, MAX_CHARS_OBSERVACAO) : undefined,
   }));
 }
 
@@ -262,6 +264,7 @@ function paraOrcamento(row: {
     contatoCliente: ((row.pecas ?? []) as PecaResumo[])[0]?.contatoCliente ?? "",
     origem: ((row.pecas ?? []) as PecaResumo[])[0]?.origem ?? null,
     observacao: ((row.pecas ?? []) as PecaResumo[])[0]?.observacao ?? "",
+    motivoRecusa: ((row.pecas ?? []) as PecaResumo[])[0]?.motivoRecusa ?? "",
     valorHora: Number(row.valor_hora),
     horas: Number(row.horas),
     maoDeObra: Number(row.mao_de_obra),
@@ -308,6 +311,10 @@ export async function criarOrcamento(
   const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
   if (!vinculo) {
     return { ok: false, error: ERRO_SEM_VINCULO };
+  }
+
+  if (!dados.origem || !ORIGENS_VALIDAS.includes(dados.origem) || !dados.pecas?.length) {
+    return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
   }
 
   const pecasComMetadados = (dados.pecas ?? []).map((peca, index) =>
@@ -377,6 +384,10 @@ export async function editarOrcamento(
       ok: false,
       error: "Orçamento inválido.",
     };
+  }
+
+  if (!dados.origem || !ORIGENS_VALIDAS.includes(dados.origem) || !dados.pecas?.length) {
+    return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
   }
 
   const pecasComMetadados = (dados.pecas ?? []).map((peca, index) =>
@@ -475,7 +486,8 @@ export async function atualizarObservacaoOrcamento(
 export async function atualizarStatusOrcamento(
   empresaId: string,
   orcamentoId: string,
-  status: StatusOrcamento
+  status: StatusOrcamento,
+  detalhes?: { origem: OrigemCliente | ""; motivoRecusa?: string },
 ): Promise<ResultadoAuth> {
   const sessao = await getSessaoComEmpresa();
   const vinculo = sessao?.empresas.find((e) => e.id === empresaId);
@@ -487,10 +499,23 @@ export async function atualizarStatusOrcamento(
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: atual, error: erroLeitura } = await admin.from("orcamentos").select("pecas")
+    .eq("id", orcamentoId).eq("empresa_id", empresaId).maybeSingle();
+  if (erroLeitura || !atual) return { ok: false, error: ERRO_GENERICO };
+  const pecas: PecaResumo[] = Array.isArray(atual.pecas) ? [...atual.pecas] : [];
+  const origem = detalhes?.origem ?? pecas[0]?.origem;
+  const motivoRecusa = String(detalhes?.motivoRecusa ?? pecas[0]?.motivoRecusa ?? "").trim().slice(0, MAX_CHARS_OBSERVACAO);
+  if (!pecas.length || !origem || !ORIGENS_VALIDAS.includes(origem)) {
+    return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
+  }
+  if (status === "Não aprovado" && !motivoRecusa) {
+    return { ok: false, error: AVISOS_PREENCHIMENTO.motivo };
+  }
+  pecas[0] = { ...pecas[0], origem, ...(status === "Não aprovado" ? { motivoRecusa } : {}) };
   const approvedAt = status === "Aprovado" ? new Date().toISOString() : null;
   let { data, error } = await admin
     .from("orcamentos")
-    .update({ status, approved_at: approvedAt })
+    .update({ status, approved_at: approvedAt, pecas })
     .eq("id", orcamentoId)
     .eq("empresa_id", empresaId)
     .select("id")
@@ -501,7 +526,7 @@ export async function atualizarStatusOrcamento(
   if (error && (error.code === "PGRST204" || error.message.includes("approved_at"))) {
     const fallback = await admin
       .from("orcamentos")
-      .update({ status })
+      .update({ status, pecas })
       .eq("id", orcamentoId)
       .eq("empresa_id", empresaId)
       .select("id")

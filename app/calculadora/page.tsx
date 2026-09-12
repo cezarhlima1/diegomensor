@@ -122,6 +122,7 @@ export default async function CalculadoraPage() {
         contatoCliente: pecas[0]?.contatoCliente ?? "",
         origem: pecas[0]?.origem ?? null,
         observacao: pecas[0]?.observacao ?? "",
+        motivoRecusa: pecas[0]?.motivoRecusa ?? "",
         valorHora: Number(o.valor_hora),
         horas: Number(o.horas),
         maoDeObra: Number(o.mao_de_obra),

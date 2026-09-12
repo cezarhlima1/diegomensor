@@ -43,6 +43,7 @@ import {
   AnimatedBRL,
   MoneyField,
   useConfirmacaoExclusao,
+  useAvisoPreenchimento,
   usePulse,
 } from "./calcUi";
 import {
@@ -233,6 +234,13 @@ export default function Calculadora({
   const [justSaved, setJustSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const { pedirConfirmacao, dialogConfirmacao } = useConfirmacaoExclusao();
+  const { avisarPreenchimento, avisoPreenchimento } = useAvisoPreenchimento();
+  const statusDialogRef = useRef<HTMLDialogElement>(null);
+  const [statusPendente, setStatusPendente] = useState<{ id: string; status: StatusOrcamento; origem: OrigemCliente | ""; motivoRecusa: string } | null>(null);
+  const [erroStatus, setErroStatus] = useState("");
+  useEffect(() => {
+    if (statusPendente && !statusDialogRef.current?.open) statusDialogRef.current?.showModal();
+  }, [statusPendente]);
 
   // só persiste depois de reidratar (evita sobrescrever o salvo com o estado inicial vazio)
   const [hydrated, setHydrated] = useState(false);
@@ -585,6 +593,7 @@ export default function Calculadora({
   }
 
   async function salvarOrcamento() {
+    if (!origem) { avisarPreenchimento("origem", "calc-origem"); return; }
     setSalvandoOrcamento(true);
     setErroOrcamento("");
     const dados = {
@@ -739,6 +748,7 @@ export default function Calculadora({
 
   async function salvarAjusteRapido() {
     if (!ajusteRapido || salvandoAjuste) return;
+    if (!ajusteRapido.origem) { avisarPreenchimento("origem", "calc-ajuste-origem"); return; }
     setSalvandoAjuste(true);
     setErroAjuste("");
     const pecasOrigem =
@@ -961,18 +971,33 @@ export default function Calculadora({
     }
   }
 
-  async function alterarStatusOrcamento(id: string, status: StatusOrcamento) {
-    const anterior = orcamentos;
+  async function alterarStatusOrcamento(id: string, status: StatusOrcamento, detalhes?: { origem: OrigemCliente | ""; motivoRecusa: string }) {
+    const anterior = orcamentos.find((o) => o.id === id);
+    if (!anterior || atualizandoStatusId) return;
+    if (!detalhes && (status === "Não aprovado" || !anterior.origem)) {
+      setErroStatus("");
+      setStatusPendente({ id, status, origem: anterior.origem || "", motivoRecusa: anterior.motivoRecusa || "" });
+      return;
+    }
+    if (detalhes && (!detalhes.origem || (status === "Não aprovado" && !detalhes.motivoRecusa.trim()))) {
+      avisarPreenchimento(!detalhes.origem ? "origem" : "motivo", !detalhes.origem ? "calc-status-origem" : "calc-status-motivo");
+      return;
+    }
     const approvedAt = status === "Aprovado" ? new Date().toISOString() : null;
     setAtualizandoStatusId(id);
-    setOrcamentos((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status, approvedAt } : o)),
-    );
     try {
-      const resultado = await atualizarStatusOrcamento(empresaId, id, status);
-      if (!resultado.ok) setOrcamentos(anterior);
+      const resultado = await atualizarStatusOrcamento(empresaId, id, status, detalhes);
+      if (!resultado.ok) { setErroStatus(resultado.error); return; }
+      setOrcamentos((prev) => prev.map((o) => {
+        if (o.id !== id) return o;
+        const metadados = detalhes ? { origem: detalhes.origem || null, ...(status === "Não aprovado" ? { motivoRecusa: detalhes.motivoRecusa.trim() } : {}) } : {};
+        return { ...o, ...metadados, status, approvedAt, pecas: o.pecas?.map((p, index) => index === 0 ? { ...p, ...metadados } : p) };
+      }));
+      setErroStatus("");
+      statusDialogRef.current?.close();
+      setStatusPendente(null);
     } catch {
-      setOrcamentos(anterior);
+      setErroStatus(ERRO_GENERICO);
     } finally {
       setAtualizandoStatusId("");
     }
@@ -1408,9 +1433,8 @@ export default function Calculadora({
                       </label>
                     </div>
 
-                    {permiteVerCustoPecas && (
                       <div className="calc-grid-2 calc-campos-teste">
-                        <label className="grid gap-1.5">
+                        {permiteVerCustoPecas && <label className="grid gap-1.5">
                           <span className="quiz-label">Contato</span>
                           <input
                             type="tel"
@@ -1421,11 +1445,13 @@ export default function Calculadora({
                             maxLength={30}
                             onChange={(e) => setContatoCliente(e.target.value)}
                           />
-                        </label>
+                        </label>}
                         <label className="grid gap-1.5">
-                          <span className="quiz-label">Origem</span>
+                          <span className="quiz-label">Origem *</span>
                           <select
                             className="quiz-input"
+                            id="calc-origem"
+                            required
                             value={origem}
                             onChange={(e) =>
                               setOrigem(e.target.value as OrigemCliente | "")
@@ -1436,7 +1462,6 @@ export default function Calculadora({
                           </select>
                         </label>
                       </div>
-                    )}
 
                     <div className="calc-grid-2">
                       <label className="grid gap-1.5">
@@ -2087,6 +2112,7 @@ export default function Calculadora({
                           })}
                         </div>
                       )}
+                      {o.status === "Não aprovado" && o.motivoRecusa && <p className="calc-warn mt-4"><strong>Motivo da recusa:</strong> {o.motivoRecusa}</p>}
                       <div className={`calc-hist-controls ${historicoCompacto ? "is-compacto has-note" : ""}`}>
                         {!historicoCompacto && <select
                           className={`calc-hist-status ${
@@ -2277,9 +2303,8 @@ export default function Calculadora({
                     }
                   />
                 </label>
-                {permiteVerCustoPecas && (
-                  <>
-                    <label className="grid gap-1.5">
+                <>
+                    {permiteVerCustoPecas && <label className="grid gap-1.5">
                       <span className="quiz-label">Contato</span>
                       <input
                         type="tel"
@@ -2293,11 +2318,13 @@ export default function Calculadora({
                           )
                         }
                       />
-                    </label>
+                    </label>}
                     <label className="grid gap-1.5">
-                      <span className="quiz-label">Origem</span>
+                      <span className="quiz-label">Origem *</span>
                       <select
                         className="quiz-input"
+                        id="calc-ajuste-origem"
+                        required
                         value={ajusteRapido.origem}
                         onChange={(e) =>
                           atualizarAjusteRapido("origem", e.target.value)
@@ -2308,7 +2335,6 @@ export default function Calculadora({
                       </select>
                     </label>
                   </>
-                )}
                 <label className="grid gap-1.5">
                   <span className="quiz-label">Veículo</span>
                   <input
@@ -2629,6 +2655,35 @@ export default function Calculadora({
           </div>
         )}
         {dialogConfirmacao}
+        <dialog ref={statusDialogRef} className="calc-required-dialog" aria-labelledby="calc-status-title"
+          onCancel={(event) => { if (atualizandoStatusId) event.preventDefault(); }}
+          onClose={() => setStatusPendente(null)}>
+          {statusPendente && <>
+            <h2 id="calc-status-title">{statusPendente.status === "Não aprovado" ? "Motivo da não aprovação" : "Origem do cliente"}</h2>
+            <label className="grid gap-1.5 mt-4">
+              <span className="quiz-label">Origem *</span>
+              <select id="calc-status-origem" className="quiz-input" required value={statusPendente.origem}
+                disabled={Boolean(atualizandoStatusId)} onChange={(e) => setStatusPendente({ ...statusPendente, origem: e.target.value as OrigemCliente })}>
+                <option value="">Selecione a origem</option>
+                {statusPendente.origem && !ORIGENS_CLIENTE.some((origem) => origem === statusPendente.origem) && <option value={statusPendente.origem}>{statusPendente.origem}</option>}
+                {ORIGENS_CLIENTE.map((origem) => <option key={origem} value={origem}>{origem}</option>)}
+              </select>
+            </label>
+            {statusPendente.status === "Não aprovado" && <label className="grid gap-1.5 mt-4">
+              <span className="quiz-label">Motivo da recusa *</span>
+              <textarea id="calc-status-motivo" className="quiz-input" required rows={3} maxLength={500}
+                value={statusPendente.motivoRecusa} disabled={Boolean(atualizandoStatusId)}
+                onChange={(e) => setStatusPendente({ ...statusPendente, motivoRecusa: e.target.value })} />
+            </label>}
+            {erroStatus && <p role="alert" className="calc-warn mt-4">{erroStatus}</p>}
+            <div className="calc-confirm-acoes mt-4">
+              <button type="button" className="btn btn--ghost" disabled={Boolean(atualizandoStatusId)} onClick={() => statusDialogRef.current?.close()}>Cancelar</button>
+              <button type="button" className="btn" disabled={Boolean(atualizandoStatusId)} onClick={() => alterarStatusOrcamento(statusPendente.id, statusPendente.status, statusPendente)}>{atualizandoStatusId ? "Salvando…" : "Salvar"}</button>
+            </div>
+          </>}
+        </dialog>
+        {erroStatus && !statusPendente && <p role="alert" className="calc-warn">{erroStatus}</p>}
+        {avisoPreenchimento}
       </div>
     </section>
   );
