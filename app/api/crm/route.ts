@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { PoolClient } from "pg";
 import { crmPool, withCrmTransaction } from "@/lib/crm-db";
-import { assertValidSourceForNewLead, supportsFollowUpAt, supportsMeetingOutcome, supportsMeetingScheduledFor, upsertLeadRecord } from "@/lib/crm-leads";
+import { saveJourneyHistory, assertValidSourceForNewLead, supportsFollowUpAt, supportsMeetingOutcome, supportsMeetingScheduledFor, upsertLeadRecord } from "@/lib/crm-leads";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -124,7 +124,7 @@ export async function GET() {
     }
     return NextResponse.json({
       access: { isAdmin: auth.isAdmin, permissions: auth.permissions },
-      leads: leadsResult.rows.map((row) => ({ id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, notes: row.notes || "", tags: row.tags || [], source: row.source, product: row.product, campaignId: row.traffic_campaign_id, stage: row.stage, value: Number(row.gross_value), netValue: row.net_value == null ? undefined : Number(row.net_value), temperature: row.temperature, nextAction: row.next_action, date: row.display_date, createdAt: row.created_at, conversationAt: row.conversation_at, meetingAt: row.meeting_at, meetingScheduledFor: row.meeting_scheduled_for || null, meetingOutcome: row.meeting_outcome || null, followUpAt: row.follow_up_at || null, proposalAt: row.proposal_at, closedAt: row.closed_at, application: row.application || undefined, contactCheckpoints: row.contact_checkpoints || [], purchases: purchasesByLead.get(row.id) || [] })),
+      leads: leadsResult.rows.map((row) => ({ id: row.id, name: row.name, company: row.company, phone: row.phone, email: row.email, notes: row.notes || "", tags: row.tags || [], source: row.source, product: row.product, campaignId: row.traffic_campaign_id, stage: row.stage, value: Number(row.gross_value), netValue: row.net_value == null ? undefined : Number(row.net_value), temperature: row.temperature, nextAction: row.next_action, date: row.display_date, createdAt: row.created_at, conversationAt: row.conversation_at, meetingAt: row.meeting_at, meetingScheduledFor: row.meeting_scheduled_for || null, meetingOutcome: row.meeting_outcome || null, followUpAt: row.follow_up_at || null, proposalAt: row.proposal_at, closedAt: row.closed_at, application: row.application || undefined, contactCheckpoints: row.contact_checkpoints || [], journeyHistory: row.journey_history || [], purchases: purchasesByLead.get(row.id) || [] })),
       traffic: trafficResult.rows.map((row) => ({ id: row.id, month: row.month, date: row.campaign_date ? new Date(row.campaign_date).toISOString().slice(0, 10) : undefined, status: row.status, campaign: row.name, product: row.product, investment: Number(row.investment), clicks: row.clicks, pageViews: row.page_views, checkouts: row.checkouts, sales: row.sales, revenue: Number(row.gross_revenue), netRevenue: row.net_revenue == null ? undefined : Number(row.net_revenue) })),
       products: productsResult.rows.map((row) => ({ name: row.name, price: Number(row.gross_price), netPrice: Number(row.net_price), position: row.position, priceHistory: historyByProduct.get(row.name) || [] })),
       sources: sourcesResult.rows.map((row) => row.name),
@@ -161,6 +161,7 @@ export async function POST(request: Request) {
         // somente compras/vínculos são atualizados; o cadastro cuidadosamente
         // editado no CRM permanece intocado.
         if (lead.preserveLeadRecord !== true) await upsertLeadRecord(db, lead);
+        await saveJourneyHistory(db, lead);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
       }
       for (const item of traffic) {
@@ -239,10 +240,10 @@ export async function PATCH(request: Request) {
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }
-        const verification = await db.query(`select stage,product,tags,contact_checkpoints,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
+        const verification = await db.query(`select stage,product,tags,contact_checkpoints,journey_history,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         return verification.rows[0];
       });
-      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], contactCheckpoints: saved.contact_checkpoints || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
+      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], contactCheckpoints: saved.contact_checkpoints || [], journeyHistory: saved.journey_history || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
     } catch (error) {
       console.error("CRM lead PATCH failed", error);
       const message = error instanceof Error ? error.message : "";

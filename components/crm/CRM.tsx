@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
+import { recordJourney, completeReturn, type JourneyEvent } from '@/lib/crm-journey';
 import ContactSummary from './ContactSummary';
 import { contactSummaryRows, contactDay, isFollowUpStage, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
@@ -49,6 +50,7 @@ type Lead = {
   campaignId?: string;
   application?: LeadApplication;
   contactCheckpoints?: string[];
+  journeyHistory?: JourneyEvent[];
 };
 type LeadImportRecord = Lead | (Pick<Lead, "id"> & { purchases: Purchase[]; preserveLeadRecord: true });
 type TrafficRecord = {
@@ -436,7 +438,7 @@ export default function CRM() {
       const savedMeetingOutcome = result.saved?.meetingOutcome || null;
       const sameDate = (expected?: string | null, saved?: string | null) => (expected ? brazilDateKey(expected) : null) === (saved ? brazilDateKey(saved) : null);
       const journeyConfirmed = sameDate(lead.createdAt, result.saved?.createdAt) && sameDate(lead.conversationAt, result.saved?.conversationAt) && sameDate(lead.meetingAt, result.saved?.meetingAt) && savedMeetingDate === expectedMeetingDate && sameDate(lead.followUpAt, result.saved?.followUpAt) && sameDate(lead.proposalAt, result.saved?.proposalAt) && sameDate(lead.closedAt, result.saved?.closedAt);
-      if (JSON.stringify(result.saved?.contactCheckpoints || []) !== JSON.stringify(lead.contactCheckpoints || []) || result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
+      if ((lead.journeyHistory || []).some(event => !(result.saved?.journeyHistory || []).some((saved: JourneyEvent) => saved.id === event.id)) || JSON.stringify(result.saved?.contactCheckpoints || []) !== JSON.stringify(lead.contactCheckpoints || []) || result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
         setDatabaseIssue("O banco não confirmou todos os dados do lead"); setDatabaseStatus("offline");
         throw new Error("Confirmação do banco divergente");
       }
@@ -469,7 +471,7 @@ export default function CRM() {
     if (timer) { window.clearTimeout(timer); leadSaveTimers.current.delete(id); }
     const today = brazilDateKey(new Date()), checkpoints = lead.contactCheckpoints || [];
     const done = checkpoints.some(value => brazilDateKey(value) === today);
-    const updated: Lead = { ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? { followUpAt: null } : {}) };
+    const updated: Lead = { ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? completeReturn(lead) : {}) };
     await saveLead(updated);
     const next = leadsRef.current.map(item => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1; setLeads(next);
@@ -707,10 +709,14 @@ export default function CRM() {
     if (!lead) return;
     const pendingSave = leadSaveTimers.current.get(id);
     if (pendingSave) { window.clearTimeout(pendingSave); leadSaveTimers.current.delete(id); }
-    const updated = transitionLead(lead, stage, now);
+    const transitioned = transitionLead(lead, stage, now);
+    const stageKey = stage.toLowerCase().replace(/[^a-z]/g, "");
+    if (stageKey === "noshow") transitioned.meetingOutcome = "No-show";
+    const updated = recordJourney(lead, transitioned, now);
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
+    setSelected(current => current?.id === id ? updated : current);
     void saveLead(updated).catch((error) => console.error("Falha ao salvar movimentação do lead", error));
   };
   const addLead = async (lead: Lead) => {
@@ -816,7 +822,7 @@ export default function CRM() {
   const updateLead = (id: string, changes: Partial<Lead>) => {
     const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
-    const updated = applyLeadChanges(lead, changes);
+    const updated = recordJourney(lead, applyLeadChanges(lead, changes));
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
@@ -987,7 +993,7 @@ export default function CRM() {
           move={(stage) => {
             const now = new Date().toISOString();
             moveLead(selected.id, stage, now);
-            setSelected((current) => current ? transitionLead(current, stage, now) : current);
+
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -2081,12 +2087,19 @@ function LeadDrawer({
             <label><span>Lead gerado</span><input type="date" value={dateInputValue(lead.createdAt)} onChange={(event) => update({ createdAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Data do agendamento</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
-            <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null })} /></label>
+            <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null, meetingOutcome: event.target.value ? "Agendada" : null })} /></label>
             <label><span>Resultado da reunião</span><select value={lead.meetingOutcome || ""} onChange={(event) => update({ meetingOutcome: (event.target.value || null) as MeetingOutcome | null })}><option value="">Não informado</option><option>Agendada</option><option>Realizada</option><option>No-show</option><option>Cancelada</option></select></label>
             <label><span>Data de retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={(event) => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>
+            {lead.followUpAt && <button type="button" onClick={() => update(completeReturn(lead))}>✓ Concluir retorno agendado</button>}
             <label><span>Proposta enviada</span><input type="date" value={dateInputValue(lead.proposalAt)} onChange={(event) => update({ proposalAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
+        </section>
+        <section className={styles.leadDatesSection}>
+          <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
+          </details>
         </section>
         <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos e pagamentos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={`${styles.closingForm} ${styles.paymentClosingForm}`} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Responsável do fechamento</span><select value={closingDraft.closerUserId} onChange={(event) => setClosingDraft({ ...closingDraft, closerUserId: event.target.value })}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label><label><span>Valor vendido</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor a receber</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><label><span>Forma de pagamento</span><select value={closingDraft.paymentMethod} onChange={(event) => setClosingDraft({ ...closingDraft, paymentMethod: event.target.value as PaymentMethod })}>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><label><span>Plataforma / instituição</span><input value={closingDraft.provider} onChange={(event) => setClosingDraft({ ...closingDraft, provider: event.target.value })} placeholder="Green, banco, operadora..." /></label><label><span>Total de parcelas</span><input type="number" min="1" max="120" value={closingDraft.installments} onChange={(event) => setClosingDraft({ ...closingDraft, installments: event.target.value })} required /></label><label><span>Entrada já recebida</span><AccountingInput value={closingDraft.entry} set={(entry) => setClosingDraft({ ...closingDraft, entry })} /></label><label><span>1º vencimento</span><input type="date" value={closingDraft.firstDueDate} onChange={(event) => setClosingDraft({ ...closingDraft, firstDueDate: event.target.value })} required /></label><label className={styles.paymentNotes}><span>Observações do pagamento</span><input value={closingDraft.paymentNotes} onChange={(event) => setClosingDraft({ ...closingDraft, paymentNotes: event.target.value })} placeholder="Condições negociadas" /></label><button type="submit">Salvar fechamento e fluxo</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><label className={styles.inlinePayment}><span>Pagamento</span><select value={purchase.paymentMethod || ""} onChange={(event) => editPurchasePayment(purchase.id, { paymentMethod: event.target.value as PaymentMethod })}><option value="">Informar...</option>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><small>{purchase.paymentProvider || `${purchase.installments?.length || 0} parcela(s)`}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Vendido <b><Money value={purchase.value} /></b></span><span>A receber <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button>{purchase.installments?.length ? <div className={styles.installmentSummary}>{purchase.installments.map((item) => <span key={item.id}>{item.number}ª · {new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))} · {currency.format(item.amount)} · {item.status}</span>)}</div> : null}</article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
         {purchaseHistory.length > 0 && <section className={styles.closerAssignments}><small>Responsáveis pelos fechamentos</small>{purchaseHistory.map((purchase) => <label key={purchase.id}><span><b>{purchase.product}</b><small>{new Intl.DateTimeFormat("pt-BR").format(new Date(purchase.closedAt))} · {currency.format(purchase.value)}</small></span><select value={purchase.closerUserId || ""} onChange={(event) => { const closer = closers.find((item) => item.id === event.target.value); editPurchasePayment(purchase.id, { closerUserId: closer?.id, closerName: closer?.name, commissionRate: closer?.commissionRate || 0, commissionBasis: "received" }); }}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label>)}</section>}
