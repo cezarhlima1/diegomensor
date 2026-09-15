@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
+import ContactSummary from './ContactSummary';
+import { contactSummaryRows, contactDay, isFollowUpStage, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
 import CommercialActions from "./CommercialActions";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
@@ -267,9 +269,9 @@ const channelStats = (channelLeads: Lead[], channel: Channel, start: string, end
     hot: reporting.filter((lead) => lead.temperature === "Quente" && lead.stage !== "Fechado").length,
   };
 };
-const whatsappLink = (lead: Lead) => {
+const whatsappLink = (lead: Pick<Lead, "phone" | "name">) => {
   const digits = lead.phone.replace(/\D/g, "");
-  const phone = digits.startsWith("55") ? digits : `55${digits}`;
+  const phone = lead.phone.trim().startsWith("+") || digits.length > 11 ? digits : `55${digits}`;
   const firstName = lead.name.trim().split(" ")[0];
   const message = `Olá, ${firstName}! Tudo bem? Aqui é da Mensor Treinamentos. Recebi seu contato e queria entender melhor o momento da sua oficina.`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -434,7 +436,7 @@ export default function CRM() {
       const savedMeetingOutcome = result.saved?.meetingOutcome || null;
       const sameDate = (expected?: string | null, saved?: string | null) => (expected ? brazilDateKey(expected) : null) === (saved ? brazilDateKey(saved) : null);
       const journeyConfirmed = sameDate(lead.createdAt, result.saved?.createdAt) && sameDate(lead.conversationAt, result.saved?.conversationAt) && sameDate(lead.meetingAt, result.saved?.meetingAt) && savedMeetingDate === expectedMeetingDate && sameDate(lead.followUpAt, result.saved?.followUpAt) && sameDate(lead.proposalAt, result.saved?.proposalAt) && sameDate(lead.closedAt, result.saved?.closedAt);
-      if (result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
+      if (JSON.stringify(result.saved?.contactCheckpoints || []) !== JSON.stringify(lead.contactCheckpoints || []) || result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
         setDatabaseIssue("O banco não confirmou todos os dados do lead"); setDatabaseStatus("offline");
         throw new Error("Confirmação do banco divergente");
       }
@@ -459,6 +461,19 @@ export default function CRM() {
     setLeads(next);
     setSelected((current) => current?.id === id ? updated : current);
     void saveLead(updated).catch((error) => console.error("Falha ao registrar contato com o lead", error));
+  };
+  const completeSummaryContact = async (id: string, mode: 'followups' | 'returns') => {
+    const lead = leadsRef.current.find(item => item.id === id);
+    if (!lead) throw new Error('Contato não encontrado');
+    const timer = leadSaveTimers.current.get(id);
+    if (timer) { window.clearTimeout(timer); leadSaveTimers.current.delete(id); }
+    const today = brazilDateKey(new Date()), checkpoints = lead.contactCheckpoints || [];
+    const done = checkpoints.some(value => brazilDateKey(value) === today);
+    const updated: Lead = { ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? { followUpAt: null } : {}) };
+    await saveLead(updated);
+    const next = leadsRef.current.map(item => item.id === id ? updated : item);
+    leadsRef.current = next; localDataRevision.current += 1; setLeads(next);
+    setSelected(current => current?.id === id ? updated : current);
   };
   const scheduleLeadSave = (lead: Lead) => {
     setDatabaseStatus("saving");
@@ -934,7 +949,7 @@ export default function CRM() {
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} select={setSelected} search={search} />
+          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -1356,6 +1371,7 @@ function Pipeline({
   setStages,
   moveLead,
   toggleContactToday,
+  completeSummaryContact,
   select,
   search,
 }: {
@@ -1365,9 +1381,13 @@ function Pipeline({
   setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
   toggleContactToday: (id: string) => void;
+  completeSummaryContact: (id: string, mode: 'followups' | 'returns') => Promise<void>;
   select: (lead: Lead) => void;
   search: string;
 }) {
+  const [summary, setSummary] = useState<'followups' | 'returns' | null>(null);
+  const [today, setToday] = useState(() => contactDay(new Date().toISOString()));
+  useEffect(() => { const timer = window.setInterval(() => setToday(contactDay(new Date().toISOString())), 60000); return () => window.clearInterval(timer); }, []);
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
@@ -1396,6 +1416,10 @@ function Pipeline({
     });
     return grouped;
   }, [leads, products, stages, range.start, range.end, productFilter, search]);
+  const summaryLeads = leads.filter(lead => productFilter === 'Todos' || lead.product === productFilter || purchasesForLead(lead, products).some(purchase => purchase.product === productFilter));
+  const followUps = contactSummaryRows(summaryLeads, 'followups', today);
+  const returns = contactSummaryRows(summaryLeads, 'returns', today);
+  if (summary) return <ContactSummary mode={summary} leads={summary === 'returns' ? returns : followUps} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) select(lead); }} complete={completeSummaryContact} whatsapp={whatsappLink} />;
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
@@ -1429,6 +1453,10 @@ function Pipeline({
   };
   return (
     <div className={styles.pipelineWrap}>
+      <div className={styles.contactSummaryCards}>
+        <button type="button" onClick={() => setSummary('followups')}><span>Follow-ups</span><strong>{followUps.filter(lead => !(lead.contactCheckpoints || []).some(value => brazilDateKey(value) === today)).length}</strong><small>A fazer hoje · abrir resumo →</small></button>
+        <button type="button" onClick={() => setSummary('returns')}><span>Retornos agendados</span><strong>{returns.length}</strong><small>Por data de retorno · abrir resumo →</small></button>
+      </div>
       <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
@@ -1450,7 +1478,7 @@ function Pipeline({
               <header>
                 <div>
                   <i style={{ background: stageColor(stage), boxShadow: `0 0 9px ${stageColor(stage)}88` }} />
-                  <b>{stage}</b>
+                  {isFollowUpStage(stage) || isReturnStage(stage) ? <button type="button" className={styles.stageSummaryButton} onClick={() => setSummary(isReturnStage(stage) ? 'returns' : 'followups')} title="Abrir resumo de contatos">{stage} ↗</button> : <b>{stage}</b>}
                   <span>{items.length}</span>
                 </div>
                 <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>

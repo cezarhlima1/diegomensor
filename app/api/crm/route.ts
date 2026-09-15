@@ -239,10 +239,10 @@ export async function PATCH(request: Request) {
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }
-        const verification = await db.query(`select stage,product,tags,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
+        const verification = await db.query(`select stage,product,tags,contact_checkpoints,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         return verification.rows[0];
       });
-      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
+      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], contactCheckpoints: saved.contact_checkpoints || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
     } catch (error) {
       console.error("CRM lead PATCH failed", error);
       const message = error instanceof Error ? error.message : "";
