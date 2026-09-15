@@ -161,7 +161,6 @@ export async function POST(request: Request) {
         // somente compras/vínculos são atualizados; o cadastro cuidadosamente
         // editado no CRM permanece intocado.
         if (lead.preserveLeadRecord !== true) await upsertLeadRecord(db, lead);
-        await saveJourneyHistory(db, lead);
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) await upsertPurchase(db, lead, purchase, columns);
       }
       for (const item of traffic) {
@@ -240,6 +239,7 @@ export async function PATCH(request: Request) {
         for (const purchase of Array.isArray(lead.purchases) ? lead.purchases as Array<Record<string, unknown>> : []) {
           await upsertPurchase(db, lead, purchase, columns);
         }
+        await saveJourneyHistory(db, lead);
         const verification = await db.query(`select stage,product,tags,contact_checkpoints,journey_history,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         return verification.rows[0];
       });
