@@ -963,7 +963,7 @@ export default function CRM() {
           <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
-          <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
+          <Contacts leads={filtered} stages={pipelineStages} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
         {view === "financeiro" && <FinanceDashboard leads={leads} traffic={traffic} expenses={expenses} closers={closers} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} saveCloserGoal={saveCloserGoal} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
@@ -1558,14 +1558,19 @@ function ContactCheckpoint({ lead, toggle }: { lead: Lead; toggle: () => void })
 function Contacts({
   leads,
   sources,
+  stages,
   products,
   select,
 }: {
   leads: Lead[];
   sources: string[];
+  stages: Stage[];
   products: ProductDefinition[];
   select: (lead: Lead) => void;
 }) {
+  const [stageFilter, setStageFilter] = useState("");
+  const stageOptions = [...new Set([...stages, ...leads.map(lead => lead.stage)])].filter(Boolean);
+  const matchesStage = (lead: Lead) => !stageFilter || lead.stage === stageFilter;
   const [sourceFilter, setSourceFilter] = useState("Todos");
   const [productFilter, setProductFilter] = useState("Todos");
   const [ascensionFilter, setAscensionFilter] = useState("Todos");
@@ -1574,7 +1579,7 @@ function Contacts({
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
   const inContactRange = (lead: Lead) => (!contactRange.start || brazilDateKey(lead.createdAt) >= contactRange.start) && (!contactRange.end || brazilDateKey(lead.createdAt) <= contactRange.end);
-  const visibleLeads = leads.filter((lead) => inContactRange(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
+  const visibleLeads = leads.filter((lead) => inContactRange(lead) && matchesStage(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
@@ -1584,12 +1589,12 @@ function Contacts({
           title={`${visibleLeads.length} leads`}
         />
         <div className={styles.contactFilters}>
-          <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use período e etiquetas somente quando quiser refinar a visualização ou exportação.</small></div>
-          <div className={styles.contactFilterFields}><QuickPeriodButtons start={contactRange.start} end={contactRange.end} setRange={(start, end) => setContactRange({ start, end })} /><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end || undefined} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start || undefined} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Produto</span><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
+          <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use etapa, período e os demais filtros para refinar a visualização ou exportação.</small></div>
+          <div className={styles.contactFilterFields}><QuickPeriodButtons start={contactRange.start} end={contactRange.end} setRange={(start, end) => setContactRange({ start, end })} /><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end || undefined} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start || undefined} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Etapa da pipeline</span><select value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}><option value="">Todas as etapas</option>{stageOptions.map(stage => <option key={stage} value={stage}>{stage}</option>)}</select></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Produto</span><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
-          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(inContactRange).length}</b></button>
-          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inContactRange(lead)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
+          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(lead => inContactRange(lead) && matchesStage(lead)).length}</b></button>
+          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inContactRange(lead) && matchesStage(lead)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
         </div>
         <div className={styles.contactTable}>
           <header>
