@@ -1997,11 +1997,11 @@ function LeadDrawer({
         </header>
         <section className={styles.quickLeadContact}>
           <span className={styles.quickLeadPhone}>{lead.phone || 'Telefone não informado'}</span>
-          <div className={styles.quickLeadActions}>
-            {lead.phone && <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}
-            {lead.phone && <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(lead.phone.replace(/\D/g, '').slice(-4)); setCopyMessage('Final copiado'); } catch { setCopyMessage('Não foi possível copiar'); } }}>Copiar final {lead.phone.replace(/\D/g, '').slice(-4)}</button>}
-            <button type="button" aria-pressed={contactedToday} onClick={toggleTodayContact}>{contactedToday ? '✓ Feito hoje' : '○ Contato feito'}</button>
-          </div>
+          <ul className={styles.quickLeadActions} aria-label="Ações rápidas">
+            {lead.phone && <li><a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a></li>}
+            {lead.phone && <li><button type="button" onClick={async () => { try { await navigator.clipboard.writeText(lead.phone.replace(/\D/g, '').slice(-4)); setCopyMessage('Final copiado'); } catch { setCopyMessage('Não foi possível copiar'); } }}>Copiar final {lead.phone.replace(/\D/g, '').slice(-4)}</button></li>}
+            <li><button type="button" aria-pressed={contactedToday} onClick={toggleTodayContact}>{contactedToday ? '✓ Feito hoje' : '○ Contato feito'}</button></li>
+          </ul>
           {copyMessage && <small role="status">{copyMessage}</small>}
           <label><span>Etapa</span><select value={lead.stage} onChange={event => move(event.target.value)}>{stages.map(stage => <option key={stage}>{stage}</option>)}</select></label>
           <div className={styles.quickLeadReturn}><label><span>Próximo retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={event => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>{lead.followUpAt && <button type="button" onClick={() => update(completeReturn(lead))}>✓ Concluir</button>}</div>
