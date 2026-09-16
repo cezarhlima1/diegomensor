@@ -10,6 +10,7 @@ export default function ContactSummary({ title, mode, leads, today, close, openL
   whatsapp: (lead: ContactSummaryLead) => string;
 }) {
   const [pending, setPending] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState('');
   const [onlyPending, setOnlyPending] = useState(true);
@@ -22,13 +23,19 @@ export default function ContactSummary({ title, mode, leads, today, close, openL
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = overflow; previous?.focus(); };
   }, []);
+  useEffect(() => {
+    if (!confirmed) return;
+    const timer = window.setTimeout(() => setConfirmed(null), 800);
+    return () => window.clearTimeout(timer);
+  }, [confirmed]);
   const completed = (lead: ContactSummaryLead) => contactedOn(lead, today) && (mode === 'followups' || !lead.followUpAt);
   const doneCount = leads.filter(completed).length;
-  const rows = onlyPending ? leads.filter(lead => !completed(lead)) : leads;
+  const rows = onlyPending ? leads.filter(lead => !completed(lead) || lead.id === pending || lead.id === confirmed) : leads;
   async function check(id: string) {
-    if (pending) return;
+    if (pending || confirmed) return;
+    const wasDone = leads.some(lead => lead.id === id && completed(lead));
     setPending(id); setMessage('');
-    try { await complete(id, mode); setMessage(mode === 'returns' ? 'Retorno registrado. A data agendada foi concluída.' : 'Histórico de contato atualizado.'); }
+    try { await complete(id, mode); if (!wasDone) setConfirmed(id); setMessage(mode === 'returns' ? 'Retorno registrado. A data agendada foi concluída.' : 'Histórico de contato atualizado.'); }
     catch { setMessage('Não foi possível salvar. O contato continua pendente; tente novamente.'); }
     finally { setPending(null); }
   }
@@ -52,7 +59,7 @@ export default function ContactSummary({ title, mode, leads, today, close, openL
     <div className={styles.contactSummaryRows}>{rows.map(lead => {
       const done = completed(lead), ending = phoneEnding(lead.phone);
       return <article key={lead.id} className={done ? styles.contactSummaryDone : undefined}>
-        <button type="button" className={styles.contactSummaryCheck} aria-label={`${done ? 'Desfazer contato de hoje de' : 'Marcar contato feito com'} ${lead.name}`} aria-pressed={done} disabled={!!pending || (mode === 'returns' && done)} onClick={() => void check(lead.id)}>{pending === lead.id ? '…' : done ? '✓' : ''}</button>
+        <button type="button" className={styles.contactSummaryCheck} aria-label={`${done ? 'Desfazer contato de hoje de' : 'Marcar contato feito com'} ${lead.name}`} aria-pressed={done} disabled={!!pending || !!confirmed || (mode === 'returns' && done)} onClick={() => void check(lead.id)}>{done ? '✓' : pending === lead.id ? '…' : ''}</button>
         <div><button type="button" className={styles.contactSummaryName} onClick={() => openLead(lead.id)}>{lead.name}</button><small>{lead.company || 'Oficina não informada'}</small>{(lead.product || lead.nextAction) && <details><summary>Ver contexto</summary>{lead.product && <span>{lead.product}</span>}{lead.nextAction && <p>{lead.nextAction}</p>}</details>}</div>
         <div><strong className={styles.contactSummaryPhone}>{lead.phone || 'Telefone não informado'}</strong>{ending && <button type="button" onClick={() => void copy(lead)}>{copied === lead.id ? '✓ Copiado' : `Copiar final ${ending}`}</button>}</div>
         <div>{lead.followUpAt ? <time className={contactDay(lead.followUpAt) < today ? styles.contactSummaryLate : undefined} dateTime={lead.followUpAt}>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short' }).format(new Date(lead.followUpAt))}</time> : mode === 'returns' ? <span>Sem data agendada</span> : <span>{done ? 'Feito hoje' : 'Pendente hoje'}</span>}{lead.phone && <a href={whatsapp(lead)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}</div>

@@ -281,6 +281,11 @@ const whatsappLink = (lead: Pick<Lead, "phone" | "name">) => {
 
 export default function CRM() {
   const [view, setView] = useState<View>("geral");
+  useEffect(() => {
+    if (view === "pipeline" || view === "contatos") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [view]);
   const [access, setAccess] = useState<{ isAdmin: boolean; permissions: CrmModule[] }>({ isAdmin: false, permissions: [] });
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
@@ -900,7 +905,7 @@ export default function CRM() {
     setView(navigation[0][0]);
   }, [view, access.isAdmin, access.permissions]);
   return (
-    <main className={styles.crm} data-theme={theme}>
+    <main className={styles.crm} data-theme={theme} data-view={view}>
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <span>MT</span>

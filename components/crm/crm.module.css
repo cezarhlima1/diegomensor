@@ -2560,8 +2560,8 @@
 .contactSummaryRows .contactSummaryName {font-size:13px;font-weight:650;color:var(--ink);overflow-wrap:anywhere}
 .contactSummaryPhone {font-size:12px;font-weight:500;word-break:break-word;color:var(--ink);font-variant-numeric:tabular-nums}
 .contactSummaryRows .contactSummaryCheck {width:28px;height:28px;border:1px solid var(--muted);border-radius:50%;display:grid;place-items:center;font-size:15px;padding:0;color:var(--ink)}
-.contactSummaryCheck[aria-pressed=true] {background:color-mix(in srgb,var(--blue) 20%,transparent);border-color:var(--blue)}
-.contactSummaryCheck:disabled {opacity:.5;cursor:wait}.contactSummaryDone {opacity:.6}
+.crm .contactSummaryRows .contactSummaryCheck[aria-pressed="true"] {background:#43b57d;border-color:#43b57d;color:#07141f;opacity:1}
+.contactSummaryCheck:disabled {opacity:.5;cursor:default}.contactSummaryDone {opacity:1}
 .contactSummaryEmpty {padding:24px;text-align:center;font-size:12px}
 .contactSummary button:focus-visible,.contactSummary a:focus-visible,.contactSummary summary:focus-visible {outline:2px solid var(--blue);outline-offset:3px}
 .contactSummary time {font-size:11px;font-weight:600;color:var(--muted)}
@@ -2654,4 +2654,44 @@
   .crm .pipelineFilters label { flex: 1 1 130px; }
   .crm .pipelineFilters label input,
   .crm .pipelineFilters label select { width: 100%; min-width: 0; }
+}
+
+/* Pipeline e Leads: o cabeçalho fica fora da área que rola. */
+.crm:is([data-view="pipeline"], [data-view="contatos"]) {
+  box-sizing: border-box;
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.crm:is([data-view="pipeline"], [data-view="contatos"]) > .workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.crm:is([data-view="pipeline"], [data-view="contatos"]) > .workspace > .topbar {
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.crm[data-view="pipeline"] .pipelineWrap {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  contain: none;
+}
+.crm[data-view="pipeline"] .pipelineScroller { min-height: 0; }
+.crm[data-view="contatos"] > .workspace > .content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+@media (max-width: 700px) {
+  .crm:is([data-view="pipeline"], [data-view="contatos"]) > .workspace > .topbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
