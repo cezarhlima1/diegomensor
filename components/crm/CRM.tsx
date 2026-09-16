@@ -1917,6 +1917,8 @@ function LeadDrawer({
   deletePurchase: (id: string) => Promise<boolean>;
   startAscension: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copyMessage, setCopyMessage] = useState('');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ name: lead.name, company: lead.company, phone: lead.phone, email: lead.email, temperature: lead.temperature });
   const [newTag, setNewTag] = useState("");
@@ -1980,21 +1982,38 @@ function LeadDrawer({
   return (
     <div className={styles.backdrop} onMouseDown={close}>
       <aside
-        className={styles.drawer}
+        className={`${styles.drawer} ${styles.quickLeadDrawer}`}
+        data-expanded={expanded}
+        role="dialog" aria-modal="true" aria-label={`Contato de ${lead.name}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header>
-          <button onClick={close}>×</button>
+          <button onClick={close} aria-label="Fechar contato">×</button>
           <span className={styles[lead.temperature.toLowerCase()]}>
             {lead.temperature}
           </span>
           <h2>{lead.name}</h2>
           <p>{lead.company}</p>
+        </header>
+        <section className={styles.quickLeadContact}>
+          <span className={styles.quickLeadPhone}>{lead.phone || 'Telefone não informado'}</span>
+          <div className={styles.quickLeadActions}>
+            {lead.phone && <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}
+            {lead.phone && <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(lead.phone.replace(/\D/g, '').slice(-4)); setCopyMessage('Final copiado'); } catch { setCopyMessage('Não foi possível copiar'); } }}>Copiar final {lead.phone.replace(/\D/g, '').slice(-4)}</button>}
+            <button type="button" aria-pressed={contactedToday} onClick={toggleTodayContact}>{contactedToday ? '✓ Feito hoje' : '○ Contato feito'}</button>
+          </div>
+          {copyMessage && <small role="status">{copyMessage}</small>}
+          <label><span>Etapa</span><select value={lead.stage} onChange={event => move(event.target.value)}>{stages.map(stage => <option key={stage}>{stage}</option>)}</select></label>
+          <div className={styles.quickLeadReturn}><label><span>Próximo retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={event => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>{lead.followUpAt && <button type="button" onClick={() => update(completeReturn(lead))}>✓ Concluir</button>}</div>
+          {lead.nextAction && <p>{lead.nextAction}</p>}
+          <label><span>Observação rápida</span><textarea rows={2} value={lead.notes || ''} onChange={event => update({ notes: event.target.value })} placeholder="Anote o resultado do contato…" /></label>
+          <button type="button" className={styles.quickLeadExpand} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? '− Recolher cadastro' : '+ Cadastro completo e histórico'}</button>
+        </section>
+        {expanded && <>
           <div className={styles.leadActions}>
-            <button type="button" onClick={() => setEditing((current) => !current)}>{editing ? "Cancelar edição" : "Editar dados"}</button>
+            <button type="button" onClick={() => setEditing(current => !current)}>{editing ? 'Cancelar edição' : 'Editar dados'}</button>
             <button type="button" onClick={remove}>Excluir lead</button>
           </div>
-        </header>
         {editing && <section className={styles.leadEditSection}>
           <small>Editar dados do lead</small>
           <div className={styles.leadEditGrid}>
@@ -2103,6 +2122,7 @@ function LeadDrawer({
         </section>
         <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos e pagamentos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={`${styles.closingForm} ${styles.paymentClosingForm}`} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Responsável do fechamento</span><select value={closingDraft.closerUserId} onChange={(event) => setClosingDraft({ ...closingDraft, closerUserId: event.target.value })}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label><label><span>Valor vendido</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor a receber</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><label><span>Forma de pagamento</span><select value={closingDraft.paymentMethod} onChange={(event) => setClosingDraft({ ...closingDraft, paymentMethod: event.target.value as PaymentMethod })}>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><label><span>Plataforma / instituição</span><input value={closingDraft.provider} onChange={(event) => setClosingDraft({ ...closingDraft, provider: event.target.value })} placeholder="Green, banco, operadora..." /></label><label><span>Total de parcelas</span><input type="number" min="1" max="120" value={closingDraft.installments} onChange={(event) => setClosingDraft({ ...closingDraft, installments: event.target.value })} required /></label><label><span>Entrada já recebida</span><AccountingInput value={closingDraft.entry} set={(entry) => setClosingDraft({ ...closingDraft, entry })} /></label><label><span>1º vencimento</span><input type="date" value={closingDraft.firstDueDate} onChange={(event) => setClosingDraft({ ...closingDraft, firstDueDate: event.target.value })} required /></label><label className={styles.paymentNotes}><span>Observações do pagamento</span><input value={closingDraft.paymentNotes} onChange={(event) => setClosingDraft({ ...closingDraft, paymentNotes: event.target.value })} placeholder="Condições negociadas" /></label><button type="submit">Salvar fechamento e fluxo</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><label className={styles.inlinePayment}><span>Pagamento</span><select value={purchase.paymentMethod || ""} onChange={(event) => editPurchasePayment(purchase.id, { paymentMethod: event.target.value as PaymentMethod })}><option value="">Informar...</option>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><small>{purchase.paymentProvider || `${purchase.installments?.length || 0} parcela(s)`}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Vendido <b><Money value={purchase.value} /></b></span><span>A receber <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button>{purchase.installments?.length ? <div className={styles.installmentSummary}>{purchase.installments.map((item) => <span key={item.id}>{item.number}ª · {new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))} · {currency.format(item.amount)} · {item.status}</span>)}</div> : null}</article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
         {purchaseHistory.length > 0 && <section className={styles.closerAssignments}><small>Responsáveis pelos fechamentos</small>{purchaseHistory.map((purchase) => <label key={purchase.id}><span><b>{purchase.product}</b><small>{new Intl.DateTimeFormat("pt-BR").format(new Date(purchase.closedAt))} · {currency.format(purchase.value)}</small></span><select value={purchase.closerUserId || ""} onChange={(event) => { const closer = closers.find((item) => item.id === event.target.value); editPurchasePayment(purchase.id, { closerUserId: closer?.id, closerName: closer?.name, commissionRate: closer?.commissionRate || 0, commissionBasis: "received" }); }}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label>)}</section>}
+        </>}
       </aside>
     </div>
   );
