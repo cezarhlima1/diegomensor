@@ -2569,55 +2569,89 @@
 .crm[data-theme="light"] .contactSummary time.contactSummaryLate{color:#ac4038}
 .contactSummary details summary{cursor:pointer;color:var(--muted);font-size:10px;padding:4px 0}
 .contactSummary details[open]{max-width:100%}
-@media(max-width:700px){.contactSummary{padding:12px}.contactSummaryRows article{grid-template-columns:28px minmax(0,1fr) minmax(95px,.65fr);gap:10px}.contactSummaryRows article>div:nth-of-type(2){grid-column:2;grid-row:2}.contactSummaryRows article>div:nth-of-type(3){grid-column:3;grid-row:1/3}.contactSummaryRows .contactSummaryName{font-size:12px}.contactSummary h2{font-size:15px}}
 
-/* Painel rápido em lista; neutraliza o tamanho e o padding do cadastro completo. */
-.crm .quickLeadDrawer {
-  display: block !important;
-  width: min(390px, calc(100vw - 24px)) !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: calc(100dvh - 24px) !important;
-  padding: 0 !important;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #0b1d28;
-  box-shadow: 0 12px 45px #0003;
-  overflow-y: auto;
-  align-self: center;
+/* Lista de contatos sobre a pipeline, com rolagem apenas nas linhas. */
+.contactSummaryBackdrop { position: fixed; inset: 0; z-index: 1190; display: grid; place-items: center; padding: 16px; background: rgba(5, 15, 22, .6); }
+.crm .contactSummary { display: flex; flex-direction: column; width: min(720px, 100%); max-height: min(620px, calc(100dvh - 32px)); min-height: 0; margin: 0; padding: 14px 16px; background: #0b1d28; box-shadow: 0 20px 65px #0005; }
+.crm[data-theme="light"] .contactSummary { background: #fbfcfd; }
+.crm .contactSummary > header { margin-bottom: 8px; flex-shrink: 0; }
+.crm .contactSummary > header > button { width: 32px; height: 32px; padding: 0; font-size: 24px; }
+.crm .contactSummary h2 { font-size: 15px; }
+.crm .contactSummaryRows { overflow-y: auto; overscroll-behavior: contain; min-height: 0; margin-top: 8px; }
+.crm .contactSummaryRows article { grid-template-columns: 26px minmax(0, 1fr) 135px 100px; gap: 10px; padding: 8px 0; }
+.crm .contactSummaryRows article > div { gap: 2px; }
+.crm .contactSummaryRows .contactSummaryName { font-size: 12px; padding: 0; }
+.crm .contactSummaryRows .contactSummaryCheck { width: 26px; height: 26px; border-radius: 6px; }
+.crm .contactSummaryRows small { overflow-wrap: anywhere; }
+@media(max-width:560px) {
+  .crm .contactSummary { padding: 10px 12px; }
+  .crm .contactSummaryRows article { grid-template-columns: 26px minmax(0, 1fr) 92px; gap: 6px 8px; }
+  .crm .contactSummaryRows article > div:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  .crm .contactSummaryRows article > div:nth-of-type(3) { grid-column: 3; grid-row: 1 / 3; }
 }
-.crm[data-theme="light"] .quickLeadDrawer { background: #edf3f5; }
-.crm .quickLeadDrawer[data-expanded="true"] { width: min(640px, calc(100vw - 24px)) !important; }
-.crm .quickLeadDrawer > header {
-  grid-column: auto !important;
-  margin: 0;
-  padding: 12px 16px;
-  background: transparent;
-  border-bottom: 1px solid var(--line);
+
+/* Acabamento: rótulos inteiros e controles alinhados sem alterar o layout do CRM. */
+.crm .sidebar nav {
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
-.crm .quickLeadDrawer > header > button { top: 8px; right: 10px; width: 32px; height: 32px; }
-.crm .quickLeadDrawer > header h2 { font-size: 16px; color: var(--ink); margin: 6px 28px 2px 0; line-height: 1.3; overflow-wrap: anywhere; }
-.crm .quickLeadDrawer > header p { font-size: 12px; margin: 0; color: var(--muted); overflow-wrap: anywhere; }
-.crm .quickLeadDrawer .quickLeadContact { display: grid; gap: 8px; padding: 12px 16px; border: 0; background: transparent; }
-.crm .quickLeadPhone { color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.crm .quickLeadActions { display: grid; gap: 0; margin: 0 0 2px; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.crm .quickLeadActions > li + li { border-top: 1px solid var(--line); }
-.crm .quickLeadContact button, .crm .quickLeadContact a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; }
-.crm .quickLeadActions > li > a, .crm .quickLeadActions > li > button { width: 100%; justify-content: flex-start; border: 0; border-radius: 0; text-align: left; }
-.crm .quickLeadActions a, .crm .quickLeadActions button[aria-pressed="true"], .crm .quickLeadActions button:hover { background: color-mix(in srgb, var(--blue) 12%, transparent); }
-.crm .quickLeadContact label { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 8px; margin: 0; }
-.crm .quickLeadContact label span { font-size: 11px; color: var(--muted); }
-.crm .quickLeadContact input, .crm .quickLeadContact select, .crm .quickLeadContact textarea { width: 100%; min-width: 0; height: 34px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font-family: inherit; font-size: 12px; color-scheme: dark; }
-.crm .quickLeadContact select option { background: #0b1d28; color: var(--ink); }
-.crm[data-theme="light"] .quickLeadContact select option { background: #edf3f5; }
-.crm[data-theme="light"] .quickLeadContact input, .crm[data-theme="light"] .quickLeadContact select, .crm[data-theme="light"] .quickLeadContact textarea { color-scheme: light; }
-.crm .quickLeadContact textarea { height: auto; min-height: 54px; resize: vertical; }
-.crm .quickLeadReturn { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
-.crm .quickLeadReturn > button { justify-self: end; }
-.crm .quickLeadContact .quickLeadExpand { border: 0; border-top: 1px solid var(--line); border-radius: 0; justify-content: flex-start; padding: 8px 0 0; color: var(--muted); }
-.crm .quickLeadContact p, .crm .quickLeadContact small { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
-.crm .quickLeadContact button:focus-visible, .crm .quickLeadContact a:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-@media (pointer: coarse) {
-  .crm .quickLeadContact button, .crm .quickLeadContact a, .crm .quickLeadContact input, .crm .quickLeadContact select { min-height: 44px; }
+.crm .sidebar nav button {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 12px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.crm .sidebar nav button span { display: block; white-space: nowrap; }
+.crm .sidebar nav button i { flex-shrink: 0; }
+.crm .pipeline > section > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.crm .pipeline > section > header > div:first-child { min-width: 0; }
+.crm .pipeline > section > header > div:first-child > i,
+.crm .pipeline > section > header > div:first-child > span { flex-shrink: 0; }
+.crm .pipeline > section > header > div:first-child > span { width: auto; min-width: 19px; padding-inline: 4px; font-variant-numeric: tabular-nums; }
+.crm .stageSummaryButton {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.crm .pipeline > section > header > .stageActions { justify-content: flex-end; }
+.crm .stageActions button { flex-shrink: 0; }
+.crm .stageActions .stageSelectAll { margin-right: auto; }
+.crm .pipelineTools { flex-wrap: wrap; }
+.crm .pipelineFilters { flex-wrap: wrap; min-width: 0; }
+.crm .pipelineFilters label,
+.crm .pipelineTools form,
+.crm .periodPresets button { flex-shrink: 0; }
+.crm .pipelineTools label small,
+.crm .pipelineTools form > span,
+.crm .periodPresets button,
+.crm .sourceChips button,
+.crm .topActions > button { white-space: nowrap; }
+.crm .topActions { flex-wrap: wrap; min-width: 0; }
+.crm .periodPresets { max-width: 100%; overflow-x: auto; }
+.crm .followUpAlert { flex-wrap: wrap; }
+.crm .followUpAlert b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crm .sidebar nav button:focus-visible,
+.crm .stageSummaryButton:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+@media (max-width: 700px) {
+  .crm .sidebar nav button { padding-inline: 10px; min-height: 46px; }
+  .crm .pipelineFilters { gap: 8px !important; }
+  .crm .pipelineFilters > span { flex-basis: 100%; }
+  .crm .pipelineFilters label { flex: 1 1 130px; }
+  .crm .pipelineFilters label input,
+  .crm .pipelineFilters label select { width: 100%; min-width: 0; }
 }
