@@ -1527,14 +1527,14 @@ function Pipeline({
                         {followUpKey && <div className={`${styles.followUpAlert} ${styles[`followUp_${followUpState}`]}`}><i>↗</i><span>{followUpState === "late" ? "Retorno atrasado" : followUpState === "today" ? "Retornar hoje" : "Retornar"}</span><b>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(lead.followUpAt!))}</b></div>}
                       </div>
                       {lead.phone && (
-                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
-                          <WhatsAppIcon />
-                        </a>
-                      )}
-                      {lead.phone && (
-                        <button type="button" className={styles.copyButton} data-copied={copiedPhoneId === lead.id} aria-label={copiedPhoneId === lead.id ? "Telefone copiado" : `Copiar telefone de ${lead.name}`} onClick={(event) => { event.stopPropagation(); void copyPhone(lead); }}>
-                          {copiedPhoneId === lead.id ? <CheckIcon /> : <CopyIcon />}
-                        </button>
+                        <div className={styles.cardActions}>
+                          <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                            <WhatsAppIcon />
+                          </a>
+                          <button type="button" className={styles.copyButton} data-copied={copiedPhoneId === lead.id} aria-label={copiedPhoneId === lead.id ? "Telefone copiado" : `Copiar telefone de ${lead.name}`} onClick={(event) => { event.stopPropagation(); void copyPhone(lead); }}>
+                            {copiedPhoneId === lead.id ? <CheckIcon /> : <CopyIcon />}
+                          </button>
+                        </div>
                       )}
                     </div>
                     {!['fechado', 'nao fechou', 'desqualificado'].includes(stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) && <ContactCheckpoint lead={lead} toggle={() => toggleContactToday(lead.id)} />}
