@@ -271,9 +271,12 @@ const channelStats = (channelLeads: Lead[], channel: Channel, start: string, end
     hot: reporting.filter((lead) => lead.temperature === "Quente" && lead.stage !== "Fechado").length,
   };
 };
+const phoneDigitsBR = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  return phone.trim().startsWith("+") || digits.length > 11 ? digits : `55${digits}`;
+};
 const whatsappLink = (lead: Pick<Lead, "phone" | "name">) => {
-  const digits = lead.phone.replace(/\D/g, "");
-  const phone = lead.phone.trim().startsWith("+") || digits.length > 11 ? digits : `55${digits}`;
+  const phone = phoneDigitsBR(lead.phone);
   const firstName = lead.name.trim().split(" ")[0];
   const message = `Olá, ${firstName}! Tudo bem? Aqui é da Mensor Treinamentos. Recebi seu contato e queria entender melhor o momento da sua oficina.`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -1403,6 +1406,16 @@ function Pipeline({
   const [productFilter, setProductFilter] = useState("Todos");
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
+  const copyPhone = async (lead: Lead) => {
+    try {
+      await navigator.clipboard.writeText(phoneDigitsBR(lead.phone));
+      setCopiedPhoneId(lead.id);
+      window.setTimeout(() => setCopiedPhoneId((current) => (current === lead.id ? null : current)), 1800);
+    } catch {
+      setCopiedPhoneId(null);
+    }
+  };
   const archived = isDisqualifiedLead;
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const stageItems = useMemo(() => {
@@ -1517,6 +1530,11 @@ function Pipeline({
                         <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
                           <WhatsAppIcon />
                         </a>
+                      )}
+                      {lead.phone && (
+                        <button type="button" className={styles.copyButton} data-copied={copiedPhoneId === lead.id} aria-label={copiedPhoneId === lead.id ? "Telefone copiado" : `Copiar telefone de ${lead.name}`} onClick={(event) => { event.stopPropagation(); void copyPhone(lead); }}>
+                          {copiedPhoneId === lead.id ? <CheckIcon /> : <CopyIcon />}
+                        </button>
                       )}
                     </div>
                     {!['fechado', 'nao fechou', 'desqualificado'].includes(stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) && <ContactCheckpoint lead={lead} toggle={() => toggleContactToday(lead.id)} />}
@@ -2280,6 +2298,12 @@ function AccountingInput({ value, set, required = false }: { value: string | num
 }
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
+}
+function CopyIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></svg>;
+}
+function CheckIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
 }
 function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { channel: Channel; leads: Lead[]; endMonth: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const [year, month] = endMonth.split("-").map(Number);
