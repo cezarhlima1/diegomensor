@@ -1954,6 +1954,11 @@ function LeadDrawer({
   const [editingTag, setEditingTag] = useState<number | null>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [addingClosing, setAddingClosing] = useState(false);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [close]);
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
   const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "", closerUserId: "" });
   const tags = lead.tags || [];
