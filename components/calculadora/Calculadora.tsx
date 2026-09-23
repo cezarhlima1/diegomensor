@@ -2361,18 +2361,59 @@ export default function Calculadora({
                 </label>
                 <label className="grid gap-1.5">
                   <span className="quiz-label">
-                    Valor da hora <span className="calc-lock-tag">🔒 base fixa</span>
+                    Valor da hora{" "}
+                    <span className="calc-lock-tag">
+                      🔒{" "}
+                      {selecionaveisVH.length > 0
+                        ? "do histórico de valor hora"
+                        : "base fixa"}
+                    </span>
                   </span>
-                  <span className="calc-money calc-money--locked">
-                    <span className="calc-money-prefix">R$</span>
-                    <input
-                      readOnly
-                      value={ajusteRapido.valorHora.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    />
-                  </span>
+                  {selecionaveisVH.length > 0 ? (
+                    <select
+                      className="quiz-input"
+                      value={
+                        selecionaveisVH.find(
+                          (h) => h.valorHora === ajusteRapido.valorHora,
+                        )?.id ?? ""
+                      }
+                      onChange={(e) => {
+                        const h = selecionaveisVH.find(
+                          (item) => item.id === e.target.value,
+                        );
+                        if (h)
+                          setAjusteRapido((atual) =>
+                            atual ? { ...atual, valorHora: h.valorHora } : atual,
+                          );
+                      }}
+                      aria-label="Valor da hora do orçamento"
+                    >
+                      {!selecionaveisVH.some(
+                        (h) => h.valorHora === ajusteRapido.valorHora,
+                      ) && (
+                        <option value="">
+                          Valor atual — {brl(ajusteRapido.valorHora)}
+                        </option>
+                      )}
+                      {selecionaveisVH.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.nome} — {brl(h.valorHora)}
+                          {h.status === "padrao" ? " (padrão)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="calc-money calc-money--locked">
+                      <span className="calc-money-prefix">R$</span>
+                      <input
+                        readOnly
+                        value={ajusteRapido.valorHora.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      />
+                    </span>
+                  )}
                 </label>
               </div>
 
