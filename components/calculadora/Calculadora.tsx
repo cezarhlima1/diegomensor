@@ -20,6 +20,7 @@ import {
   markupDaPeca,
   maskIntTyping,
   maskMoneyTyping,
+  maskQuantidadeTyping,
   novaPeca,
   parseNum,
   precoPecaItem,
@@ -660,7 +661,10 @@ export default function Calculadora({
       return {
         id: crypto.randomUUID(),
         nome: peca.nome,
-        quantidade: String(Math.max(1, Number(peca.quantidade) || 1)),
+        quantidade: Math.max(1, Number(peca.quantidade) || 1).toLocaleString(
+          "pt-BR",
+          { maximumFractionDigits: 2 },
+        ),
         // Orçamentos novos preservam custo e markup. Para os antigos,
         // reconstruímos pelo preço final sem alterar o total já registrado.
         custo: (
@@ -1205,7 +1209,7 @@ export default function Calculadora({
                                         p.id,
                                         "quantidade",
                                         permiteQuantidadeDecimal
-                                          ? maskMoneyTyping(e.target.value)
+                                          ? maskQuantidadeTyping(e.target.value)
                                           : maskIntTyping(e.target.value),
                                       )
                                     }
@@ -2459,7 +2463,7 @@ export default function Calculadora({
                             peca.id,
                             "quantidade",
                             permiteQuantidadeDecimal
-                              ? maskMoneyTyping(e.target.value)
+                              ? maskQuantidadeTyping(e.target.value)
                               : maskIntTyping(e.target.value),
                           )
                         }
