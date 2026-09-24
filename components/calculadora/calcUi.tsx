@@ -7,7 +7,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { brl, formatMoneyBlur, maskMoneyTyping } from "./calcLogic";
+import { AVISOS_PREENCHIMENTO, brl, formatMoneyBlur, maskMoneyTyping } from "./calcLogic";
+
+export function useAvisoPreenchimento() {
+  const ref = useRef<HTMLDialogElement>(null);
+  const destino = useRef<string>("");
+  const [campo, setCampo] = useState<keyof typeof AVISOS_PREENCHIMENTO>("origem");
+  function avisarPreenchimento(campo: keyof typeof AVISOS_PREENCHIMENTO, id = "") {
+    setCampo(campo);
+    destino.current = id;
+    if (!ref.current?.open) ref.current?.showModal();
+  }
+  const avisoPreenchimento = (
+    <dialog ref={ref} className="calc-required-dialog" aria-labelledby="calc-required-message"
+      onClose={() => { if (destino.current) document.getElementById(destino.current)?.focus(); }}>
+      <p id="calc-required-message">{AVISOS_PREENCHIMENTO[campo]}</p>
+      <button type="button" className="btn" autoFocus onClick={() => ref.current?.close()}>Preencher</button>
+    </dialog>
+  );
+  return { avisarPreenchimento, avisoPreenchimento };
+}
 
 /** Confirmação visual padronizada para qualquer exclusão da calculadora. */
 export function useConfirmacaoExclusao() {

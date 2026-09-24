@@ -32,6 +32,13 @@ export async function POST(request:Request) {
     const db=crmPool();
     if(body.entity==="action") {
       const a=body.record;if(!a?.id||!a?.name||!a?.startsOn)return NextResponse.json({error:"invalid-payload"},{status:400});
+      const counts = [a.confirmedCount ?? 0, a.attendedCount ?? 0].map(Number);
+      if (counts.some(value => !Number.isInteger(value) || value < 0 || value > 2147483647)) {
+        return NextResponse.json({ error: "invalid-metrics", detail: "Confirmados e participantes devem ser números inteiros maiores ou iguais a zero." }, { status: 400 });
+      }
+      if (a.endsOn && a.endsOn < a.startsOn) {
+        return NextResponse.json({ error: "invalid-dates", detail: "A data final não pode ser anterior à data inicial." }, { status: 400 });
+      }
       await db.query("insert into public.crm_commercial_actions(id,name,starts_on,ends_on,description,offered_product,access_type,ticket_value,confirmed_count,attended_count,status,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now()) on conflict(id) do update set name=excluded.name,starts_on=excluded.starts_on,ends_on=excluded.ends_on,description=excluded.description,offered_product=excluded.offered_product,access_type=excluded.access_type,ticket_value=excluded.ticket_value,confirmed_count=excluded.confirmed_count,attended_count=excluded.attended_count,status=excluded.status,updated_at=now()",[a.id,a.name,a.startsOn,a.endsOn||null,a.description||"",a.offeredProduct||null,a.accessType||"Gratuita",Number(a.ticketValue)||0,Number(a.confirmedCount)||0,Number(a.attendedCount)||0,a.status||"Planejada"]);return NextResponse.json({ok:true});
     }
     if(body.entity==="participant") {

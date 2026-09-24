@@ -95,6 +95,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
   const [editingAction, setEditingAction] = useState(false);
   const [addingParticipant, setAddingParticipant] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [savingMetrics, setSavingMetrics] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -207,22 +208,28 @@ export default function CommercialActions({ products }: { products: Array<{ name
   };
 
   const release = async (action: Action) => {
-    if (!confirm(`Liberar os participantes pendentes de ${action.name} para o CRM?`)) return;
+    if (releasing || !confirm(`Liberar os participantes pendentes de ${action.name} para o CRM?`)) return;
+    setReleasing(true);
     setError("");
-    const response = await fetch("/api/crm/actions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entity: "release", actionId: action.id }),
-    });
-    if (!response.ok) {
-      setError(await responseMessage(response, "Não foi possível liberar os participantes."));
-      return;
-    }
-    setSuccess("Participantes liberados para o CRM.");
+    setSuccess("");
     try {
-      await load();
-    } catch {
-      setError("Os participantes foram liberados, mas a tela não conseguiu atualizar. Recarregue a página.");
+      const response = await fetch("/api/crm/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entity: "release", actionId: action.id }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response, "Não foi possível liberar os participantes."));
+      const result = await response.json();
+      setSuccess(`${result.released} participante(s) liberado(s) para o CRM. Confira a situação dos demais na lista.`);
+      try {
+        await load();
+      } catch {
+        setError("Os participantes foram liberados, mas a tela não conseguiu atualizar. Recarregue a página.");
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível liberar os participantes. Verifique a conexão e tente novamente.");
+    } finally {
+      setReleasing(false);
     }
   };
 
@@ -438,7 +445,7 @@ export default function CommercialActions({ products }: { products: Array<{ name
                 {!selectedPeople.length && <p>Nenhum participante cadastrado nesta ação.</p>}
               </div>
             </section>
-            <footer><button type="button" onClick={() => setSelected(null)}>Fechar</button><button type="button" onClick={() => release(selected)} disabled={waitingCount(selected.id) === 0}>Liberar pendentes para o CRM</button></footer>
+            <footer><button type="button" onClick={() => setSelected(null)}>Fechar</button><button type="button" onClick={() => release(selected)} disabled={releasing || waitingCount(selected.id) === 0}>{releasing ? "Liberando..." : "Liberar pendentes para o CRM"}</button></footer>
           </section>
         </div>
       )}

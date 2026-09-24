@@ -128,6 +128,21 @@ export function maskIntTyping(v: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+/**
+ * Máscara de digitação para quantidade: aceita "," OU "." como separador
+ * decimal (diferente de maskMoneyTyping, aqui não existe agrupamento de
+ * milhar — quantidade não chega a milhares — então o primeiro separador
+ * digitado, seja vírgula ou ponto, já é tratado como decimal).
+ */
+export function maskQuantidadeTyping(v: string): string {
+  const s = v.replace(/[^\d,.]/g, "");
+  const sepIndex = s.search(/[,.]/);
+  if (sepIndex === -1) return s;
+  const intPart = s.slice(0, sepIndex).replace(/[,.]/g, "");
+  const decPart = s.slice(sepIndex + 1).replace(/[,.]/g, "");
+  return `${intPart || "0"},${decPart.slice(0, 2)}`;
+}
+
 /* ---------- Passo #01 — custo da hora ---------- */
 export type CustoHoraResult = {
   totalCustos: number;
@@ -258,6 +273,11 @@ export function somaMaoDeObra(pecas: Peca[], valorHora: number): number {
 }
 
 /* ---------- Histórico de orçamentos (banco: tabela orcamentos) ---------- */
+export const AVISOS_PREENCHIMENTO = {
+  origem: "A origem do cliente é importante, preencha para seguir.",
+  motivo: "O motivo da reprovação do cliente é importante, preencha para seguir.",
+} as const;
+
 export type PecaResumo = {
   nome: string;
   valor: number;
@@ -271,6 +291,7 @@ export type PecaResumo = {
   contatoCliente?: string;
   origem?: OrigemCliente | null;
   observacao?: string;
+  motivoRecusa?: string;
 };
 
 /** Opções aceitas pelo CHECK da coluna orcamentos.status (migration 0007). */
@@ -295,6 +316,7 @@ export type Orcamento = {
   contatoCliente?: string;
   origem?: OrigemCliente | null;
   observacao?: string;
+  motivoRecusa?: string;
   valorHora: number;
   horas: number;
   maoDeObra: number;

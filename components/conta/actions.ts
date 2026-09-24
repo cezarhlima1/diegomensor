@@ -158,6 +158,105 @@ export async function adicionarUsuario(dados: {
 }
 
 /**
+ * Atualiza nome, e-mail, papel e (opcionalmente) a senha de um membro da
+ * empresa ativa do chamador. Espelha atualizarUsuarioEmpresa (super admin,
+ * components/admin/actions.ts), com uma checagem a mais: o alvo precisa
+ * pertencer à MESMA empresa do chamador — um admin só edita gente da própria
+ * empresa. Senha vazia mantém a atual (não é obrigatória, diferente da
+ * criação). Não deixar a empresa sem nenhum admin usa a mesma regra de
+ * removerUsuario.
+ */
+export async function atualizarUsuario(dados: {
+  userId: string;
+  nome: string;
+  email: string;
+  senha: string;
+  papel: Papel;
+}): Promise<ResultadoAuth> {
+  const sessao = await exigirAdminDaEmpresaAtiva();
+  if (!sessao) return { ok: false, error: ERRO_SEM_PERMISSAO };
+  const empresaId = sessao.empresaAtiva.id;
+
+  const nome = dados.nome.trim();
+  const email = dados.email.trim().toLowerCase();
+  const senha = dados.senha;
+  const papel = dados.papel;
+
+  if (!nome || !email) {
+    return { ok: false, error: "Preencha nome e e-mail." };
+  }
+  if (!emailValido(email)) {
+    return { ok: false, error: "Informe um e-mail válido." };
+  }
+  if (senha && senha.length < SENHA_MIN) {
+    return {
+      ok: false,
+      error: `A nova senha precisa ter pelo menos ${SENHA_MIN} caracteres.`,
+    };
+  }
+  if (papel !== "admin" && papel !== "funcionario") {
+    return { ok: false, error: "Papel inválido." };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: vinculo, error: erroVinculo } = await admin
+    .from("empresa_usuarios")
+    .select("papel")
+    .eq("empresa_id", empresaId)
+    .eq("user_id", dados.userId)
+    .maybeSingle();
+  if (erroVinculo) return { ok: false, error: ERRO_GENERICO };
+  if (!vinculo) {
+    return { ok: false, error: "Usuário não encontrado nesta empresa." };
+  }
+
+  if (vinculo.papel === "admin" && papel !== "admin") {
+    const { count: totalAdmins, error: erroAdmins } = await admin
+      .from("empresa_usuarios")
+      .select("*", { count: "exact", head: true })
+      .eq("empresa_id", empresaId)
+      .eq("papel", "admin");
+    if (erroAdmins || totalAdmins === null) {
+      return { ok: false, error: ERRO_GENERICO };
+    }
+    if (totalAdmins <= 1) {
+      return {
+        ok: false,
+        error: "A empresa precisa de pelo menos um administrador.",
+      };
+    }
+  }
+
+  const { error: erroAuth } = await admin.auth.admin.updateUserById(dados.userId, {
+    email,
+    ...(senha ? { password: senha } : {}),
+    user_metadata: { nome },
+  });
+  if (erroAuth) {
+    return { ok: false, error: mapearErroBanco(erroAuth.message, ERRO_GENERICO) };
+  }
+
+  const { error: erroProfile } = await admin
+    .from("profiles")
+    .update({ nome, email })
+    .eq("id", dados.userId);
+  if (erroProfile) return { ok: false, error: ERRO_GENERICO };
+
+  if (papel !== vinculo.papel) {
+    const { error: erroPapel } = await admin
+      .from("empresa_usuarios")
+      .update({ papel })
+      .eq("empresa_id", empresaId)
+      .eq("user_id", dados.userId);
+    if (erroPapel) return { ok: false, error: ERRO_GENERICO };
+  }
+
+  revalidatePath("/conta");
+  return { ok: true };
+}
+
+/**
  * Remove um membro da empresa ativa do chamador.
  * Regras: chamador precisa ser admin da empresa; o ÚLTIMO admin não pode
  * ser removido (na prática só acontece na auto-remoção — se o alvo fosse

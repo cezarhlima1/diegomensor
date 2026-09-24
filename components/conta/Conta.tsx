@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Membro, Papel } from "@/lib/db/types";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
 import { definirEmpresaAtiva } from "@/lib/auth/empresaAtiva";
-import { adicionarUsuario, removerUsuario } from "./actions";
+import { adicionarUsuario, atualizarUsuario, removerUsuario } from "./actions";
 
 /** Resumo de uma empresa do usuário para o seletor de empresa ativa. */
 type EmpresaResumo = { id: string; nome: string };
@@ -134,26 +134,13 @@ export default function Conta({
 
         <ul className="conta-lista">
           {membros.map((m) => (
-            <li key={m.user_id} className="conta-item">
-              <div className="conta-item-info">
-                <span className="conta-item-nome">
-                  {m.nome ?? m.email}
-                  {m.user_id === userId ? " (você)" : ""}
-                </span>
-                <span className="conta-item-sub">{m.email}</span>
-              </div>
-              <span className={`conta-papel conta-papel--${m.papel}`}>
-                {PAPEL_LABEL[m.papel]}
-              </span>
-              <button
-                type="button"
-                className="conta-acao conta-acao--remover"
-                onClick={() => remover(m)}
-                disabled={removendoId !== null}
-              >
-                {removendoId === m.user_id ? "Removendo…" : "Remover"}
-              </button>
-            </li>
+            <LinhaMembro
+              key={m.user_id}
+              membro={m}
+              userId={userId}
+              removendoId={removendoId}
+              onRemover={remover}
+            />
           ))}
         </ul>
 
@@ -279,5 +266,156 @@ export default function Conta({
 
       </section>
     </div>
+  );
+}
+
+/**
+ * Uma linha da lista de membros, com edição inline (nome, e-mail, papel e
+ * nova senha opcional). Espelha LinhaMembro do painel /admin
+ * (components/admin/Admin.tsx) — mesma técnica de troca de senha via
+ * Supabase Auth, sem nunca ler/exibir a senha atual (impossível: ela é
+ * armazenada com hash irreversível pelo próprio Supabase Auth).
+ */
+function LinhaMembro({
+  membro,
+  userId,
+  removendoId,
+  onRemover,
+}: {
+  membro: Membro;
+  userId: string;
+  removendoId: string | null;
+  onRemover: (membro: Membro) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [nome, setNome] = useState(membro.nome ?? "");
+  const [email, setEmail] = useState(membro.email);
+  const [senha, setSenha] = useState("");
+  const [papel, setPapel] = useState<Papel>(membro.papel);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (salvando) return;
+    setErro(null);
+    setSalvando(true);
+    try {
+      const resultado = await atualizarUsuario({
+        userId: membro.user_id,
+        nome,
+        email,
+        senha,
+        papel,
+      });
+      if (!resultado.ok) {
+        setErro(resultado.error);
+        return;
+      }
+      setSenha("");
+      setEditando(false);
+      router.refresh();
+    } catch (err) {
+      console.error("Conta: falha inesperada ao editar usuário:", err);
+      setErro(ERRO_GENERICO);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <li className="admin-item">
+      <div className="conta-item-info">
+        <span className="conta-item-nome">
+          {membro.nome ?? membro.email}
+          {membro.user_id === userId ? " (você)" : ""}
+        </span>
+        <span className="conta-item-sub">{membro.email}</span>
+      </div>
+      <span className={`conta-papel conta-papel--${membro.papel}`}>
+        {PAPEL_LABEL[membro.papel]}
+      </span>
+      <div className="admin-member-actions">
+        <button
+          type="button"
+          className="conta-acao"
+          onClick={() => {
+            setNome(membro.nome ?? "");
+            setEmail(membro.email);
+            setPapel(membro.papel);
+            setSenha("");
+            setErro(null);
+            setEditando((aberto) => !aberto);
+          }}
+        >
+          {editando ? "Cancelar" : "Editar"}
+        </button>
+        <button
+          type="button"
+          className="conta-acao conta-acao--remover"
+          onClick={() => onRemover(membro)}
+          disabled={removendoId !== null}
+        >
+          {removendoId === membro.user_id ? "Removendo…" : "Remover"}
+        </button>
+      </div>
+      {editando && (
+        <form onSubmit={salvar} className="admin-member-form" noValidate>
+          <div className="calc-grid-2">
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Nome</span>
+              <input
+                className="quiz-input"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">E-mail</span>
+              <input
+                type="email"
+                className="quiz-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Nova senha (opcional)</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                className="quiz-input"
+                placeholder="Deixe em branco para manter a atual"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                minLength={8}
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="quiz-label">Papel</span>
+              <select
+                className="quiz-input"
+                value={papel}
+                onChange={(e) => setPapel(e.target.value as Papel)}
+              >
+                <option value="funcionario">Funcionário</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </label>
+          </div>
+          {erro && (
+            <p className="auth-erro w-full" role="alert">
+              {erro}
+            </p>
+          )}
+          <button type="submit" className="conta-acao" disabled={salvando}>
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+        </form>
+      )}
+    </li>
   );
 }

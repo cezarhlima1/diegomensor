@@ -1,0 +1,34 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+function load(name) {
+  const exports = {};
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(`lib/${name}.ts`, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports, require: name => load(name.replace('./', '')), Intl, Date });
+  return exports;
+}
+const {recordJourney, completeReturn} = load('crm-journey');
+const now = '2026-09-15T15:00:00Z';
+let lead = {stage:'Novo lead', contactCheckpoints:[]};
+lead = recordJourney(lead, {...lead, stage:'Primeiro contato'}, now);
+assert.equal(lead.contactCheckpoints.length,1);
+lead = recordJourney(lead, {...lead,stage:'Proposta'}, now);
+assert.equal(lead.contactCheckpoints.length,1);
+assert.equal(lead.journeyHistory.length,2);
+assert.equal(recordJourney(lead,{...lead},now).journeyHistory.length,2);
+lead = {...lead, followUpAt:'2026-09-16T12:00:00Z'};
+lead = completeReturn(lead,now);
+assert.equal(lead.followUpAt,null);
+assert.equal(lead.journeyHistory[2].scheduledFor,'2026-09-16T12:00:00Z');
+assert.equal(completeReturn(lead,now).journeyHistory.length,3);
+lead = completeReturn({...lead,followUpAt:'2026-09-20T12:00:00Z'},'2026-09-20T15:00:00Z');
+assert.equal(lead.journeyHistory.filter(x=>x.kind==='return-completed').length,2);
+lead = {...lead,meetingScheduledFor:'2026-09-21T12:00:00Z',meetingOutcome:'Agendada'};
+lead = recordJourney(lead,{...lead,meetingOutcome:'No-show'},now);
+assert.equal(recordJourney(lead,{...lead,notes:'teste'},now).journeyHistory.length,5);
+lead = recordJourney(lead,{...lead,meetingScheduledFor:'2026-09-25T12:00:00Z',meetingOutcome:'Agendada'},now);
+lead = recordJourney(lead,{...lead,meetingOutcome:'No-show'},'2026-09-25T15:00:00Z');
+assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show').length,2);
+assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show')[0].scheduledFor,'2026-09-21T12:00:00Z');
+assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show')[1].scheduledFor,'2026-09-25T12:00:00Z');
+console.log('PASS: stage history, daily contact deduplication, repeated returns and no-shows retain scheduled dates, unchanged saves are idempotent.');

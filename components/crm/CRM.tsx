@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
+import { recordJourney, completeReturn, type JourneyEvent } from '@/lib/crm-journey';
+import ContactSummary from './ContactSummary';
+import { contactDay, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
 import CommercialActions from "./CommercialActions";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
@@ -47,6 +50,7 @@ type Lead = {
   campaignId?: string;
   application?: LeadApplication;
   contactCheckpoints?: string[];
+  journeyHistory?: JourneyEvent[];
 };
 type LeadImportRecord = Lead | (Pick<Lead, "id"> & { purchases: Purchase[]; preserveLeadRecord: true });
 type TrafficRecord = {
@@ -273,9 +277,12 @@ const channelStats = (channelLeads: Lead[], channel: Channel, start: string, end
     hot: reporting.filter((lead) => lead.temperature === "Quente" && lead.stage !== "Fechado").length,
   };
 };
-const whatsappLink = (lead: Lead) => {
-  const digits = lead.phone.replace(/\D/g, "");
-  const phone = digits.startsWith("55") ? digits : `55${digits}`;
+const phoneDigitsBR = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  return phone.trim().startsWith("+") || digits.length > 11 ? digits : `55${digits}`;
+};
+const whatsappLink = (lead: Pick<Lead, "phone" | "name">) => {
+  const phone = phoneDigitsBR(lead.phone);
   const firstName = lead.name.trim().split(" ")[0];
   const message = `Olá, ${firstName}! Tudo bem? Aqui é da Mensor Treinamentos. Recebi seu contato e queria entender melhor o momento da sua oficina.`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -283,6 +290,11 @@ const whatsappLink = (lead: Lead) => {
 
 export default function CRM() {
   const [view, setView] = useState<View>("geral");
+  useEffect(() => {
+    if (view === "pipeline" || view === "contatos") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [view]);
   const [access, setAccess] = useState<{ isAdmin: boolean; permissions: CrmModule[] }>({ isAdmin: false, permissions: [] });
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [leads, setLeads] = useState<Lead[]>(() => initialLeads.map((lead) => hydrateLeadDates(lead, new Date().toISOString())));
@@ -440,7 +452,7 @@ export default function CRM() {
       const savedMeetingOutcome = result.saved?.meetingOutcome || null;
       const sameDate = (expected?: string | null, saved?: string | null) => (expected ? brazilDateKey(expected) : null) === (saved ? brazilDateKey(saved) : null);
       const journeyConfirmed = sameDate(lead.createdAt, result.saved?.createdAt) && sameDate(lead.conversationAt, result.saved?.conversationAt) && sameDate(lead.meetingAt, result.saved?.meetingAt) && savedMeetingDate === expectedMeetingDate && sameDate(lead.followUpAt, result.saved?.followUpAt) && sameDate(lead.proposalAt, result.saved?.proposalAt) && sameDate(lead.closedAt, result.saved?.closedAt);
-      if (result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
+      if ((lead.journeyHistory || []).some(event => !(result.saved?.journeyHistory || []).some((saved: JourneyEvent) => saved.id === event.id)) || JSON.stringify(result.saved?.contactCheckpoints || []) !== JSON.stringify(lead.contactCheckpoints || []) || result.saved?.stage !== lead.stage || (result.saved?.product || undefined) !== (lead.product || undefined) || savedTags !== expectedTags || !journeyConfirmed || savedMeetingOutcome !== expectedMeetingOutcome) {
         setDatabaseIssue("O banco não confirmou todos os dados do lead"); setDatabaseStatus("offline");
         throw new Error("Confirmação do banco divergente");
       }
@@ -465,6 +477,19 @@ export default function CRM() {
     setLeads(next);
     setSelected((current) => current?.id === id ? updated : current);
     void saveLead(updated).catch((error) => console.error("Falha ao registrar contato com o lead", error));
+  };
+  const completeSummaryContact = async (id: string, mode: 'followups' | 'returns') => {
+    const lead = leadsRef.current.find(item => item.id === id);
+    if (!lead) throw new Error('Contato não encontrado');
+    const timer = leadSaveTimers.current.get(id);
+    if (timer) { window.clearTimeout(timer); leadSaveTimers.current.delete(id); }
+    const today = brazilDateKey(new Date()), checkpoints = lead.contactCheckpoints || [];
+    const done = checkpoints.some(value => brazilDateKey(value) === today);
+    const updated: Lead = { ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? completeReturn(lead) : {}) };
+    await saveLead(updated);
+    const next = leadsRef.current.map(item => item.id === id ? updated : item);
+    leadsRef.current = next; localDataRevision.current += 1; setLeads(next);
+    setSelected(current => current?.id === id ? updated : current);
   };
   const scheduleLeadSave = (lead: Lead) => {
     setDatabaseStatus("saving");
@@ -698,10 +723,14 @@ export default function CRM() {
     if (!lead) return;
     const pendingSave = leadSaveTimers.current.get(id);
     if (pendingSave) { window.clearTimeout(pendingSave); leadSaveTimers.current.delete(id); }
-    const updated = transitionLead(lead, stage, now);
+    const transitioned = transitionLead(lead, stage, now);
+    const stageKey = stage.toLowerCase().replace(/[^a-z]/g, "");
+    if (stageKey === "noshow") transitioned.meetingOutcome = "No-show";
+    const updated = recordJourney(lead, transitioned, now);
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
+    setSelected(current => current?.id === id ? updated : current);
     void saveLead(updated).catch((error) => console.error("Falha ao salvar movimentação do lead", error));
   };
   const addLead = async (lead: Lead) => {
@@ -807,7 +836,7 @@ export default function CRM() {
   const updateLead = (id: string, changes: Partial<Lead>) => {
     const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
-    const updated = applyLeadChanges(lead, changes);
+    const updated = recordJourney(lead, applyLeadChanges(lead, changes));
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
@@ -885,7 +914,7 @@ export default function CRM() {
     setView(navigation[0][0]);
   }, [view, access.isAdmin, access.permissions]);
   return (
-    <main className={styles.crm} data-theme={theme}>
+    <main className={styles.crm} data-theme={theme} data-view={view}>
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <span>MT</span>
@@ -940,10 +969,10 @@ export default function CRM() {
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} products={catalogProducts} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} select={setSelected} search={search} />
+          <Pipeline leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
-          <Contacts leads={filtered} sources={catalogSources} products={catalogProducts} select={setSelected} />
+          <Contacts leads={filtered} stages={pipelineStages} sources={catalogSources} products={catalogProducts} select={setSelected} />
         )}
         {view === "financeiro" && <FinanceDashboard leads={leads} traffic={traffic} expenses={expenses} closers={closers} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} saveCloserGoal={saveCloserGoal} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
@@ -978,7 +1007,7 @@ export default function CRM() {
           move={(stage) => {
             const now = new Date().toISOString();
             moveLead(selected.id, stage, now);
-            setSelected((current) => current ? transitionLead(current, stage, now) : current);
+
           }}
           startAscension={() => startAscension(selected.id)}
         />
@@ -1358,27 +1387,47 @@ function Dashboard({
 function Pipeline({
   leads,
   products,
+  sources,
   stages,
   setStages,
   moveLead,
   toggleContactToday,
+  completeSummaryContact,
   select,
   search,
 }: {
   leads: Lead[];
   products: ProductDefinition[];
+  sources: string[];
   stages: Stage[];
   setStages: (stages: Stage[]) => void;
   moveLead: (id: string, stage: Stage) => void;
   toggleContactToday: (id: string) => void;
+  completeSummaryContact: (id: string, mode: 'followups' | 'returns') => Promise<void>;
   select: (lead: Lead) => void;
   search: string;
 }) {
+  const [summary, setSummary] = useState<Stage | null>(null);
+  const [today, setToday] = useState(() => contactDay(new Date().toISOString()));
+  useEffect(() => { const timer = window.setInterval(() => setToday(contactDay(new Date().toISOString())), 60000); return () => window.clearInterval(timer); }, []);
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
+  const [sourceFilter, setSourceFilter] = useState("Todos");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
   const [revenueFilter, setRevenueFilter] = useState<Set<string>>(new Set());
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
+  const copyPhone = async (lead: Lead) => {
+    try {
+      await navigator.clipboard.writeText(phoneDigitsBR(lead.phone));
+      setCopiedPhoneId(lead.id);
+      window.setTimeout(() => setCopiedPhoneId((current) => (current === lead.id ? null : current)), 1800);
+    } catch {
+      setCopiedPhoneId(null);
+    }
+  };
   const archived = isDisqualifiedLead;
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
   const revenueOptions = useMemo(() => {
@@ -1403,6 +1452,9 @@ function Pipeline({
           : (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
       if (!matchesRange) continue;
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
+      if (sourceFilter !== "Todos" && lead.source.trim() !== sourceFilter) continue;
+      if (minValue && lead.value < Number(minValue)) continue;
+      if (maxValue && lead.value > Number(maxValue)) continue;
       if (revenueFilter.size > 0 && !revenueFilter.has(leadRevenueRange(lead) || "")) continue;
       if (!search && archived(lead)) continue;
       const stage = visibleStage(lead);
@@ -1414,7 +1466,12 @@ function Pipeline({
       return latestClosing(right) - latestClosing(left);
     });
     return grouped;
-  }, [leads, products, stages, range.start, range.end, productFilter, revenueFilter, search]);
+  }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, minValue, maxValue, revenueFilter, search]);
+  const summaryMode = summary && isReturnStage(summary) ? 'returns' : 'followups';
+  const summaryLeads = summary ? [...(stageItems.get(summary) || [])].sort((a, b) => {
+    const done = Number((a.contactCheckpoints || []).some(value => contactDay(value) === today)) - Number((b.contactCheckpoints || []).some(value => contactDay(value) === today));
+    return done || (Date.parse(a.followUpAt || '') || Infinity) - (Date.parse(b.followUpAt || '') || Infinity) || a.name.localeCompare(b.name, 'pt-BR');
+  }) : [];
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
@@ -1448,7 +1505,7 @@ function Pipeline({
   };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label><label><small>Valor mínimo</small><input type="number" min="0" step="0.01" placeholder="R$" value={minValue} onChange={(event) => setMinValue(event.target.value)} /></label><label><small>Valor máximo</small><input type="number" min="0" step="0.01" placeholder="R$" value={maxValue} onChange={(event) => setMaxValue(event.target.value)} /></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       {revenueOptions.length > 0 && <div className={styles.sourceChips}>
         <button type="button" className={revenueFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setRevenueFilter(new Set())}>Todas as faixas</button>
         {revenueOptions.map((option) => <button type="button" key={option} className={revenueFilter.has(option) ? styles.selectedChip : ""} onClick={() => toggleRevenueFilter(option)}>{option}</button>)}
@@ -1473,7 +1530,7 @@ function Pipeline({
               <header>
                 <div>
                   <i style={{ background: stageColor(stage), boxShadow: `0 0 9px ${stageColor(stage)}88` }} />
-                  <b>{stage}</b>
+                  <button type="button" className={styles.stageSummaryButton} onClick={() => setSummary(stage)} aria-haspopup="dialog" title={`Abrir lista de contatos de ${stage}`}>{stage} ↗</button>
                   <span>{items.length}</span>
                 </div>
                 <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
@@ -1501,9 +1558,14 @@ function Pipeline({
                         {followUpKey && <div className={`${styles.followUpAlert} ${styles[`followUp_${followUpState}`]}`}><i>↗</i><span>{followUpState === "late" ? "Retorno atrasado" : followUpState === "today" ? "Retornar hoje" : "Retornar"}</span><b>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(lead.followUpAt!))}</b></div>}
                       </div>
                       {lead.phone && (
-                        <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
-                          <WhatsAppIcon />
-                        </a>
+                        <div className={styles.cardActions}>
+                          <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                            <WhatsAppIcon />
+                          </a>
+                          <button type="button" className={styles.copyButton} data-copied={copiedPhoneId === lead.id} aria-label={copiedPhoneId === lead.id ? "Telefone copiado" : `Copiar telefone de ${lead.name}`} onClick={(event) => { event.stopPropagation(); void copyPhone(lead); }}>
+                            {copiedPhoneId === lead.id ? <CheckIcon /> : <CopyIcon />}
+                          </button>
+                        </div>
                       )}
                     </div>
                     {!['fechado', 'nao fechou', 'desqualificado'].includes(stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) && <ContactCheckpoint lead={lead} toggle={() => toggleContactToday(lead.id)} />}
@@ -1515,6 +1577,8 @@ function Pipeline({
           );
         })}
       </div></div>
+      {summary && <ContactSummary key={summary} title={summary} mode={summaryMode} leads={summaryLeads} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) { setSummary(null); select(lead); } }} complete={completeSummaryContact} whatsapp={whatsappLink} />}
+
     </div>
   );
 }
@@ -1543,14 +1607,19 @@ function ContactCheckpoint({ lead, toggle }: { lead: Lead; toggle: () => void })
 function Contacts({
   leads,
   sources,
+  stages,
   products,
   select,
 }: {
   leads: Lead[];
   sources: string[];
+  stages: Stage[];
   products: ProductDefinition[];
   select: (lead: Lead) => void;
 }) {
+  const [stageFilter, setStageFilter] = useState("");
+  const stageOptions = [...new Set([...stages, ...leads.map(lead => lead.stage)])].filter(Boolean);
+  const matchesStage = (lead: Lead) => !stageFilter || lead.stage === stageFilter;
   const [sourceFilter, setSourceFilter] = useState("Todos");
   const [productFilter, setProductFilter] = useState("Todos");
   const [ascensionFilter, setAscensionFilter] = useState("Todos");
@@ -1559,7 +1628,7 @@ function Contacts({
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
   const inContactRange = (lead: Lead) => (!contactRange.start || brazilDateKey(lead.createdAt) >= contactRange.start) && (!contactRange.end || brazilDateKey(lead.createdAt) <= contactRange.end);
-  const visibleLeads = leads.filter((lead) => inContactRange(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
+  const visibleLeads = leads.filter((lead) => inContactRange(lead) && matchesStage(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
@@ -1569,12 +1638,12 @@ function Contacts({
           title={`${visibleLeads.length} leads`}
         />
         <div className={styles.contactFilters}>
-          <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use período e etiquetas somente quando quiser refinar a visualização ou exportação.</small></div>
-          <div className={styles.contactFilterFields}><QuickPeriodButtons start={contactRange.start} end={contactRange.end} setRange={(start, end) => setContactRange({ start, end })} /><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end || undefined} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start || undefined} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Produto</span><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
+          <div><span>Filtrar leads</span><small>Todos os leads aparecem por padrão. Use etapa, período e os demais filtros para refinar a visualização ou exportação.</small></div>
+          <div className={styles.contactFilterFields}><QuickPeriodButtons start={contactRange.start} end={contactRange.end} setRange={(start, end) => setContactRange({ start, end })} /><label><span>Data inicial</span><input type="date" value={contactRange.start} max={contactRange.end || undefined} onChange={(event) => setContactRange({ ...contactRange, start: event.target.value })} /></label><label><span>Data final</span><input type="date" value={contactRange.end} min={contactRange.start || undefined} onChange={(event) => setContactRange({ ...contactRange, end: event.target.value })} /></label><label><span>Etapa da pipeline</span><select value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}><option value="">Todas as etapas</option>{stageOptions.map(stage => <option key={stage} value={stage}>{stage}</option>)}</select></label><label><span>Origem</span><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sourceTags.map((source) => <option key={source}>{source}</option>)}</select></label><label><span>Produto</span><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Esteira</span><select value={ascensionFilter} onChange={(event) => setAscensionFilter(event.target.value)}><option>Todos</option><option>Possível ascensão</option><option>Clientes com recompra</option></select></label><button onClick={exportExcel}>↓ Baixar Excel</button></div>
         </div>
         <div className={styles.sourceChips}>
-          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(inContactRange).length}</b></button>
-          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inContactRange(lead)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
+          <button className={sourceFilter === "Todos" ? styles.selectedChip : ""} onClick={() => setSourceFilter("Todos")}>Todos <b>{leads.filter(lead => inContactRange(lead) && matchesStage(lead)).length}</b></button>
+          {sourceTags.map((source) => { const count = leads.filter((lead) => lead.source.trim() === source && inContactRange(lead) && matchesStage(lead)).length; return <button key={source} className={sourceFilter === source ? styles.selectedChip : ""} onClick={() => setSourceFilter(source)}>{source}<b>{count}</b></button>; })}
         </div>
         <div className={styles.contactTable}>
           <header>
@@ -1916,6 +1985,11 @@ function LeadDrawer({
   const [editingTag, setEditingTag] = useState<number | null>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [addingClosing, setAddingClosing] = useState(false);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [close]);
   const closingProduct = products.find((item) => item.name === lead.product) || products[0];
   const [closingDraft, setClosingDraft] = useState({ product: closingProduct?.name || "", date: brazilDateKey(new Date()), gross: String(lead.value || closingProduct?.price || ""), net: String(lead.netValue ?? closingProduct?.netPrice ?? closingProduct?.price ?? ""), paymentMethod: "Pix" as PaymentMethod, provider: "", installments: "1", entry: "", firstDueDate: brazilDateKey(new Date()), paymentNotes: "", closerUserId: "" });
   const tags = lead.tags || [];
@@ -1974,20 +2048,21 @@ function LeadDrawer({
     <div className={styles.backdrop} onMouseDown={close}>
       <aside
         className={styles.drawer}
+        role="dialog" aria-modal="true" aria-label={`Contato de ${lead.name}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header>
-          <button onClick={close}>×</button>
+          <button onClick={close} aria-label="Fechar contato">×</button>
           <span className={styles[lead.temperature.toLowerCase()]}>
             {lead.temperature}
           </span>
           <h2>{lead.name}</h2>
           <p>{lead.company}</p>
+        </header>
           <div className={styles.leadActions}>
-            <button type="button" onClick={() => setEditing((current) => !current)}>{editing ? "Cancelar edição" : "Editar dados"}</button>
+            <button type="button" onClick={() => setEditing(current => !current)}>{editing ? 'Cancelar edição' : 'Editar dados'}</button>
             <button type="button" onClick={remove}>Excluir lead</button>
           </div>
-        </header>
         {editing && <section className={styles.leadEditSection}>
           <small>Editar dados do lead</small>
           <div className={styles.leadEditGrid}>
@@ -2080,12 +2155,19 @@ function LeadDrawer({
             <label><span>Lead gerado</span><input type="date" value={dateInputValue(lead.createdAt)} onChange={(event) => update({ createdAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Conversa iniciada</span><input type="date" value={dateInputValue(lead.conversationAt)} onChange={(event) => update({ conversationAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Data do agendamento</span><input type="date" value={dateInputValue(lead.meetingAt)} onChange={(event) => update({ meetingAt: dateFromInput(event.target.value) })} /></label>
-            <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null })} /></label>
+            <label><span>Data da reunião</span><input type="date" value={dateInputValue(lead.meetingScheduledFor || undefined)} onChange={(event) => update({ meetingScheduledFor: dateFromInput(event.target.value) || null, meetingOutcome: event.target.value ? "Agendada" : null })} /></label>
             <label><span>Resultado da reunião</span><select value={lead.meetingOutcome || ""} onChange={(event) => update({ meetingOutcome: (event.target.value || null) as MeetingOutcome | null })}><option value="">Não informado</option><option>Agendada</option><option>Realizada</option><option>No-show</option><option>Cancelada</option></select></label>
             <label><span>Data de retorno</span><input type="date" value={dateInputValue(lead.followUpAt || undefined)} onChange={(event) => update({ followUpAt: dateFromInput(event.target.value) || null })} /></label>
+            {lead.followUpAt && <button type="button" onClick={() => update(completeReturn(lead))}>✓ Concluir retorno agendado</button>}
             <label><span>Proposta enviada</span><input type="date" value={dateInputValue(lead.proposalAt)} onChange={(event) => update({ proposalAt: dateFromInput(event.target.value) })} /></label>
             <label><span>Fechamento</span><input type="date" value={dateInputValue(lead.closedAt)} onChange={(event) => update({ closedAt: dateFromInput(event.target.value) })} /></label>
           </div>
+        </section>
+        <section className={styles.leadDatesSection}>
+          <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
+          </details>
         </section>
         <section className={styles.closingsSection}><div className={styles.closingsTitle}><small>Esteira de produtos e pagamentos</small><button type="button" onClick={() => setAddingClosing((value) => !value)}>{addingClosing ? "Cancelar" : "+ Adicionar fechamento"}</button></div>{addingClosing && <form className={`${styles.closingForm} ${styles.paymentClosingForm}`} onSubmit={addClosing}><label><span>Produto</span><select value={closingDraft.product} onChange={(event) => { const product = products.find((item) => item.name === event.target.value); setClosingDraft({ ...closingDraft, product: event.target.value, gross: String(product?.price || ""), net: String(product?.netPrice ?? product?.price ?? "") }); }}>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><span>Data do fechamento</span><input type="date" value={closingDraft.date} onChange={(event) => setClosingDraft({ ...closingDraft, date: event.target.value })} required /></label><label><span>Responsável do fechamento</span><select value={closingDraft.closerUserId} onChange={(event) => setClosingDraft({ ...closingDraft, closerUserId: event.target.value })}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label><label><span>Valor vendido</span><AccountingInput value={closingDraft.gross} set={(gross) => setClosingDraft({ ...closingDraft, gross })} required /></label><label><span>Valor a receber</span><AccountingInput value={closingDraft.net} set={(net) => setClosingDraft({ ...closingDraft, net })} required /></label><label><span>Forma de pagamento</span><select value={closingDraft.paymentMethod} onChange={(event) => setClosingDraft({ ...closingDraft, paymentMethod: event.target.value as PaymentMethod })}>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><label><span>Plataforma / instituição</span><input value={closingDraft.provider} onChange={(event) => setClosingDraft({ ...closingDraft, provider: event.target.value })} placeholder="Green, banco, operadora..." /></label><label><span>Total de parcelas</span><input type="number" min="1" max="120" value={closingDraft.installments} onChange={(event) => setClosingDraft({ ...closingDraft, installments: event.target.value })} required /></label><label><span>Entrada já recebida</span><AccountingInput value={closingDraft.entry} set={(entry) => setClosingDraft({ ...closingDraft, entry })} /></label><label><span>1º vencimento</span><input type="date" value={closingDraft.firstDueDate} onChange={(event) => setClosingDraft({ ...closingDraft, firstDueDate: event.target.value })} required /></label><label className={styles.paymentNotes}><span>Observações do pagamento</span><input value={closingDraft.paymentNotes} onChange={(event) => setClosingDraft({ ...closingDraft, paymentNotes: event.target.value })} placeholder="Condições negociadas" /></label><button type="submit">Salvar fechamento e fluxo</button></form>}{purchaseHistory.length > 0 && <><div className={styles.purchaseHistory}>{purchaseHistory.map((purchase) => <article key={purchase.id}><div><b>{purchase.product}</b><label className={styles.inlinePayment}><span>Pagamento</span><select value={purchase.paymentMethod || ""} onChange={(event) => editPurchasePayment(purchase.id, { paymentMethod: event.target.value as PaymentMethod })}><option value="">Informar...</option>{["Pix","Boleto","Cartão","Green","Transferência","Outro"].map((method) => <option key={method}>{method}</option>)}</select></label><small>{purchase.paymentProvider || `${purchase.installments?.length || 0} parcela(s)`}</small></div><label className={styles.purchaseDate}><span>Data da compra</span><input type="date" value={dateInputValue(purchase.closedAt)} onChange={(event) => editPurchaseDate(purchase.id, event.target.value)} /></label><div className={styles.purchaseValues}><span>Vendido <b><Money value={purchase.value} /></b></span><span>A receber <b><Money value={purchase.netValue} /></b></span></div><button className={styles.deletePurchase} type="button" aria-label={`Excluir compra de ${purchase.product}`} onClick={() => removePurchase(purchase.id)}>×</button>{purchase.installments?.length ? <div className={styles.installmentSummary}>{purchase.installments.map((item) => <span key={item.id}>{item.number}ª · {new Intl.DateTimeFormat("pt-BR").format(new Date(`${item.dueDate.slice(0,10)}T12:00:00`))} · {currency.format(item.amount)} · {item.status}</span>)}</div> : null}</article>)}</div>{nextProduct ? <button className={styles.ascensionButton} onClick={startAscension}>Iniciar ascensão para {nextProduct.name}</button> : <span className={styles.ascensionComplete}>Esteira completa</span>}</>}{!purchaseHistory.length && !addingClosing && <p className={styles.noClosings}>Nenhum fechamento registrado.</p>}</section>
         {purchaseHistory.length > 0 && <section className={styles.closerAssignments}><small>Responsáveis pelos fechamentos</small>{purchaseHistory.map((purchase) => <label key={purchase.id}><span><b>{purchase.product}</b><small>{new Intl.DateTimeFormat("pt-BR").format(new Date(purchase.closedAt))} · {currency.format(purchase.value)}</small></span><select value={purchase.closerUserId || ""} onChange={(event) => { const closer = closers.find((item) => item.id === event.target.value); editPurchasePayment(purchase.id, { closerUserId: closer?.id, closerName: closer?.name, commissionRate: closer?.commissionRate || 0, commissionBasis: "received" }); }}><option value="">Closer não informada</option>{closers.map((closer) => <option key={closer.id} value={closer.id}>{closer.name} · {closer.commissionRate}%</option>)}</select></label>)}</section>}
@@ -2252,6 +2334,12 @@ function AccountingInput({ value, set, required = false }: { value: string | num
 }
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a9.8 9.8 0 0 0-8.45 14.75L2.2 21.8l5.17-1.35A9.8 9.8 0 1 0 12 2Zm0 17.8a7.8 7.8 0 0 1-3.98-1.08l-.28-.17-3.07.8.82-2.99-.18-.3A7.8 7.8 0 1 1 12 19.8Zm4.28-5.84c-.23-.12-1.38-.68-1.6-.76-.21-.08-.37-.12-.52.12-.16.23-.6.76-.74.91-.14.16-.27.18-.5.06-.24-.12-1-.37-1.9-1.18a7.1 7.1 0 0 1-1.31-1.63c-.14-.23-.02-.36.1-.48.11-.1.24-.27.35-.4.12-.14.16-.24.24-.4.08-.15.04-.29-.02-.4-.06-.12-.52-1.26-.72-1.72-.19-.46-.38-.4-.52-.4h-.45c-.16 0-.41.06-.63.3-.21.23-.82.8-.82 1.96s.84 2.27.96 2.43c.12.16 1.66 2.53 4.02 3.55.56.24 1 .39 1.34.5.57.18 1.08.15 1.49.09.45-.07 1.38-.57 1.58-1.11.2-.55.2-1.02.14-1.12-.06-.1-.22-.16-.45-.28Z" /></svg>;
+}
+function CopyIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></svg>;
+}
+function CheckIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
 }
 function MonthlyMetricsChart({ channel, leads, endMonth, goals, setGoal }: { channel: Channel; leads: Lead[]; endMonth: string; goals: Record<string, number>; setGoal: (month: string, value: number) => void }) {
   const [year, month] = endMonth.split("-").map(Number);
