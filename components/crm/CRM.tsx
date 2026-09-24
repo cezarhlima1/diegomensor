@@ -101,6 +101,12 @@ const answersForLead = (lead: Lead) => allQuestions.map((question) => {
   const fallback = formLead && question.id === "whatsapp" ? lead.phone : formLead && question.id === "nome" ? lead.name : "";
   return { numero: question.number, pergunta: question.label, resposta: answer?.resposta?.trim() || fallback.trim() || "Não preenchido" };
 });
+const revenueQuestion = allQuestions.find((question) => question.id === "faturamento");
+const revenueRangeOrder = revenueQuestion?.options || [];
+const leadRevenueRange = (lead: Lead) => {
+  const answer = answersForLead(lead).find((item) => normalizeQuestion(item.pergunta) === normalizeQuestion(revenueQuestion?.label || ""));
+  return answer && answer.resposta !== "Não preenchido" ? answer.resposta : undefined;
+};
 const productPrice = (product?: string) => products.find((item) => item.name === product)?.price || 0;
 const netForValue = (value: number, productName: string | undefined, catalog: ProductDefinition[]) => { const product = catalog.find((item) => item.name === productName); if (!product?.price) return value; return value * ((product.netPrice ?? product.price) / product.price); };
 const productLadder = (catalog: ProductDefinition[]) => [...catalog];
@@ -1370,10 +1376,22 @@ function Pipeline({
 }) {
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
+  const [revenueFilter, setRevenueFilter] = useState<Set<string>>(new Set());
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const archived = isDisqualifiedLead;
   const visibleStage = (lead: Lead) => stages.includes(lead.stage) ? lead.stage : stages[0] || "Novo lead";
+  const revenueOptions = useMemo(() => {
+    const existing = new Set(leads.map((lead) => leadRevenueRange(lead)).filter((value): value is string => Boolean(value)));
+    const ordered = revenueRangeOrder.filter((option) => existing.has(option));
+    const extras = [...existing].filter((option) => !revenueRangeOrder.includes(option));
+    return [...ordered, ...extras];
+  }, [leads]);
+  const toggleRevenueFilter = (option: string) => setRevenueFilter((current) => {
+    const next = new Set(current);
+    if (next.has(option)) next.delete(option); else next.add(option);
+    return next;
+  });
   const stageItems = useMemo(() => {
     const grouped = new Map<Stage, Lead[]>(stages.map((stage) => [stage, []]));
     for (const lead of leads) {
@@ -1385,6 +1403,7 @@ function Pipeline({
           : (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
       if (!matchesRange) continue;
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
+      if (revenueFilter.size > 0 && !revenueFilter.has(leadRevenueRange(lead) || "")) continue;
       if (!search && archived(lead)) continue;
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
@@ -1395,7 +1414,7 @@ function Pipeline({
       return latestClosing(right) - latestClosing(left);
     });
     return grouped;
-  }, [leads, products, stages, range.start, range.end, productFilter, search]);
+  }, [leads, products, stages, range.start, range.end, productFilter, revenueFilter, search]);
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
   const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
   const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
@@ -1430,6 +1449,10 @@ function Pipeline({
   return (
     <div className={styles.pipelineWrap}>
       <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      {revenueOptions.length > 0 && <div className={styles.sourceChips}>
+        <button type="button" className={revenueFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setRevenueFilter(new Set())}>Todas as faixas</button>
+        {revenueOptions.map((option) => <button type="button" key={option} className={revenueFilter.has(option) ? styles.selectedChip : ""} onClick={() => toggleRevenueFilter(option)}>{option}</button>)}
+      </div>}
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
@@ -1898,7 +1921,7 @@ function LeadDrawer({
   const tags = lead.tags || [];
   const applicationAnswers = answersForLead(lead);
   const filledApplicationAnswers = applicationAnswers.filter((answer) => answer.resposta !== "Não preenchido").length;
-  const applicationRevenue = applicationAnswers.find((answer) => normalizeQuestion(answer.pergunta) === normalizeQuestion("Qual a faixa de faturamento mensal da sua operação?"))?.resposta;
+  const applicationRevenue = applicationAnswers.find((answer) => normalizeQuestion(answer.pergunta) === normalizeQuestion(revenueQuestion?.label || ""))?.resposta;
   const contactCheckpoints = [...(lead.contactCheckpoints || [])].sort((left, right) => new Date(right).getTime() - new Date(left).getTime());
   const today = brazilDateKey(new Date());
   const contactedToday = contactCheckpoints.some((checkpoint) => brazilDateKey(checkpoint) === today);
