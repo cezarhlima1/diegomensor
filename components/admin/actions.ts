@@ -56,6 +56,21 @@ export type EmpresaAdmin = {
   membros: MembroAdmin[];
 };
 
+/** Uma empresa à qual um cadastro pertence, com o papel da pessoa nela. */
+export type EmpresaDoCadastro = { id: string; nome: string; papel: Papel };
+
+/** Um cadastro (profiles) para a listagem somente-leitura "Cadastros" do admin. */
+export type CadastroAdmin = {
+  userId: string;
+  nome: string | null;
+  email: string;
+  telefone: string | null;
+  origem: string | null;
+  createdAt: string;
+  licencaAte: string | null;
+  empresas: EmpresaDoCadastro[];
+};
+
 /**
  * Lista TODAS as empresas do produto com seus membros e a licença de cada
  * pessoa — visão que nenhum admin de empresa tem (cada um só vê a própria
@@ -113,6 +128,55 @@ export async function listarEmpresasAdmin(): Promise<EmpresaAdmin[] | null> {
   }
 
   return Array.from(porEmpresa.values());
+}
+
+/**
+ * Lista TODOS os cadastros (profiles) do produto, com as empresas/papéis de
+ * cada um — visão somente-leitura para a aba "Cadastros" do admin geral.
+ * Diferente de listarEmpresasAdmin (organizado por empresa), aqui cada linha
+ * é uma PESSOA, o que cobre o cadastro do teste grátis antes mesmo de ele
+ * ter uma empresa "normal" e permite filtrar por origem do cadastro.
+ */
+export async function listarCadastrosAdmin(): Promise<CadastroAdmin[] | null> {
+  const superAdminId = await exigirSuperAdmin();
+  if (!superAdminId) return null;
+
+  const admin = createSupabaseAdminClient();
+
+  const [profilesRes, vinculosRes] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, nome, email, telefone, origem, created_at, license_expiry_at")
+      .order("created_at", { ascending: false }),
+    admin.from("empresa_usuarios").select("user_id, papel, empresas ( id, nome )"),
+  ]);
+  if (profilesRes.error || vinculosRes.error || !profilesRes.data || !vinculosRes.data) {
+    console.error(
+      "listarCadastrosAdmin: falha ao carregar dados",
+      profilesRes.error?.message ?? vinculosRes.error?.message
+    );
+    return null;
+  }
+
+  const empresasPorUsuario = new Map<string, EmpresaDoCadastro[]>();
+  for (const v of vinculosRes.data) {
+    const e = v.empresas as unknown as { id: string; nome: string } | null;
+    if (!e) continue;
+    const lista = empresasPorUsuario.get(v.user_id) ?? [];
+    lista.push({ id: e.id, nome: e.nome, papel: v.papel as Papel });
+    empresasPorUsuario.set(v.user_id, lista);
+  }
+
+  return profilesRes.data.map((p) => ({
+    userId: p.id,
+    nome: p.nome,
+    email: p.email,
+    telefone: p.telefone,
+    origem: p.origem,
+    createdAt: p.created_at,
+    licencaAte: p.license_expiry_at,
+    empresas: empresasPorUsuario.get(p.id) ?? [],
+  }));
 }
 
 /**

@@ -134,6 +134,7 @@ export default function Calculadora({
   orcamentosIniciais,
   valorHoraHistoricoInicial,
   nomeEmpresa,
+  mostrarBoasVindasTeste,
   permiteEditarOrcamentos,
   historicoCompacto,
   permiteVerCustoPecas,
@@ -156,6 +157,8 @@ export default function Calculadora({
   valorHoraHistoricoInicial: ValorHoraSalvo[];
   /** Nome da empresa ativa — texto da trava do valor da hora p/ funcionário. */
   nomeEmpresa: string;
+  /** Mostra, uma única vez, o modal de boas-vindas do teste grátis (calculado no servidor). */
+  mostrarBoasVindasTeste?: boolean;
   /** Permite alterar orçamentos já persistidos. */
   permiteEditarOrcamentos: boolean;
   /** Visual resumido e expansível do histórico. */
@@ -168,6 +171,9 @@ export default function Calculadora({
   permiteQuantidadeDecimal: boolean;
 }) {
   const ehAdmin = papel === "admin";
+  const [boasVindasAberta, setBoasVindasAberta] = useState(
+    Boolean(mostrarBoasVindasTeste),
+  );
   const [view, setView] = useState<View>("calc");
   // Funcionário não tem Passo 1: começa direto no valor da peça.
   const [step, setStep] = useState<Step>(ehAdmin ? 1 : 2);
@@ -1013,6 +1019,51 @@ export default function Calculadora({
 
   return (
     <section className="calc-page relative min-h-[100svh] py-20 sm:py-24">
+      {boasVindasAberta && (
+        <div
+          className="calc-export-overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setBoasVindasAberta(false);
+          }}
+        >
+          <div
+            className="calc-export-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calc-boas-vindas-titulo"
+          >
+            <div className="calc-export-cabecalho">
+              <div>
+                <p className="calc-card-kicker">Teste grátis</p>
+                <h2 id="calc-boas-vindas-titulo">Seu teste grátis começa agora!</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBoasVindasAberta(false)}
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
+            <p className="calc-card-sub">
+              Pra começar do jeito certo e entender como usar a calculadora,
+              assista ao vídeo rápido que preparamos pra ti:
+            </p>
+            <div className="calc-export-acoes">
+              <a
+                href="https://www.youtube.com/watch?v=U1AoafqvWwg&t=11s"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn"
+                onClick={() => setBoasVindasAberta(false)}
+              >
+                ▶️ Assistir ao vídeo e começar
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[920px]">
         {/* ---------- cabeçalho ---------- */}

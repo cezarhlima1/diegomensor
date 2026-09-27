@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import HeaderLogado from "@/components/auth/HeaderLogado";
 import { getSessaoComEmpresa } from "@/lib/auth/sessao";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type {
   Orcamento,
   PecaResumo,
@@ -31,6 +32,36 @@ export default async function CalculadoraPage() {
   // página revalida (cobre também usuário autenticado sem empresa).
   const sessao = await getSessaoComEmpresa();
   if (!sessao) redirect("/login");
+
+  // Boas-vindas do teste grátis: mostra o vídeo de onboarding UMA VEZ, só
+  // para quem se cadastrou pela página /teste-gratis (profiles.origem) e
+  // ainda não viu (onboarding_video_visto_em null). A leitura usa o client
+  // da sessão (RLS já libera "select do proprio usuario"); marcar como
+  // visto precisa do admin client porque não existe policy de UPDATE para
+  // authenticated (mesmo padrão de escrita do resto do app).
+  let mostrarBoasVindasTeste = false;
+  {
+    const supabase = await createSupabaseServerClient();
+    const { data: perfil } = await supabase
+      .from("profiles")
+      .select("origem, onboarding_video_visto_em")
+      .eq("id", sessao.userId)
+      .single();
+    if (perfil?.origem === "teste_gratis" && !perfil.onboarding_video_visto_em) {
+      mostrarBoasVindasTeste = true;
+      const { error } = await createSupabaseAdminClient()
+        .from("profiles")
+        .update({ onboarding_video_visto_em: new Date().toISOString() })
+        .eq("id", sessao.userId);
+      if (error) {
+        console.error(
+          "calculadora: falha ao marcar onboarding_video_visto_em:",
+          error.message
+        );
+      }
+    }
+  }
+
   // Insumos do Passo 1: consultados e serializados APENAS para admin — para
   // funcionário nem a query acontece, então os dados nunca saem do servidor
   // (DW-4.1). Leitura via client RLS (policy "select apenas admin da
@@ -185,6 +216,7 @@ export default async function CalculadoraPage() {
           orcamentosIniciais={orcamentosIniciais}
           valorHoraHistoricoInicial={valorHoraHistoricoInicial}
           nomeEmpresa={sessao.empresaAtiva.nome}
+          mostrarBoasVindasTeste={mostrarBoasVindasTeste}
           permiteEditarOrcamentos
           historicoCompacto
           permiteVerCustoPecas

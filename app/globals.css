@@ -1146,6 +1146,18 @@ a:focus-visible, button:focus-visible {
   .licenca-badge--ativa { color: var(--color-brand-green); background: rgba(47,210,122,.12); border-color: rgba(47,210,122,.35); }
   .licenca-badge--expirada { color: var(--color-brand-red); background: rgba(240,88,76,.12); border-color: rgba(240,88,76,.35); }
 
+  /* aba "Cadastros" do admin: filtro + linha clicável + detalhe no modal de export */
+  .admin-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+  .admin-tabs button { padding: 9px 16px; border: 1px solid var(--color-line); border-radius: 100px; background: transparent; color: var(--color-muted); font-weight: 700; font-size: 13px; cursor: pointer; }
+  .admin-tabs button.is-ativa { color: #fff; background: var(--color-blue); border-color: var(--color-blue); }
+  .admin-cadastros-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
+  .admin-cadastro-linha { display: flex; flex: 1; align-items: center; gap: 12px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+  .admin-cadastro-linha:hover .conta-item-nome { color: var(--color-blue); }
+  .admin-cadastro-detalhe { display: grid; gap: 10px; margin-top: 14px; }
+  .admin-cadastro-detalhe li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .admin-cadastro-detalhe li span { color: var(--color-muted); }
+  .admin-cadastro-detalhe li b { color: #fff; font-weight: 700; text-align: right; }
+
   /* linha de membro do admin: nome/e-mail + papel + status + editor de data */
   .admin-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 13px 2px; border-top: 1px solid var(--color-line); }
   .admin-item:last-child { border-bottom: 1px solid var(--color-line); }

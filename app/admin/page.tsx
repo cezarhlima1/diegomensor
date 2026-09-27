@@ -4,7 +4,7 @@ import Admin from "@/components/admin/Admin";
 import Footer from "@/components/Footer";
 import { sair } from "@/components/auth/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { listarEmpresasAdmin } from "@/components/admin/actions";
+import { listarCadastrosAdmin, listarEmpresasAdmin } from "@/components/admin/actions";
 
 export const metadata: Metadata = {
   title: "Admin geral - Diego Mensor",
@@ -31,7 +31,10 @@ export default async function AdminPage() {
     .single();
   if (!profile?.is_super_admin) redirect("/calculadora");
 
-  const empresas = await listarEmpresasAdmin();
+  const [empresas, cadastros] = await Promise.all([
+    listarEmpresasAdmin(),
+    listarCadastrosAdmin(),
+  ]);
 
   return (
     <>
@@ -51,8 +54,8 @@ export default async function AdminPage() {
       <main className="admin-page">
         <div className="hero-bg" aria-hidden="true" />
         <div className="wrap max-w-[880px]">
-          {empresas ? (
-            <Admin empresas={empresas} />
+          {empresas && cadastros ? (
+            <Admin empresas={empresas} cadastros={cadastros} />
           ) : (
             <div className="calc-card cta-reveal">
               <p className="calc-card-kicker">Admin geral</p>

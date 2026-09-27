@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Papel } from "@/lib/db/types";
 import { ERRO_GENERICO } from "@/components/auth/authLogic";
+import Cadastros from "./Cadastros";
 import {
   adicionarUsuarioEmpresa,
   atualizarEmpresa,
@@ -12,6 +13,7 @@ import {
   criarEmpresaParaUsuario,
   excluirEmpresa,
   excluirUsuarioEmpresa,
+  type CadastroAdmin,
   type EmpresaAdmin,
   type MembroAdmin,
 } from "./actions";
@@ -54,8 +56,15 @@ function paraInputDate(licencaAte: string | null): string {
  * (components/admin/actions.ts) — este componente só orquestra forms e
  * feedback, seguindo o mesmo padrão de components/conta/Conta.tsx.
  */
-export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
+export default function Admin({
+  empresas,
+  cadastros,
+}: {
+  empresas: EmpresaAdmin[];
+  cadastros: CadastroAdmin[];
+}) {
   const router = useRouter();
+  const [aba, setAba] = useState<"empresas" | "cadastros">("empresas");
 
   // --- form "criar empresa + admin" ---------------------------------------
   const [nomeEmpresa, setNomeEmpresa] = useState("");
@@ -140,6 +149,31 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
 
   return (
     <div className="grid gap-6">
+      <div className="admin-tabs" role="tablist" aria-label="Seções do admin">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aba === "empresas"}
+          className={aba === "empresas" ? "is-ativa" : ""}
+          onClick={() => setAba("empresas")}
+        >
+          Empresas
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aba === "cadastros"}
+          className={aba === "cadastros" ? "is-ativa" : ""}
+          onClick={() => setAba("cadastros")}
+        >
+          Cadastros
+        </button>
+      </div>
+
+      {aba === "cadastros" ? (
+        <Cadastros cadastros={cadastros} />
+      ) : (
+      <>
       <section className="calc-card cta-reveal" aria-labelledby="admin-criar">
         <p className="calc-card-kicker">Novo cliente</p>
         <h2 id="admin-criar" className="calc-card-title">
@@ -306,6 +340,8 @@ export default function Admin({ empresas }: { empresas: EmpresaAdmin[] }) {
         empresas.map((empresa) => (
           <EmpresaCard key={empresa.id} empresa={empresa} onMudou={() => router.refresh()} />
         ))
+      )}
+      </>
       )}
     </div>
   );

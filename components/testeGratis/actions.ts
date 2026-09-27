@@ -91,7 +91,11 @@ export async function registrarTesteGratis(dados: {
 
   const { error: erroLicenca } = await admin
     .from("profiles")
-    .update({ license_expiry_at: calcularVencimentoTeste(), telefone })
+    .update({
+      license_expiry_at: calcularVencimentoTeste(),
+      telefone,
+      origem: "teste_gratis",
+    })
     .eq("id", criado.user.id);
   if (erroLicenca) {
     await desfazerCriacao(admin, criado.user.id, "erro ao ativar a licença de teste");

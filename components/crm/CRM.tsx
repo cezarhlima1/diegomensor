@@ -1407,8 +1407,10 @@ function Pipeline({
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
   const [sourceFilter, setSourceFilter] = useState("Todos");
-  const [minValue, setMinValue] = useState("");
-  const [maxValue, setMaxValue] = useState("");
+  const [faturamentoFilter, setFaturamentoFilter] = useState("Todos");
+  const faturamentoOptions = allQuestions.find((question) => question.id === "faturamento")?.options ?? [];
+  const leadFaturamento = (lead: Lead) =>
+    lead.application?.answers?.find((answer) => normalizeQuestion(answer.pergunta) === normalizeQuestion("Qual a faixa de faturamento mensal da sua operação?"))?.resposta?.trim() || "Não preenchido";
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
@@ -1435,8 +1437,7 @@ function Pipeline({
       if (!matchesRange) continue;
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
       if (sourceFilter !== "Todos" && lead.source.trim() !== sourceFilter) continue;
-      if (minValue && lead.value < Number(minValue)) continue;
-      if (maxValue && lead.value > Number(maxValue)) continue;
+      if (faturamentoFilter !== "Todos" && leadFaturamento(lead) !== faturamentoFilter) continue;
       if (!search && archived(lead)) continue;
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
@@ -1447,7 +1448,7 @@ function Pipeline({
       return latestClosing(right) - latestClosing(left);
     });
     return grouped;
-  }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, minValue, maxValue, search]);
+  }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, faturamentoFilter, search]);
   const summaryMode = summary && isReturnStage(summary) ? 'returns' : 'followups';
   const summaryLeads = summary ? [...(stageItems.get(summary) || [])].sort((a, b) => {
     const done = Number((a.contactCheckpoints || []).some(value => contactDay(value) === today)) - Number((b.contactCheckpoints || []).some(value => contactDay(value) === today));
@@ -1486,7 +1487,7 @@ function Pipeline({
   };
   return (
     <div className={styles.pipelineWrap}>
-      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label><label><small>Valor mínimo</small><input type="number" min="0" step="0.01" placeholder="R$" value={minValue} onChange={(event) => setMinValue(event.target.value)} /></label><label><small>Valor máximo</small><input type="number" min="0" step="0.01" placeholder="R$" value={maxValue} onChange={(event) => setMaxValue(event.target.value)} /></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label><label><small>Faturamento</small><select value={faturamentoFilter} onChange={(event) => setFaturamentoFilter(event.target.value)}><option>Todos</option>{faturamentoOptions.map((option) => <option key={option}>{option}</option>)}<option>Não preenchido</option></select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
