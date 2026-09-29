@@ -420,7 +420,10 @@ export default function Calculadora({
     [orcamentosFiltrados],
   );
   const saldoOrigens = useMemo(
-    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => [origem, orcamentosFiltrados.filter((o) => o.origem === origem).length])) as Record<(typeof ORIGENS_CLIENTE)[number], number>,
+    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => {
+      const doOrigem = orcamentosFiltrados.filter((o) => o.origem === origem);
+      return [origem, { quantidade: doOrigem.length, valor: doOrigem.reduce((acc, o) => acc + o.total, 0) }];
+    })) as Record<(typeof ORIGENS_CLIENTE)[number], { quantidade: number; valor: number }>,
     [orcamentosFiltrados],
   );
   const totaisAjusteRapido = useMemo(() => {
@@ -1816,10 +1819,10 @@ export default function Calculadora({
                     <div className="calc-origens">
                       <div className="calc-origens-cabecalho">
                         <span>Origem de clientes</span>
-                        <small>Quantidade por canal</small>
+                        <small>Quantidade e valor por canal</small>
                       </div>
                       <div className="calc-origens-grid">
-                        {ORIGENS_CLIENTE.map((origem) => <div key={origem}><span>{origem}</span><b>{saldoOrigens[origem]}</b></div>)}
+                        {ORIGENS_CLIENTE.map((origem) => <div key={origem}><span>{origem}</span><b>{saldoOrigens[origem].quantidade}</b><small>{brl(saldoOrigens[origem].valor)}</small></div>)}
                       </div>
                     </div>
                   )}
