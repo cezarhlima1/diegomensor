@@ -1436,6 +1436,7 @@ function Pipeline({
   const [productFilter, setProductFilter] = useState("Todos");
   const [sourceFilter, setSourceFilter] = useState("Todos");
   const [revenueFilter, setRevenueFilter] = useState<Set<string>>(new Set());
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set());
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
@@ -1461,6 +1462,15 @@ function Pipeline({
     if (next.has(option)) next.delete(option); else next.add(option);
     return next;
   });
+  const tagOptions = useMemo(
+    () => Array.from(new Set(leads.flatMap((lead) => lead.tags || []))).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [leads],
+  );
+  const toggleTagFilter = (tag: string) => setTagFilter((current) => {
+    const next = new Set(current);
+    if (next.has(tag)) next.delete(tag); else next.add(tag);
+    return next;
+  });
   const stageItems = useMemo(() => {
     const grouped = new Map<Stage, Lead[]>(stages.map((stage) => [stage, []]));
     for (const lead of leads) {
@@ -1474,6 +1484,7 @@ function Pipeline({
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
       if (sourceFilter !== "Todos" && lead.source.trim() !== sourceFilter) continue;
       if (revenueFilter.size > 0 && !revenueFilter.has(leadRevenueRange(lead) || "")) continue;
+      if (tagFilter.size > 0 && !(lead.tags || []).some((tag) => tagFilter.has(tag))) continue;
       if (!search && archived(lead)) continue;
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
@@ -1484,7 +1495,7 @@ function Pipeline({
       return latestClosing(right) - latestClosing(left);
     });
     return grouped;
-  }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, revenueFilter, search]);
+  }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, revenueFilter, tagFilter, search]);
   const summaryMode = summary && isReturnStage(summary) ? 'returns' : 'followups';
   const summaryLeads = summary ? [...(stageItems.get(summary) || [])].sort((a, b) => {
     const done = Number((a.contactCheckpoints || []).some(value => contactDay(value) === today)) - Number((b.contactCheckpoints || []).some(value => contactDay(value) === today));
@@ -1523,11 +1534,17 @@ function Pipeline({
   };
   return (
     <div className={styles.pipelineWrap}>
-      <div>
-        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+      <div className={styles.pipelineFilterZone}>
+        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><div className={styles.pipelineFilterGroup}><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label></div></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
         {revenueOptions.length > 0 && <div className={styles.sourceChips}>
+          <span>Faturamento</span>
           <button type="button" className={revenueFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setRevenueFilter(new Set())}>Todas as faixas</button>
           {revenueOptions.map((option) => <button type="button" key={option} className={revenueFilter.has(option) ? styles.selectedChip : ""} onClick={() => toggleRevenueFilter(option)}>{option}</button>)}
+        </div>}
+        {tagOptions.length > 0 && <div className={styles.sourceChips}>
+          <span>Etiquetas</span>
+          <button type="button" className={tagFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setTagFilter(new Set())}>Todas as etiquetas</button>
+          {tagOptions.map((tag) => <button type="button" key={tag} className={tagFilter.has(tag) ? styles.selectedChip : ""} onClick={() => toggleTagFilter(tag)}>{tag}</button>)}
         </div>}
       </div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
