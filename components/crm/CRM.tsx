@@ -2261,13 +2261,13 @@ function FinanceDashboard({ leads, traffic, expenses, closers, month, setMonth, 
     <section className={styles.financeHero}><div><span>FLUXO DE CAIXA</span><h2>Resumo financeiro do mês</h2><p>Veja primeiro o resultado geral e, abaixo, confira cada entrada e saída por vencimento.</p></div><label><span>Mês analisado</span><input type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label></section>
     <div className={styles.financeKpis}>
       <Kpi label="Faturamento vendido" value={currency.format(soldRevenue)} detail="Vendas fechadas no mês" />
-      <Kpi label="Total recebido bruto" value={currency.format(receivedRevenue)} detail={`${monthReceivables.filter((item) => item.status === "Recebido").length} recebimentos · antes das despesas`} />
-      <Kpi label="Saldo líquido" value={currency.format(realizedNetCash)} detail="Recebido − despesas pagas − tráfego" />
+      <Kpi label="Total recebido bruto" value={currency.format(receivedRevenue)} detail={`${monthReceivables.filter((item) => item.status === "Recebido").length} recebimentos · antes das despesas`} tone="positive" />
+      <Kpi label="Saldo líquido" value={currency.format(realizedNetCash)} detail="Recebido − despesas pagas − tráfego" tone="primary" />
       <Kpi label="Valor a receber" value={currency.format(pendingRevenue)} detail="Pendente no mês selecionado" />
       <Kpi label="Projeção do próximo mês" value={currency.format(nextMonthRevenue)} detail={`Vencimentos previstos para ${nextMonth.split("-").reverse().join("/")}`} />
       <Kpi label="Projeção total de recebimento" value={currency.format(expectedRevenue)} detail="Recebido + valores pendentes" />
-      <Kpi label="Tráfego pago lançado" value={currency.format(paidTrafficFallback)} detail={trafficInvestment > 0 ? "Investimento cadastrado em campanhas" : "Despesas pagas na categoria Tráfego"} />
-      <Kpi label="Despesas previstas" value={currency.format(expectedExpenses)} detail={`${currency.format(fixedExpenses)} fixas · ${currency.format(variableExpenses)} variáveis`} />
+      <Kpi label="Tráfego pago lançado" value={currency.format(paidTrafficFallback)} detail={trafficInvestment > 0 ? "Investimento cadastrado em campanhas" : "Despesas pagas na categoria Tráfego"} tone="negative" />
+      <Kpi label="Despesas previstas" value={currency.format(expectedExpenses)} detail={`${currency.format(fixedExpenses)} fixas · ${currency.format(variableExpenses)} variáveis`} tone="negative" />
       <div className={styles.financeSplitRow}>
         <div><span>Divisão do saldo · Susane (30%)</span><strong>{currency.format(susaneShare)}</strong></div>
         <div><span>Divisão do saldo · Diego (70%)</span><strong>{currency.format(diegoShare)}</strong></div>
@@ -2609,13 +2609,16 @@ function Kpi({
   label,
   value,
   detail,
+  tone,
 }: {
   label: string;
   value: ReactNode;
   detail: ReactNode;
+  /** Destaque semântico opcional: dinheiro entrando, saindo, ou o número principal do bloco. */
+  tone?: "positive" | "negative" | "primary";
 }) {
   return (
-    <article>
+    <article className={tone ? styles[`kpi_${tone}`] : undefined}>
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{detail}</small>
