@@ -39,9 +39,9 @@ export async function POST(request: Request) {
       const source = "Forms - Manychat";
       await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
       const id = crypto.randomUUID();
-      // Etiqueta fixa da planilha + uma segunda com o funil exatamente como
-      // veio na coluna FUNIL, pra identificar de qual automação o lead saiu.
-      const tags = contact.funnel ? ["Planilha ISCAS", contact.funnel] : ["Planilha ISCAS"];
+      // Etiqueta com o funil exatamente como veio na coluna FUNIL da
+      // planilha, pra identificar de qual automação o lead saiu.
+      const tags = contact.funnel ? [contact.funnel] : [];
       await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,'Novo lead','Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,$8)", [id, contact.name, contact.company, contact.phone, source, JSON.stringify(application), sheetProduct(contact.funnel), tags]);
       return { id, created: true };
     });

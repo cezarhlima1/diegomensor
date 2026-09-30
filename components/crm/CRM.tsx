@@ -1437,6 +1437,7 @@ function Pipeline({
   const [sourceFilter, setSourceFilter] = useState("Todos");
   const [revenueFilter, setRevenueFilter] = useState<Set<string>>(new Set());
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set());
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [newStage, setNewStage] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
@@ -1532,10 +1533,17 @@ function Pipeline({
     validIds.forEach((id) => moveLead(id, stage));
     setSelectedLeadIds(new Set());
   };
+  const filtrosAtivos = (range.start || range.end ? 1 : 0) + (productFilter !== "Todos" ? 1 : 0) + (sourceFilter !== "Todos" ? 1 : 0) + (revenueFilter.size > 0 ? 1 : 0) + (tagFilter.size > 0 ? 1 : 0);
   return (
     <div className={styles.pipelineWrap}>
       <div className={styles.pipelineFilterZone}>
-        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><span>Filtrar pipeline</span><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><div className={styles.pipelineFilterGroup}><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label></div></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+        <button type="button" className={styles.pipelineFilterToggle} onClick={() => setFiltrosAbertos((value) => !value)}>
+          <span>Filtrar pipeline</span>
+          {filtrosAtivos > 0 && <b>{filtrosAtivos}</b>}
+          <i>{filtrosAbertos ? "▲ Recolher" : "▼ Expandir"}</i>
+        </button>
+        {filtrosAbertos && <>
+        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><div className={styles.pipelineFilterGroup}><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label></div></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
         {revenueOptions.length > 0 && <div className={styles.sourceChips}>
           <span>Faturamento</span>
           <button type="button" className={revenueFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setRevenueFilter(new Set())}>Todas as faixas</button>
@@ -1546,6 +1554,7 @@ function Pipeline({
           <button type="button" className={tagFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setTagFilter(new Set())}>Todas as etiquetas</button>
           {tagOptions.map((tag) => <button type="button" key={tag} className={tagFilter.has(tag) ? styles.selectedChip : ""} onClick={() => toggleTagFilter(tag)}>{tag}</button>)}
         </div>}
+        </>}
       </div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
