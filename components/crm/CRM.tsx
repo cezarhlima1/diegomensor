@@ -118,6 +118,12 @@ const purchasesForLead = (lead: Lead, catalog: ProductDefinition[]): Purchase[] 
 // O banco remove o campaignId quando uma campanha é excluída, mas preserva a
 // compra. O código externo mantém a origem importada identificável.
 const isCampaignPurchase = (purchase: Purchase) => purchase.origin === "campaign" || (purchase.origin === undefined && !purchase.id.startsWith("ascension-") && Boolean(purchase.campaignId || purchase.externalSaleCode));
+// Uma venda com cara de campanha (código externo/campaignId) só conta como
+// receita de verdade se apontar pra uma campanha que existe hoje em Tráfego —
+// evita que vendas com vínculo perdido (ex.: campanha excluída) sejam
+// contadas sem aparecer em nenhuma campanha real.
+const isOrphanedCampaignPurchase = (purchase: Purchase, campaignIds: Set<string>) =>
+  isCampaignPurchase(purchase) && !(purchase.campaignId && campaignIds.has(purchase.campaignId));
 type Channel = "organic" | "traffic" | "all";
 const isTrafficSource = (source?: string) => source?.trim().toLowerCase() === "tráfego" || source?.trim().toLowerCase() === "trafego";
 const isTrafficLead = (lead: Lead) => isTrafficSource(lead.source)
@@ -1107,14 +1113,11 @@ function UnifiedRevenueAnalysis({ leads, traffic, products, start, end, goals, s
     const date = item.date || `${item.month}-01`;
     return Array.from({ length: units }, (_, index): Lead => ({ id: `traffic-${item.id}-${index}`, name: item.campaign, company: "Tráfego", phone: "", email: "", source: "Tráfego", product: item.product, stage: "Fechado", value: units ? item.revenue / units : 0, netValue: units ? (item.netRevenue ?? netForValue(item.revenue, item.product, products)) / units : 0, temperature: "Quente", nextAction: "Venda direta", date, closedAt: date }));
   });
-  // Uma venda com cara de campanha (código externo/campaignId) só entra na
-  // composição se apontar para uma campanha que existe hoje em Tráfego —
-  // mesmo critério da "Receita bruta" da Visão Geral (fechamento manual +
-  // tráfego verificado). Sem isso, vendas cujo vínculo se perdeu (ex.:
-  // campanha excluída) inflavam este total sem aparecer em nenhuma campanha.
+  // Mesmo critério da "Receita bruta" da Visão Geral (fechamento manual +
+  // tráfego verificado): uma venda com cara de campanha só entra na
+  // composição se apontar pra uma campanha que existe hoje em Tráfego.
   const campaignIds = new Set(traffic.map((item) => item.id));
-  const isOrphanedCampaignPurchase = (purchase: Purchase) => isCampaignPurchase(purchase) && !(purchase.campaignId && campaignIds.has(purchase.campaignId));
-  const consolidatedLeads = leads.map((lead) => ({ ...lead, purchases: purchasesForLead(lead, products).filter((purchase) => !isOrphanedCampaignPurchase(purchase)) }));
+  const consolidatedLeads = leads.map((lead) => ({ ...lead, purchases: purchasesForLead(lead, products).filter((purchase) => !isOrphanedCampaignPurchase(purchase, campaignIds)) }));
   const consolidated = [...consolidatedLeads, ...trafficLeads];
   const sources = Array.from(new Set([...leadSources, "Tráfego"]));
   return <div className={styles.unifiedOrganicLayout}><div className={styles.analysisColumn}><ProductValueChart channel="all" leads={consolidated} start={start} end={end} products={products} /></div><div className={styles.unifiedOriginColumn}><OriginValueChart channel="all" leads={consolidated} start={start} end={end} sources={sources} /></div><MonthlyMetricsChart channel="all" leads={consolidated} endMonth={end.slice(0,7)} goals={goals} setGoal={setGoal} /></div>;
@@ -2246,7 +2249,12 @@ function FinanceDashboard({ leads, traffic, expenses, closers, month, setMonth, 
   const receivedRevenue = monthReceivables.filter((item) => item.status === "Recebido").reduce((sum, item) => sum + item.amount, 0);
   const expectedExpenses = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
   const pendingRevenue = monthReceivables.filter((item) => item.status !== "Recebido").reduce((sum, item) => sum + item.amount, 0);
-  const monthPurchases = leads.flatMap((lead) => purchasesForLead(lead, [])).filter((purchase) => brazilMonthKey(purchase.closedAt) === month);
+  // Mesmo critério da "Receita bruta"/"Composição do valor fechado": uma
+  // venda com cara de campanha só conta se apontar pra uma campanha que
+  // existe hoje em Tráfego — senão o faturamento vendido ficava inflado por
+  // vendas cujo vínculo de campanha se perdeu.
+  const campaignIds = new Set(traffic.map((item) => item.id));
+  const monthPurchases = leads.flatMap((lead) => purchasesForLead(lead, [])).filter((purchase) => brazilMonthKey(purchase.closedAt) === month && !isOrphanedCampaignPurchase(purchase, campaignIds));
   const soldRevenue = monthPurchases.reduce((sum, purchase) => sum + purchase.value, 0);
   const trafficInvestment = traffic.filter((item) => (item.date ? brazilMonthKey(item.date) : item.month) === month).reduce((sum, item) => sum + item.investment, 0);
   const normalize = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
