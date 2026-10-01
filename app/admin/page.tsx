@@ -54,8 +54,8 @@ export default async function AdminPage() {
       <main className="admin-page">
         <div className="hero-bg" aria-hidden="true" />
         <div className="wrap max-w-[880px]">
-          {empresas && cadastros ? (
-            <Admin empresas={empresas} cadastros={cadastros} />
+          {empresas ? (
+            <Admin empresas={empresas} cadastros={cadastros ?? []} />
           ) : (
             <div className="calc-card cta-reveal">
               <p className="calc-card-kicker">Admin geral</p>
