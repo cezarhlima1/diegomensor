@@ -20,39 +20,52 @@ function formatarData(data: string): string {
 }
 
 /**
- * Lista somente-leitura de todos os cadastros (profiles) do produto, com
- * filtro por status (ativo/inativo pela licença, mesmo critério de
- * statusLicenca em Admin.tsx) e por origem do cadastro (teste grátis ou
- * não). Clicar numa linha abre o detalhe completo num modal — não há
- * edição aqui, isso continua na aba "Empresas" ao lado.
+ * Aba "Histórico": lista somente-leitura de todos os cadastros (profiles) do
+ * produto, com busca por nome/e-mail e filtro por status (ativo/inativo pela
+ * licença, mesmo critério de statusLicenca em Admin.tsx) e por origem do
+ * cadastro (teste grátis ou não). Clicar numa linha abre o detalhe completo
+ * num modal — não há edição aqui, isso continua na aba "Criar novo cadastro".
  */
 export default function Cadastros({ cadastros }: { cadastros: CadastroAdmin[] }) {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("Todos");
   const [origemFiltro, setOrigemFiltro] = useState<OrigemFiltro>("Todos");
+  const [busca, setBusca] = useState("");
   const [selecionado, setSelecionado] = useState<CadastroAdmin | null>(null);
 
   const filtrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
     return cadastros.filter((cadastro) => {
       const cadastroAtivo = ativo(cadastro.licencaAte);
       if (statusFiltro === "Ativos" && !cadastroAtivo) return false;
       if (statusFiltro === "Inativos" && cadastroAtivo) return false;
       if (origemFiltro !== "Todos" && origemLabel(cadastro.origem) !== origemFiltro) return false;
+      if (termo && !`${cadastro.nome ?? ""} ${cadastro.email}`.toLowerCase().includes(termo)) return false;
       return true;
     });
-  }, [cadastros, statusFiltro, origemFiltro]);
+  }, [cadastros, statusFiltro, origemFiltro, busca]);
 
   return (
     <section className="calc-card cta-reveal" aria-labelledby="admin-cadastros">
-      <p className="calc-card-kicker">Todos os cadastros</p>
+      <p className="calc-card-kicker">Histórico</p>
       <h2 id="admin-cadastros" className="calc-card-title">
-        Cadastros
+        Quem já está cadastrado
       </h2>
       <p className="calc-card-sub">
         Lista de todas as pessoas cadastradas no produto, só para consulta —
-        para editar um acesso, use a aba &quot;Empresas&quot;.
+        para editar um acesso, use a aba &quot;Criar novo cadastro&quot;.
       </p>
 
       <div className="admin-cadastros-filtros">
+        <label className="grid gap-1.5">
+          <span className="quiz-label">Buscar por nome ou e-mail</span>
+          <input
+            type="text"
+            className="quiz-input"
+            placeholder="ex.: joão ou joao@oficina.com.br"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </label>
         <label className="grid gap-1.5">
           <span className="quiz-label">Status</span>
           <select

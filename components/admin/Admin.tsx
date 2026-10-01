@@ -157,7 +157,7 @@ export default function Admin({
           className={aba === "empresas" ? "is-ativa" : ""}
           onClick={() => setAba("empresas")}
         >
-          Empresas
+          Criar novo cadastro
         </button>
         <button
           type="button"
@@ -166,7 +166,7 @@ export default function Admin({
           className={aba === "cadastros" ? "is-ativa" : ""}
           onClick={() => setAba("cadastros")}
         >
-          Cadastros
+          Histórico
         </button>
       </div>
 
