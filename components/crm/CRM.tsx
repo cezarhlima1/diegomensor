@@ -732,6 +732,12 @@ export default function CRM() {
     const transitioned = transitionLead(lead, stage, now);
     const stageKey = stage.toLowerCase().replace(/[^a-z]/g, "");
     if (stageKey === "noshow") transitioned.meetingOutcome = "No-show";
+    else if (lead.meetingScheduledFor && (!lead.meetingOutcome || lead.meetingOutcome === "Agendada")) {
+      // Sair de "Reunião agendada" para uma etapa adiante registra a reunião como realizada.
+      const stageIndex = pipelineStages.indexOf(stage);
+      const meetingIndex = pipelineStages.findIndex((item) => item.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase() === "reuniao agendada");
+      if (meetingIndex >= 0 && pipelineStages.indexOf(lead.stage) === meetingIndex && stageIndex > meetingIndex && stageKey !== "desqualificado") transitioned.meetingOutcome = "Realizada";
+    }
     const updated = recordJourney(lead, transitioned, now);
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
@@ -768,6 +774,14 @@ export default function CRM() {
         const codedPurchaseIndex = codedHistory.findIndex((purchase) => purchase.externalSaleCode === sale.code);
         const codedPurchase = codedHistory[codedPurchaseIndex];
         if (codedPurchase.campaignId) touchedCampaignIds.add(codedPurchase.campaignId);
+        // Venda lançada manualmente (orgânica): a planilha só corrige o valor.
+        if (!isCampaignPurchase(codedPurchase)) {
+          const purchases = codedHistory.map((purchase, purchaseIndex) => purchaseIndex === codedPurchaseIndex
+            ? { ...purchase, value: sale.gross, netValue: sale.net }
+            : purchase);
+          next[codedLeadIndex] = { ...next[codedLeadIndex], purchases };
+          continue;
+        }
         const purchases = codedHistory.map((purchase, purchaseIndex) => purchaseIndex === codedPurchaseIndex
           ? { ...purchase, origin: "campaign" as const, source: "Tráfego", campaignId: campaign.id, product: saleProduct, value: sale.gross, netValue: sale.net, closedAt: sale.date, installments: [{ id: `gateway-${sale.code}-1`, number: 1, dueDate: brazilDateKey(sale.date), amount: sale.net, status: "Recebido" as const, receivedAt: brazilDateKey(sale.date) }] }
           : purchase);
@@ -779,13 +793,14 @@ export default function CRM() {
       const history = existing ? purchasesForLead(existing, catalogProducts) : [];
       if (history.some((purchase) => purchase.externalSaleCode === sale.code)) continue;
       // Se o lead já possui um fechamento manual deste mesmo produto, a
-      // planilha confirma e atualiza esse fechamento. Produto diferente gera
-      // uma nova compra, preservando a esteira do cliente.
+      // planilha só valida: mantém a origem manual/orgânica e atualiza apenas
+      // o valor. Produto diferente gera uma nova compra de tráfego,
+      // preservando a esteira do cliente.
       const matchingPurchaseIndex = history.findLastIndex((purchase) => !isCampaignPurchase(purchase)
         && purchase.product === saleProduct);
       const paidInstallments: Installment[] = [{ id: `gateway-${sale.code}-1`, number: 1, dueDate: brazilDateKey(sale.date), amount: sale.net, status: "Recebido", receivedAt: brazilDateKey(sale.date) }];
       const purchase: Purchase = matchingPurchaseIndex >= 0
-        ? { ...history[matchingPurchaseIndex], origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: saleProduct, value: sale.gross, netValue: sale.net, closedAt: sale.date, installments: paidInstallments }
+        ? { ...history[matchingPurchaseIndex], externalSaleCode: sale.code, value: sale.gross, netValue: sale.net }
         : { id: `gateway-${sale.code}`, origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: saleProduct, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0, installments: paidInstallments };
       const purchases = matchingPurchaseIndex >= 0
         ? history.map((item, purchaseIndex) => purchaseIndex === matchingPurchaseIndex ? purchase : item)
@@ -1409,6 +1424,29 @@ function Dashboard({
   );
 }
 
+function FilterMenu({ label, options, selected, toggle, clear }: { label: string; options: string[]; selected: Set<string>; toggle: (option: string) => void; clear: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  if (!options.length) return null;
+  return (
+    <div className={styles.filterMenu} ref={ref}>
+      <button type="button" className={selected.size ? styles.filterMenuActive : ""} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        {label}{selected.size > 0 && <b>{selected.size}</b>}<i aria-hidden>▾</i>
+      </button>
+      {open && <div className={styles.filterMenuList} role="listbox" aria-multiselectable>
+        {options.map((option) => <label key={option}><input type="checkbox" checked={selected.has(option)} onChange={() => toggle(option)} /><span>{option}</span></label>)}
+        {selected.size > 0 && <button type="button" onClick={clear}>Limpar</button>}
+      </div>}
+    </div>
+  );
+}
+
 function Pipeline({
   leads,
   products,
@@ -1437,7 +1475,7 @@ function Pipeline({
   useEffect(() => { const timer = window.setInterval(() => setToday(contactDay(new Date().toISOString())), 60000); return () => window.clearInterval(timer); }, []);
   const [range, setRange] = useState({ start: "", end: "" });
   const [productFilter, setProductFilter] = useState("Todos");
-  const [sourceFilter, setSourceFilter] = useState("Todos");
+  const [sourceFilter, setSourceFilter] = useState<Set<string>>(new Set());
   const [revenueFilter, setRevenueFilter] = useState<Set<string>>(new Set());
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set());
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
@@ -1475,6 +1513,11 @@ function Pipeline({
     if (next.has(tag)) next.delete(tag); else next.add(tag);
     return next;
   });
+  const toggleSourceFilter = (source: string) => setSourceFilter((current) => {
+    const next = new Set(current);
+    if (next.has(source)) next.delete(source); else next.add(source);
+    return next;
+  });
   const stageItems = useMemo(() => {
     const grouped = new Map<Stage, Lead[]>(stages.map((stage) => [stage, []]));
     for (const lead of leads) {
@@ -1486,7 +1529,7 @@ function Pipeline({
           : (!range.start || brazilDateKey(lead.createdAt) >= range.start) && (!range.end || brazilDateKey(lead.createdAt) <= range.end);
       if (!matchesRange) continue;
       if (productFilter !== "Todos" && lead.product !== productFilter && !purchases.some((purchase) => purchase.product === productFilter)) continue;
-      if (sourceFilter !== "Todos" && lead.source.trim() !== sourceFilter) continue;
+      if (sourceFilter.size > 0 && !sourceFilter.has(lead.source.trim())) continue;
       if (revenueFilter.size > 0 && !revenueFilter.has(leadRevenueRange(lead) || "")) continue;
       if (tagFilter.size > 0 && !(lead.tags || []).some((tag) => tagFilter.has(tag))) continue;
       if (!search && archived(lead)) continue;
@@ -1536,7 +1579,7 @@ function Pipeline({
     validIds.forEach((id) => moveLead(id, stage));
     setSelectedLeadIds(new Set());
   };
-  const filtrosAtivos = (range.start || range.end ? 1 : 0) + (productFilter !== "Todos" ? 1 : 0) + (sourceFilter !== "Todos" ? 1 : 0) + (revenueFilter.size > 0 ? 1 : 0) + (tagFilter.size > 0 ? 1 : 0);
+  const filtrosAtivos = (range.start || range.end ? 1 : 0) + (productFilter !== "Todos" ? 1 : 0) + (sourceFilter.size > 0 ? 1 : 0) + (revenueFilter.size > 0 ? 1 : 0) + (tagFilter.size > 0 ? 1 : 0);
   return (
     <div className={styles.pipelineWrap}>
       <div className={styles.pipelineFilterZone}>
@@ -1546,17 +1589,12 @@ function Pipeline({
           <i>{filtrosAbertos ? "▲ Recolher" : "▼ Expandir"}</i>
         </button>
         {filtrosAbertos && <>
-        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><div className={styles.pipelineFilterGroup}><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label><label><small>Origem</small><select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option>Todos</option>{sources.map((source) => <option key={source}>{source}</option>)}</select></label></div></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
-        {revenueOptions.length > 0 && <div className={styles.sourceChips}>
-          <span>Faturamento</span>
-          <button type="button" className={revenueFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setRevenueFilter(new Set())}>Todas as faixas</button>
-          {revenueOptions.map((option) => <button type="button" key={option} className={revenueFilter.has(option) ? styles.selectedChip : ""} onClick={() => toggleRevenueFilter(option)}>{option}</button>)}
-        </div>}
-        {tagOptions.length > 0 && <div className={styles.sourceChips}>
-          <span>Etiquetas</span>
-          <button type="button" className={tagFilter.size === 0 ? styles.selectedChip : ""} onClick={() => setTagFilter(new Set())}>Todas as etiquetas</button>
-          {tagOptions.map((tag) => <button type="button" key={tag} className={tagFilter.has(tag) ? styles.selectedChip : ""} onClick={() => toggleTagFilter(tag)}>{tag}</button>)}
-        </div>}
+        <div className={styles.pipelineTools}><div className={styles.pipelineFilters}><QuickPeriodButtons start={range.start} end={range.end} setRange={(start, end) => setRange({ start, end })} /><label><small>Data inicial</small><input type="date" value={range.start} max={range.end || undefined} onChange={(event) => setRange({ ...range, start: event.target.value })} /></label><label><small>Data final</small><input type="date" value={range.end} min={range.start || undefined} onChange={(event) => setRange({ ...range, end: event.target.value })} /></label><div className={styles.pipelineFilterGroup}><label><small>Produto</small><select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}><option>Todos</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select></label></div></div>{selectedLeadIds.size > 0 && <div className={styles.multiSelection}><b>{selectedLeadIds.size} selecionado{selectedLeadIds.size === 1 ? "" : "s"}</b><span>Arraste um deles para mover todos</span><button type="button" onClick={() => setSelectedLeadIds(new Set())}>Limpar</button></div>}<form onSubmit={addStage}><span>Nova etapa</span><input value={newStage} onChange={(event) => setNewStage(event.target.value)} placeholder="Ex.: Follow-up" /><button aria-label="Adicionar etapa">+</button></form></div>
+        <div className={styles.filterMenus}>
+          <FilterMenu label="Origem" options={sources} selected={sourceFilter} toggle={toggleSourceFilter} clear={() => setSourceFilter(new Set())} />
+          <FilterMenu label="Faturamento" options={revenueOptions} selected={revenueFilter} toggle={toggleRevenueFilter} clear={() => setRevenueFilter(new Set())} />
+          <FilterMenu label="Etiquetas" options={tagOptions} selected={tagFilter} toggle={toggleTagFilter} clear={() => setTagFilter(new Set())} />
+        </div>
         </>}
       </div>
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
