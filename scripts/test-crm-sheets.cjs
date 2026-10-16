@@ -36,13 +36,15 @@ test('preserves previously completed answers and attribution on reimport', () =>
   assert.equal(mapping.sheetApplication(contact, result).answers.length, result.answers.length);
 });
 
-function endpoint(rows = []) {
+function endpoint(rows = [], reactivated = false) {
   const calls = [];
-  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: sql.startsWith('select id,') ? rows : [] }; } };
+  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: sql.startsWith('select id,') ? rows : sql.includes('returning id') && reactivated ? [{ id: rows[0].id }] : [] }; } };
+  const reentry = load('lib/crm-reentry.ts');
   const route = load('app/api/crm/sheets-sync/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/crm-db': { withCrmTransaction: async (callback) => callback(db) },
     '@/lib/crm-sheets': mapping,
+    '@/lib/crm-reentry': reentry,
   }, { process: { env: { SHEETS_TO_CRM_SECRET: 'test-only-secret' } } });
   const send = (body, secret = 'test-only-secret') => route.POST(new Request('https://example.test/api/crm/sheets-sync', { method: 'POST', headers: { authorization: 'Bearer ' + secret }, body: JSON.stringify(body) }));
   return { send, calls };
@@ -108,4 +110,32 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   context.sincronizarPendentes();
   assert.equal(requests, 3);
   assert.equal(released, 4);
+});
+
+test('reentry reuses the existing contact and reports reactivation without creating another lead', async () => {
+  const { send, calls } = endpoint([{ id: 'archived', application: {} }], true);
+  const response = await send({ celular: '12974038745' });
+  const result = await response.json();
+  assert.equal(result.id, 'archived');
+  assert.equal(result.created, false);
+  assert.equal(result.reactivated, true);
+  assert.equal(calls.some(c => c.sql.startsWith('insert into public.crm_leads(')), false);
+  const reentry = calls.find(c => c.sql.includes('returning id'));
+  assert.equal(reentry.params[0], 'archived');
+});
+
+test('reactivation is conditional and retains notes, purchases and journey history', async () => {
+  const { reactivateDisqualifiedLead } = load('lib/crm-reentry.ts');
+  const calls = [];
+  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: [] }; } };
+  assert.equal(await reactivateDisqualifiedLead(db, 'active'), false);
+  const { sql, params } = calls[0];
+  assert.equal(params[0], 'active');
+  assert.match(sql, /where id=\$1 and/);
+  assert.match(sql, /lower\(trim\(tag\)\)='desqualificado'/);
+  assert.match(sql, /Já desqualificado/);
+  assert.match(sql, /stage='Novo lead'/);
+  assert.equal(/notes=|journey_history=|crm_purchases/.test(sql), false);
+  assert.match(sql, /meeting_scheduled_for=null/);
+  assert.match(sql, /follow_up_at=null/);
 });

@@ -747,7 +747,7 @@ export default function CRM() {
   };
   const addLead = async (lead: Lead) => {
     await saveLead(lead);
-    setLeads((current) => mergeLeadCollections(current, [lead]));
+    setLeads((current) => current.some((item) => item.id === lead.id) ? current.map((item) => item.id === lead.id ? lead : item) : mergeLeadCollections(current, [lead]));
     setAdding(false);
   };
   const importCampaignSales = async (campaign: TrafficRecord, sales: ImportedSale[]) => {
@@ -1930,8 +1930,15 @@ function LeadModal({
           const match = existing.find((lead) => (email && lead.email.trim().toLowerCase() === email) || (phone && phoneKey(lead.phone) === phone));
           if (match) {
             if (isDisqualifiedLead(match)) {
-              window.alert("Este contato já está cadastrado e arquivado como Desqualificado. O cadastro existente será aberto sem alterar nenhuma informação.");
-              duplicate(match);
+              const now = new Date().toISOString();
+              const updated: Lead = { ...match, stage: "Novo lead", createdAt: now, date: "Hoje",
+                tags: Array.from(new Set(["Já desqualificado", ...(match.tags || []).filter((tag) => tag.trim().toLowerCase() !== "desqualificado")])),
+                value: 0, netValue: undefined, conversationAt: undefined, meetingAt: undefined,
+                meetingScheduledFor: null, meetingOutcome: null, followUpAt: null, proposalAt: undefined, closedAt: undefined, nextAction: "" };
+              setSaving(true); setSaveError("");
+              try { await save(updated); duplicate(updated); }
+              catch { setSaveError("Não foi possível reativar o contato. Tente novamente."); }
+              finally { setSaving(false); }
               return;
             }
             const updated = mergeLeadData(match, { ...match, name: match.name || draft.name.trim(), company: match.company || draft.company.trim(), phone: match.phone || draft.phone.trim(), email: match.email || email });

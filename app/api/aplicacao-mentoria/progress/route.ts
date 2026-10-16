@@ -1,3 +1,4 @@
+import { reactivateDisqualifiedLead } from "@/lib/crm-reentry";
 import { NextResponse } from "next/server";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
 import { crmPool } from "@/lib/crm-db";
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     const db = crmPool();
     const existing = await db.query("select id,application->>'sessionId' as application_session_id from public.crm_leads where application->>'sessionId'=$1 or regexp_replace(phone,'\\D','','g')=any($2::text[]) order by (application->>'sessionId'=$1) desc limit 1", [sessionId, phoneVariants(phone)]);
     if (existing.rows[0]?.id) {
+      await reactivateDisqualifiedLead(db, existing.rows[0].id);
       const repeated = Boolean(existing.rows[0].application_session_id && existing.rows[0].application_session_id !== sessionId);
       await db.query("update public.crm_leads set application=$2::jsonb,notes=case when notes='Iniciou o formulário e informou nome e WhatsApp.' then 'Aplicação iniciada e ainda não finalizada.' else notes end,tags=case when $3 and not ('Segunda aplicação'=any(coalesce(tags,'{}'::text[]))) then array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') else tags end,updated_at=now() where id=$1", [existing.rows[0].id, JSON.stringify(application), repeated]);
       return;

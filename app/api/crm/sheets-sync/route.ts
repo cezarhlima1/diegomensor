@@ -1,3 +1,4 @@
+import { reactivateDisqualifiedLead } from "@/lib/crm-reentry";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { withCrmTransaction } from "@/lib/crm-db";
@@ -34,7 +35,8 @@ export async function POST(request: Request) {
       const application = sheetApplication(contact, existing?.application || {});
       if (existing) {
         await db.query("update public.crm_leads set name=coalesce(nullif(name,''),$2),company=coalesce(nullif(company,''),$3),application=$4::jsonb,phone=coalesce(nullif(phone,''),$5),updated_at=now() where id=$1", [existing.id, contact.name, contact.company, JSON.stringify(application), contact.phone]);
-        return { id: existing.id, created: false };
+        const reactivated = await reactivateDisqualifiedLead(db, existing.id);
+        return { id: existing.id, created: false, reactivated };
       }
       const source = "Forms - Manychat";
       await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);

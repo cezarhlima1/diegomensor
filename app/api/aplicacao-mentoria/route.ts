@@ -1,3 +1,4 @@
+import { reactivateDisqualifiedLead } from "@/lib/crm-reentry";
 import { NextResponse } from "next/server";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
 import { crmPool } from "@/lib/crm-db";
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
         "select id from public.crm_leads where regexp_replace(phone,'\\D','','g')=any($1::text[]) limit 1",
         [phoneVariants(phone)],
       );
+      if (existing.rows[0]?.id) await reactivateDisqualifiedLead(db, existing.rows[0].id);
       if (!existing.rows[0]?.id) {
         const expectedSource = crmSourceForAttribution(attribution);
         const crmSource = await registeredCrmSource(db, expectedSource);
@@ -183,7 +185,7 @@ export async function POST(request: Request) {
       const isSameApplication = Boolean(sessionId && existing.rows[0].application_session_id === sessionId);
       if (supportsApplication && isFormDraft) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes='',updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), crmSource, submittedAt],
         );
       } else if (supportsApplication && isSameApplication) {
@@ -193,20 +195,21 @@ export async function POST(request: Request) {
         );
       } else if (supportsApplication) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes='',tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), crmSource, submittedAt],
         );
       } else if (isFormDraft) {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes='',updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, email, crmSource, submittedAt],
         );
       } else {
         await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes='',tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
+          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
           [existing.rows[0].id, answers.nome, answers.whatsapp, email, crmSource, submittedAt],
         );
       }
+      await reactivateDisqualifiedLead(db, existing.rows[0].id);
     } else {
       if (supportsApplication) {
         await db.query(
