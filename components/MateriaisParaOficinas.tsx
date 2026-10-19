@@ -2,25 +2,25 @@ import styles from "./materiais-para-oficinas.module.css";
 
 const materials = [
   {
-    image: "/imagem11.png",
+    image: "/material-aulas.jpg",
     alt: "Aula de precificação com Diego Mensor dentro da oficina",
     title: "Aulas rápidas diretas ao ponto",
     description: "Entenda de forma simples o que precisa considerar na hora de precificar e o porquê de cada cálculo.",
   },
   {
-    image: "/imagem8.png",
+    image: "/previa-mao-de-obra.jpg",
     alt: "Planilha de cálculo de mão de obra",
     title: "Planilha de cálculo de mão de obra",
     description: "Faça os cálculos da tua oficina na prática e saiba quanto precisa cobrar.",
   },
   {
-    image: "/imagem7.png",
+    image: "/previa-markup.jpg",
     alt: "Planilha de cálculo de markup para peças",
     title: "Planilha de cálculo de markup para peças",
     description: "Tenha a planilha para calcular e nunca mais errar o markup das peças.",
   },
   {
-    image: "/imagem12.png",
+    image: "/material-checklist.jpg",
     alt: "Checklist de manutenção preventiva incluído na aula bônus",
     title: "Aula bônus de checklist",
     description: "Aprenda a implementar o checklist na tua oficina para conferir se a precificação está sendo feita corretamente.",

@@ -24,3 +24,12 @@
   outline: 3px solid #157a43;
   outline-offset: 4px;
 }
+
+@media (max-width: 767px) {
+  .button {
+    width: 100%;
+    min-height: 56px;
+    padding: 18px;
+    font-size: 14px;
+  }
+}

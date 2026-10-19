@@ -1,3 +1,5 @@
+import styles from "./como-funciona-para-oficinas.module.css";
+
 const steps = [
   {
     title: "Assista às aulas",
@@ -18,16 +20,18 @@ export default function ComoFuncionaParaOficinas() {
     <section aria-labelledby="como-funciona-title" className="py-[72px] md:py-24">
       <div className="wrap">
         <h2 id="como-funciona-title" className="section-title mx-auto text-center">
-          Como funciona <span className="text-blue">sem complicação:</span>
+          Como funciona <span className="text-blue">(sem complicar):</span>
         </h2>
-        <ol className="mt-12 grid list-none gap-8 md:mt-16 md:grid-cols-3 md:gap-10">
+        <ol className={styles.sequence}>
           {steps.map((step, index) => (
-            <li key={step.title} className="border-t border-blue/30 pt-6">
+            <li key={step.title} className={styles.step}>
+              <span className={styles.number} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <div className={styles.content}>
               <h3 className="font-display text-[20px] font-bold uppercase leading-[1.5]">
-                <span className="text-blue">{String(index + 1).padStart(2, "0")} — </span>
                 {step.title}
               </h3>
               <p className="mt-4 text-[16px] leading-[1.8] text-[#b8c9d5]">{step.description}</p>
+              </div>
             </li>
           ))}
         </ol>

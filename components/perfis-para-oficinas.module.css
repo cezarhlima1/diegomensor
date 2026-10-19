@@ -49,7 +49,7 @@
   text-wrap: balance;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .profiles {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -58,6 +58,11 @@
 
   .profile {
     padding: 24px;
+  }
+
+  .profile h3 {
+    font-size: 22px;
+    line-height: 1.4;
   }
 
   .closing {

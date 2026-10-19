@@ -30,9 +30,9 @@ export default function PrecificacaoParaOficinasPage() {
         <CursoParaOficinas />
         <DuvidasParaOficinas />
         <ComoFuncionaParaOficinas />
+        <PerfisParaOficinas />
         <MateriaisParaOficinas />
         <OfertaParaOficinas />
-        <PerfisParaOficinas />
         <Author />
         <Faq />
         <Guarantee />

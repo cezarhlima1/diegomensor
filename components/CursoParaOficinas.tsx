@@ -1,12 +1,12 @@
 import styles from "./curso-para-oficinas.module.css";
 
 const images = [
-  { n: 6, alt: "Diego Mensor ensinando precificação dentro da oficina", featured: true },
-  { n: 1, alt: "Aula: primeiro passo da precificação" },
-  { n: 3, alt: "Aula: quanto custa sua oficina aberta?" },
-  { n: 2, alt: "Aula: precificando de forma correta" },
-  { n: 8, src: "/imagem8.png", alt: "Planilha de custo operacional e cálculo do valor da mão de obra", featured: true },
-  { n: 4, alt: "Aula: a importância de cobrar certo" },
+  { n: 6, src: "/curso-aula-oficina.jpg", alt: "Diego Mensor ensinando precificação dentro da oficina", featured: true },
+  { n: 1, src: "/curso-primeiro-passo.jpg", alt: "Aula: primeiro passo da precificação" },
+  { n: 3, src: "/curso-custo-oficina.jpg", alt: "Aula: quanto custa sua oficina aberta?" },
+  { n: 2, src: "/curso-precificando.jpg", alt: "Aula: precificando de forma correta" },
+  { n: 8, src: "/previa-mao-de-obra.jpg", alt: "Planilha de custo operacional e cálculo do valor da mão de obra", featured: true },
+  { n: 4, src: "/curso-cobrar-certo.jpg", alt: "Aula: a importância de cobrar certo" },
 ];
 
 export default function CursoParaOficinas() {

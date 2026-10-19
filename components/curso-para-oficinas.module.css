@@ -50,6 +50,17 @@
   grid-column: span 2;
 }
 
+@media (max-width: 767px) {
+  .frame:nth-child(5) {
+    order: 2;
+    margin-top: 8px;
+  }
+
+  .frame:nth-child(6) {
+    order: 1;
+  }
+}
+
 @media (min-width: 768px) {
   .collage {
     display: block;

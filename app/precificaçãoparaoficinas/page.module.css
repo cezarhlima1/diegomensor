@@ -19,7 +19,7 @@
   background: #11161b;
 }
 
-.page main > section:nth-of-type(even) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) {
   --color-blue: #087bbd;
   --color-blue-soft: #087bbd;
   --color-muted: #52616d;
@@ -185,9 +185,9 @@
 }
 
 .page [aria-labelledby="depoimentos-title"] :global(.testi) {
-  background: #fff;
-  border-color: #172b3a1a;
-  box-shadow: 0 12px 32px -20px #172b3a40;
+  background: #18222c;
+  border-color: #ffffff1a;
+  box-shadow: 0 12px 32px -20px #0009;
 }
 
 .page main > section[aria-labelledby="curso-title"] {
@@ -281,60 +281,236 @@
 }
 
 @media (max-width: 767px) {
+  .page {
+    overflow-wrap: break-word;
+  }
+
+  .page :global(.wrap) {
+    width: calc(100% - 40px);
+    min-width: 0;
+  }
+
   .page main > section {
-    padding-block: 56px;
+    padding-block: 64px;
+    scroll-margin-top: 80px;
   }
 
   .page main > section:first-child {
-    padding-top: 104px;
+    padding-top: calc(100px + env(safe-area-inset-top));
+  }
+
+  .page h1 {
+    margin-block: 20px;
+    font-size: clamp(29px, 7.8vw, 38px);
+    line-height: 1.2;
+  }
+
+  .page :global(.section-title) {
+    font-size: clamp(25px, 6.5vw, 32px);
+    line-height: 1.32;
+    text-wrap: pretty;
+  }
+
+  .page :global(.hero-badge) {
+    max-width: 32ch;
+    font-size: 10px;
+    line-height: 1.7;
+  }
+
+  .page [data-hero] p {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .page [data-hero] ul {
+    width: 100%;
+    margin-block: 28px;
+    text-align: left;
+  }
+
+  .page [data-hero] li {
+    justify-content: flex-start;
+    gap: 10px;
+    font-size: 15px;
+    line-height: 1.65;
+    font-weight: 600;
+  }
+
+  .page [data-hero] li > span:first-child {
+    flex-shrink: 0;
+  }
+
+  .page :global(.btn) {
+    width: 100%;
+    max-width: 100%;
+    min-height: 52px;
+    padding: 16px 18px;
+    font-size: 15px;
+    line-height: 1.55;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .page :global(.reassure) {
+    max-width: 36ch;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+
+  .page > div:has(> [role="timer"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 60px;
+    padding: calc(10px + env(safe-area-inset-top)) 20px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .page [role="timer"] {
+    padding: 6px 0 6px 12px;
+    border-left: 1px solid #ffffff4d;
+    border-radius: 0;
+    font-size: 18px;
+    white-space: nowrap;
+  }
+
+  .page [aria-labelledby="depoimentos-title"] article {
+    gap: 24px;
+    padding-bottom: 40px;
+  }
+
+  .page [aria-labelledby="depoimentos-title"] article > p {
+    padding-left: 16px;
+    font-size: 20px;
+    line-height: 1.55;
+  }
+
+  .page [aria-labelledby="duvidas-title"] h2 {
+    margin-bottom: 32px;
+  }
+
+  .page [aria-labelledby="duvidas-title"] li {
+    padding-block: 20px;
+  }
+
+  .page [aria-labelledby="duvidas-title"] li p {
+    font-size: 17px;
+    line-height: 1.75;
+  }
+
+  .page :global(.price-card) {
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+
+  .page :global(.price-card) ul {
+    gap: 20px;
+  }
+
+  .page :global(.price-card) li {
+    gap: 10px;
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  .page :global(.price-main) {
+    white-space: normal;
+    text-shadow: none;
+  }
+
+  .page :global(.author-photo) {
+    min-height: 320px;
+  }
+
+  .page :global(.author-card) > div:last-child {
+    padding: 28px 24px;
+  }
+
+  .page :global(.author-card) p {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .page :global(.faq-q) {
+    min-height: 56px;
+    padding: 20px 18px;
+    gap: 16px;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .page :global(.faq-item) p {
+    padding-inline: 18px;
+    line-height: 1.75;
+  }
+
+  .page :global(.wrap) > div:has(> :global(.shield)) {
+    padding: 28px 22px;
+    gap: 24px;
+  }
+
+  .page :global(.wrap) > div:has(> :global(.shield)) p {
+    line-height: 1.75;
+  }
+
+  .page footer :global(.wrap) {
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .page footer :global(.wrap) > div {
+    text-align: left;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
   }
 }
 
 /* Contraste completo nas dobras brancas, incluindo os blocos compartilhados. */
-.page main > section:nth-of-type(even) :is(h2, h3),
-.page main > section:nth-of-type(even) :global(.text-white),
-.page main > section:nth-of-type(even) :global(.text-offwhite) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :is(h2, h3),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-white),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-offwhite) {
   color: #172b3a;
 }
 
-.page main > section:nth-of-type(even) p {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) p {
   color: #435461;
 }
 
-.page main > section:nth-of-type(even) :global(.text-blue) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-blue) {
   color: #087bbd;
 }
 
-.page main > section:nth-of-type(even) > :global(.wrap) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) > :global(.wrap) {
   background: transparent;
   box-shadow: none;
   border: 0;
 }
 
-.page main > section:nth-of-type(even) > div[aria-hidden] {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) > div[aria-hidden] {
   display: none;
 }
 
-.page main > section:nth-of-type(even) :global(.choice-card),
-.page main > section:nth-of-type(even) :global(.final-card),
-.page main > section:nth-of-type(even) :global(.author-card),
-.page main > section:nth-of-type(even) :global(.faq-item),
-.page main > section:nth-of-type(even)[aria-labelledby="perfis-title"] li,
-.page main > section:nth-of-type(even) :global(.wrap) > div:has(> :global(.shield)) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.choice-card),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.final-card),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.author-card),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.faq-item),
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"]))[aria-labelledby="perfis-title"] li,
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.wrap) > div:has(> :global(.shield)) {
   background: #f6f8fa;
   border-color: #172b3a26;
   box-shadow: 0 12px 32px -24px #172b3a30;
 }
 
-.page main > section:nth-of-type(even) :global(.faq-q) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.faq-q) {
   color: #172b3a;
 }
 
-.page main > section:nth-of-type(even)[aria-labelledby="perfis-title"] ul + div {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"]))[aria-labelledby="perfis-title"] ul + div {
   border-top-color: #172b3a26;
 }
 
-.page main > section:nth-of-type(even) :global(.choice-good) {
+.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.choice-good) {
   background: #f0f8fd;
   border-color: #087bbd55;
 }
@@ -347,4 +523,9 @@
 .page main > section:global(.checkout-light) > :global(.wrap) > p,
 .page main > section:global(.checkout-light) > :global(.wrap) > p b {
   color: #dce1e5;
+}
+
+.page main > section[aria-labelledby="depoimentos-title"] {
+  background: #1c2630;
+  border-top-color: #ffffff12;
 }

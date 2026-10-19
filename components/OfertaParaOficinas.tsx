@@ -25,7 +25,9 @@ export default function OfertaParaOficinas() {
           <div className="my-8 border-t border-[#173b54]/15" />
           <h2 id="oferta-title" className="!text-[#173b54] text-[22px] font-semibold leading-relaxed">Tudo isso por:</h2>
           <div className="price-main mx-auto mt-3 !text-[clamp(56px,9vw,76px)] leading-none">R$197</div>
-          <p className="mb-8 mt-4 !text-[#526d80] text-[16px] font-semibold">Pagamento único.</p>
+          <p className="mt-4 !text-[#526d80] text-[16px] font-semibold">À vista. Pagamento único.</p>
+          <p className="mt-4 !text-[#526d80] text-[14px]">ou</p>
+          <div className="price-main mx-auto mb-8 mt-2 !text-[clamp(30px,6vw,48px)] leading-none">12x de R$20,25</div>
           <Cta variant="wide" className="!text-[clamp(14px,2vw,18px)]">QUERO ORGANIZAR MINHA PRECIFICAÇÃO</Cta>
         </div>
       </div>
