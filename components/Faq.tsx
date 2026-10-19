@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 const faqs = [
   {
@@ -25,7 +26,7 @@ const faqs = [
   },
 ];
 
-export default function Faq() {
+export default function Faq({ footer }: { footer?: ReactNode } = {}) {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
@@ -65,6 +66,7 @@ export default function Faq() {
             );
           })}
         </div>
+        {footer}
       </div>
     </section>
   );

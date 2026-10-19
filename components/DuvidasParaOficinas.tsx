@@ -1,3 +1,4 @@
+import SectionCta from "./SectionCta";
 const doubts = [
   "Será que eu tô cobrando barato demais?",
   "Se eu aumentar o preço, será que o cliente vai embora?",
@@ -25,6 +26,7 @@ export default function DuvidasParaOficinas() {
             </li>
           ))}
         </ul>
+        <SectionCta />
       </div>
     </section>
   );

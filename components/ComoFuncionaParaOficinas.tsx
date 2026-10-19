@@ -1,3 +1,4 @@
+import SectionCta from "./SectionCta";
 import styles from "./como-funciona-para-oficinas.module.css";
 
 const steps = [
@@ -35,6 +36,7 @@ export default function ComoFuncionaParaOficinas() {
             </li>
           ))}
         </ol>
+        <SectionCta />
       </div>
     </section>
   );

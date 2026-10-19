@@ -40,7 +40,7 @@ export default function HeroParaOficinas() {
           </ul>
 
           <div className="reveal d3 flex w-full flex-col items-center gap-[14px] sm:w-auto">
-            <Cta variant="lg">Quero aprender a cobrar certo</Cta>
+            <Cta variant="compact">Quero aprender a cobrar certo</Cta>
             <span className="reassure">
               Acesso imediato • Aulas práticas • Planilha + tabela de markup
             </span>

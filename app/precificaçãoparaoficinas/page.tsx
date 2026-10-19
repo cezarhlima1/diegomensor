@@ -10,13 +10,13 @@ import MateriaisParaOficinas from "@/components/MateriaisParaOficinas";
 import OfertaParaOficinas from "@/components/OfertaParaOficinas";
 import Author from "@/components/Author";
 import Faq from "@/components/Faq";
-import Guarantee from "@/components/Guarantee";
 import WhatsAppParaOficinas from "@/components/WhatsAppParaOficinas";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
 import BackRedirect from "@/components/BackRedirect";
 import OfertaLimitadaParaOficinas from "@/components/OfertaLimitadaParaOficinas";
 import styles from "./page.module.css";
+import SectionCta from "@/components/SectionCta";
 
 export default function PrecificacaoParaOficinasPage() {
   return (
@@ -33,10 +33,9 @@ export default function PrecificacaoParaOficinasPage() {
         <PerfisParaOficinas />
         <MateriaisParaOficinas />
         <OfertaParaOficinas />
-        <Author />
-        <Faq />
+        <Author footer={<SectionCta />} />
+        <Faq footer={<SectionCta />} />
         <WhatsAppParaOficinas />
-        <Guarantee />
       </main>
       <Footer />
       <ClientEffects />

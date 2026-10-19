@@ -18,7 +18,7 @@ const cases = [
     text: "Mais um mês acima dos R$100 mil, com a meta batida antes do último dia, depois de ajustar a precificação.",
   },
   {
-    images: [{ src: "/Depoimento 002.png", alt: "Depoimento sobre o melhor mês desde a abertura da oficina", label: "" }],
+    images: [{ src: "/depoimento-002-anonimizado.png", alt: "Depoimento sobre o melhor mês desde a abertura da oficina", label: "" }],
     text: "O ajuste de precificação faz isso: o melhor mês desde que abriram a oficina!",
   },
 ];
@@ -59,7 +59,7 @@ export default function DepoimentosParaOficinas() {
         </div>
 
         <div className="reveal mt-12 text-center md:mt-16">
-          <Cta variant="lg">Quero aprender a cobrar certo</Cta>
+          <Cta variant="compact">Quero aprender a cobrar certo</Cta>
         </div>
       </div>
     </section>

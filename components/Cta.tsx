@@ -1,14 +1,17 @@
 /** Botão CTA reutilizável. Todos apontam para o mesmo checkout do produto. */
 
+import styles from "./section-cta.module.css";
+
 const CHECKOUT_URL =
   "https://payfast.greenn.com.br/x4tv742/offer/EH1p7y?ch_id=136193&b_id_1=n9vm2px&b_offer_1=A3ccG2&b_id_2=27jfr8c&b_offer_2=KaGpUB&b_id_3=4qkqx23&b_offer_3=TR6Iaq";
 
-type Variant = "lg" | "wide" | "base";
+type Variant = "lg" | "wide" | "base" | "compact";
 
 const variantClass: Record<Variant, string> = {
   base: "",
   lg: "btn--lg",
   wide: "btn--wide",
+  compact: "",
 };
 
 export default function Cta({
@@ -23,7 +26,7 @@ export default function Cta({
   className?: string;
 }) {
   return (
-    <a href={href} className={`btn ${variantClass[variant]} ${className}`.trim()}>
+    <a href={href} className={`${variant === "compact" ? styles.button : `btn ${variantClass[variant]}`} ${className}`.trim()}>
       {children}
     </a>
   );

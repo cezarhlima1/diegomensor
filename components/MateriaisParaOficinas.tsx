@@ -1,3 +1,4 @@
+import SectionCta from "./SectionCta";
 import styles from "./materiais-para-oficinas.module.css";
 
 const materials = [
@@ -25,6 +26,12 @@ const materials = [
     title: "Aula bônus de checklist",
     description: "Aprenda a implementar o checklist na tua oficina para conferir se a precificação está sendo feita corretamente.",
   },
+  {
+    image: "/material-apostila.jpg",
+    alt: "Apostila de precificação para oficinas",
+    title: "Apostila de precificação",
+    description: "Tenha o conteúdo em mãos para acompanhar as aulas e consultar na hora de ajustar a precificação da tua oficina.",
+  },
 ];
 
 export default function MateriaisParaOficinas() {
@@ -47,6 +54,7 @@ export default function MateriaisParaOficinas() {
             </article>
           ))}
         </div>
+        <SectionCta />
       </div>
     </section>
   );

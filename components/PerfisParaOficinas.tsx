@@ -1,3 +1,4 @@
+import SectionCta from "./SectionCta";
 import styles from "./perfis-para-oficinas.module.css";
 
 const profiles = [
@@ -26,7 +27,7 @@ export default function PerfisParaOficinas() {
         <div className="text-center">
           <span className="tag reveal">Para quem é</span>
           <h2 id="perfis-title" className="section-title reveal d1 mx-auto mt-5 max-w-[29ch]">
-            Esse treinamento é para quem precisa <span className="text-blue">cobrar certo dentro da oficina.</span>
+            Esse mini curso é para o dono de oficina que cansou de <span className="text-blue">cobrar errado e não saber como ajustar isso.</span>
           </h2>
         </div>
 
@@ -48,6 +49,7 @@ export default function PerfisParaOficinas() {
             Não importa se tua oficina fatura <span className="text-blue">R$10mil ou R$150 mil:</span> se tu vende mão de obra e peças, precisa saber quanto cobrar.
           </p>
         </div>
+        <SectionCta />
       </div>
     </section>
   );

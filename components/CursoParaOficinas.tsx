@@ -1,3 +1,4 @@
+import SectionCta from "./SectionCta";
 import styles from "./curso-para-oficinas.module.css";
 
 const images = [
@@ -7,6 +8,7 @@ const images = [
   { n: 2, src: "/curso-precificando.jpg", alt: "Aula: precificando de forma correta" },
   { n: 8, src: "/previa-mao-de-obra.jpg", alt: "Planilha de custo operacional e cálculo do valor da mão de obra", featured: true },
   { n: 4, src: "/curso-cobrar-certo.jpg", alt: "Aula: a importância de cobrar certo" },
+  { n: 14, src: "/material-apostila.jpg", alt: "Apostila de precificação para oficinas" },
 ];
 
 export default function CursoParaOficinas() {
@@ -23,6 +25,7 @@ export default function CursoParaOficinas() {
             </figure>
           ))}
         </div>
+        <SectionCta />
       </div>
     </section>
   );

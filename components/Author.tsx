@@ -1,4 +1,6 @@
-export default function Author() {
+import type { ReactNode } from "react";
+
+export default function Author({ footer }: { footer?: ReactNode } = {}) {
   return (
     <section className="py-[72px] md:py-24">
       <div className="wrap">
@@ -27,6 +29,7 @@ export default function Author() {
             <div className="font-mono text-blue font-bold tracking-[.04em]">@diegomensor</div>
           </div>
         </div>
+        {footer}
       </div>
     </section>
   );

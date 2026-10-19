@@ -72,17 +72,17 @@
 }
 
 .page :global(.btn) {
-  background: linear-gradient(180deg, #36b0fa, #148bd4);
-  color: #071722;
+  background: #157a43;
+  color: #fff;
   border-radius: 10px;
-  box-shadow: 0 8px 28px -12px #0495f08c;
+  box-shadow: 0 8px 24px -16px #157a4380;
   font-weight: 700;
   transform: none !important;
 }
 
 .page :global(.btn):hover {
-  background: #5cc2ff;
-  box-shadow: 0 10px 30px -12px #0495f099;
+  background: #106336;
+  box-shadow: 0 8px 24px -16px #157a4380;
   filter: none;
 }
 
