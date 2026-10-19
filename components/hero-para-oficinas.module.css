@@ -1,0 +1,45 @@
+.collage {
+  width: min(100%, 720px);
+  margin: 0 auto 40px;
+}
+
+.collage img {
+  display: block;
+  height: auto;
+  border: 1px solid #ffffff20;
+  border-radius: 6px;
+}
+
+.course {
+  width: 80%;
+  margin-inline: auto;
+}
+
+.materials {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin-top: -32px;
+}
+
+.materials img {
+  width: 100%;
+  background: #11161b;
+}
+
+@media (max-width: 600px) {
+  .collage {
+    margin-bottom: 28px;
+  }
+
+  .course {
+    width: 94%;
+  }
+
+  .materials {
+    gap: 6px;
+    margin-top: -12px;
+  }
+}

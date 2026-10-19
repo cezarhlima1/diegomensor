@@ -16,10 +16,11 @@ import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
 import BackRedirect from "@/components/BackRedirect";
 import OfertaLimitadaParaOficinas from "@/components/OfertaLimitadaParaOficinas";
+import styles from "./page.module.css";
 
 export default function PrecificacaoParaOficinasPage() {
   return (
-    <>
+    <div className={styles.page}>
       <FacebookPixel />
       <ClarityScript projectId="xbomd0cmow" />
       <OfertaLimitadaParaOficinas />
@@ -28,7 +29,18 @@ export default function PrecificacaoParaOficinasPage() {
         <DepoimentosParaOficinas />
         <CursoParaOficinas />
         <DuvidasParaOficinas />
-        <Steps />
+        <Steps titles={[
+          "Por que precificação primeiro?",
+          "A importância de cobrar certo",
+          "Quanto custa manter sua oficina aberta?",
+          "Planilha na prática",
+          "Precificando de forma correta",
+          "Quanto cada mecânico deve produzir?",
+          "Contratar mais funcionários pode diminuir o custo da sua hora",
+          "O que é o Tempario?",
+          "Como funciona o Tempario Automotivo",
+          "Pague aluguel para você mesmo",
+        ]} />
         <PerfisParaOficinas />
         <Offer />
         <Choice />
@@ -40,6 +52,6 @@ export default function PrecificacaoParaOficinasPage() {
       <Footer />
       <ClientEffects />
       <BackRedirect />
-    </>
+    </div>
   );
 }

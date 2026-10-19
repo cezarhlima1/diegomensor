@@ -36,27 +36,29 @@ const steps = [
   },
 ];
 
-export default function Steps() {
+export default function Steps({ titles }: { titles?: string[] } = {}) {
+  const displayedSteps = titles
+    ? titles.map((title, index) => ({ n: String(index + 1).padStart(2, "0"), title, desc: "" }))
+    : steps;
   return (
     <section className="py-[72px] md:py-24">
       <div className="wrap">
         <h2 className="section-title text-center mx-auto max-w-[24ch] reveal">
-          Os 7 passos que fazem <span className="text-blue">a conta finalmente fechar</span> dentro
+          Os {displayedSteps.length} passos que fazem <span className="text-blue">a conta finalmente fechar</span> dentro
           da sua oficina
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px] mt-[54px]">
-          {steps.map((s, i) => (
+          {displayedSteps.map((s, i) => (
             <article key={s.n} className={`step reveal d${(i % 4) + 1}`}>
               <div className="step-num">Passo {s.n}</div>
               <div className="step-big">{s.n}</div>
               <h3 className="text-[19px] font-bold mb-2.5 leading-tight">{s.title}</h3>
-              <p className="text-sm text-muted">{s.desc}</p>
+              {s.desc && <p className="text-sm text-muted">{s.desc}</p>}
             </article>
           ))}
 
-          {/* card de reforço ocupando o 8º espaço */}
-          <article className="step reveal d4 flex flex-col justify-center !border-blue/50 bg-[linear-gradient(165deg,#0a2c49,#0d1c28)]">
+          <article className={`step reveal d4 flex flex-col justify-center !border-blue/50 bg-[linear-gradient(165deg,#0a2c49,#0d1c28)] ${titles ? "sm:col-span-2" : ""}`}>
             <div className="step-num !text-blue-soft">Resultado</div>
             <h3 className="text-[21px] font-bold mt-2 leading-tight">
               A conta fechando, com clareza e no preço.

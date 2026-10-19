@@ -5,7 +5,7 @@ const images = [
   { n: 1, alt: "Aula: primeiro passo da precificação" },
   { n: 3, alt: "Aula: quanto custa sua oficina aberta?" },
   { n: 2, alt: "Aula: precificando de forma correta" },
-  { n: 5, alt: "Planilha de custo operacional e cálculo do valor da mão de obra", featured: true },
+  { n: 8, src: "/imagem8.png", alt: "Planilha de custo operacional e cálculo do valor da mão de obra", featured: true },
   { n: 4, alt: "Aula: a importância de cobrar certo" },
 ];
 
@@ -19,7 +19,7 @@ export default function CursoParaOficinas() {
         <div className={`${styles.collage} mt-12 md:mt-16`}>
           {images.map((image, index) => (
             <figure key={image.n} className={`${styles.frame} ${image.featured ? styles.featured : ""} reveal d${(index % 3) + 1}`}>
-              <img src={`/Imagem${image.n}curso.png`} alt={image.alt} loading="lazy" className="block h-auto w-full" />
+              <img src={image.src ?? `/Imagem${image.n}curso.png`} alt={image.alt} loading="lazy" className="block h-auto w-full" />
             </figure>
           ))}
         </div>
