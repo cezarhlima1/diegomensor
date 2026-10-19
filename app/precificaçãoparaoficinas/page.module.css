@@ -15,17 +15,23 @@
   scroll-margin-top: 56px;
 }
 
-.page main > section:where(:nth-of-type(odd):not(:global(.checkout-light))) {
-  background-color: #111b26;
+.page main > section:nth-of-type(odd) {
+  background: #11161b;
 }
 
-.page main > section:where(:nth-of-type(even):not(:global(.checkout-light))) {
-  background-color: #1b232b;
+.page main > section:nth-of-type(even) {
+  --color-blue: #087bbd;
+  --color-blue-soft: #087bbd;
+  --color-muted: #52616d;
+  --color-offwhite: #172b3a;
+  --color-line: #172b3a26;
+  background: #fff;
+  color: #172b3a;
+  border-top-color: #172b3a14;
 }
 
 .page main > section:first-child {
   padding-top: 140px;
-  background-color: #0e1823;
   border-top: 0;
 }
 
@@ -142,12 +148,7 @@
   line-height: 1.6;
 }
 
-.page main > section[aria-labelledby="depoimentos-title"] {
-  background: #202830;
-}
-
-.page [aria-labelledby="duvidas-title"] li,
-.page [aria-labelledby="perfis-title"] li {
+.page [aria-labelledby="duvidas-title"] li {
   background: linear-gradient(145deg, #17232d, #141c23);
   box-shadow: 0 12px 32px -24px #0008;
   border: 1px solid #ffffff0f;
@@ -155,9 +156,7 @@
   padding: 28px;
 }
 
-.page [aria-labelledby="duvidas-title"] li > span,
-.page [aria-labelledby="perfis-title"] li > span,
-.page [aria-labelledby="perfis-title"] > div[aria-hidden] {
+.page [aria-labelledby="duvidas-title"] li > span {
   display: none;
 }
 
@@ -165,23 +164,6 @@
   font-size: 18px;
   font-weight: 400;
   line-height: 1.7;
-}
-
-.page [aria-labelledby="perfis-title"] h3 {
-  font-size: clamp(22px, 2.3vw, 28px);
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.page [aria-labelledby="perfis-title"] ul + div {
-  background: #219de90a;
-  border: 1px solid #39adf32b;
-  border-radius: 14px;
-}
-
-.page [aria-labelledby="perfis-title"] ul + div p {
-  font-size: clamp(19px, 2.2vw, 25px);
-  font-weight: 500;
 }
 
 @media (min-width: 768px) {
@@ -203,22 +185,17 @@
 }
 
 .page [aria-labelledby="depoimentos-title"] :global(.testi) {
-  background: #141c23;
-  border-color: #ffffff1a;
-  box-shadow: 0 12px 32px -20px #0009;
+  background: #fff;
+  border-color: #172b3a1a;
+  box-shadow: 0 12px 32px -20px #172b3a40;
 }
 
 .page main > section[aria-labelledby="curso-title"] {
-  background: radial-gradient(ellipse at 50% 40%, #0495f014, transparent 70%), #102c3a;
   border-bottom: 1px solid #5db8ed1a;
 }
 
 .page [aria-labelledby="curso-title"] h2 {
   max-width: 34ch;
-}
-
-.page main > section[aria-labelledby="duvidas-title"] {
-  background: #283541;
 }
 
 .page [aria-labelledby="duvidas-title"] h2 {
@@ -234,7 +211,7 @@
 
 .page [aria-labelledby="duvidas-title"] li {
   border: 0;
-  border-bottom: 1px solid #ffffff24;
+  border-bottom: 1px solid var(--color-line);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -248,18 +225,6 @@
 .page [aria-labelledby="duvidas-title"] li:last-child {
   border-bottom: 0;
   padding-bottom: 0;
-}
-
-.page main > section[data-steps] {
-  background: #111d2d;
-}
-
-.page main > section[aria-labelledby="materiais-title"] {
-  background: #17384b;
-}
-
-.page main > section[aria-labelledby="perfis-title"] {
-  background: #252d35;
 }
 
 .page [data-steps] :global(.step) {
@@ -298,54 +263,14 @@
   background: #219de90a;
 }
 
-.page [aria-labelledby="perfis-title"] li {
-  background: linear-gradient(145deg, #17232d, #141c23);
-  border: 1px solid #ffffff0f;
-  border-radius: 12px;
-  box-shadow: none;
-}
-
-.page [aria-labelledby="perfis-title"] li p {
-  color: #b8c9d5;
-}
-
-.page [aria-labelledby="perfis-title"] ul + div {
-  background: #219de90a;
-  border: 1px solid #39adf32b;
-}
-
 @media (min-width: 900px) {
   .page [aria-labelledby="duvidas-title"] > :global(.wrap) {
     display: grid;
     grid-template-columns: .9fr 1.1fr;
-    align-items: start;
+    align-items: center;
     gap: 80px;
   }
 
-  .page [aria-labelledby="perfis-title"] > :global(.wrap) {
-    display: grid;
-    grid-template-columns: .8fr 1.2fr;
-    align-items: start;
-    gap: 40px 64px;
-  }
-
-  .page [aria-labelledby="perfis-title"] > :global(.wrap) > div:first-child,
-  .page [aria-labelledby="perfis-title"] h2 {
-    text-align: left;
-    margin-inline: 0;
-  }
-
-  .page [aria-labelledby="perfis-title"] ul {
-    margin-top: 0;
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .page [aria-labelledby="perfis-title"] ul + div {
-    grid-column: 1 / -1;
-    margin-top: 0;
-    width: 100%;
-  }
 }
 
 @media (max-width: 899px) {
@@ -363,4 +288,63 @@
   .page main > section:first-child {
     padding-top: 104px;
   }
+}
+
+/* Contraste completo nas dobras brancas, incluindo os blocos compartilhados. */
+.page main > section:nth-of-type(even) :is(h2, h3),
+.page main > section:nth-of-type(even) :global(.text-white),
+.page main > section:nth-of-type(even) :global(.text-offwhite) {
+  color: #172b3a;
+}
+
+.page main > section:nth-of-type(even) p {
+  color: #435461;
+}
+
+.page main > section:nth-of-type(even) :global(.text-blue) {
+  color: #087bbd;
+}
+
+.page main > section:nth-of-type(even) > :global(.wrap) {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+}
+
+.page main > section:nth-of-type(even) > div[aria-hidden] {
+  display: none;
+}
+
+.page main > section:nth-of-type(even) :global(.choice-card),
+.page main > section:nth-of-type(even) :global(.final-card),
+.page main > section:nth-of-type(even) :global(.author-card),
+.page main > section:nth-of-type(even) :global(.faq-item),
+.page main > section:nth-of-type(even)[aria-labelledby="perfis-title"] li,
+.page main > section:nth-of-type(even) :global(.wrap) > div:has(> :global(.shield)) {
+  background: #f6f8fa;
+  border-color: #172b3a26;
+  box-shadow: 0 12px 32px -24px #172b3a30;
+}
+
+.page main > section:nth-of-type(even) :global(.faq-q) {
+  color: #172b3a;
+}
+
+.page main > section:nth-of-type(even)[aria-labelledby="perfis-title"] ul + div {
+  border-top-color: #172b3a26;
+}
+
+.page main > section:nth-of-type(even) :global(.choice-good) {
+  background: #f0f8fd;
+  border-color: #087bbd55;
+}
+
+.page main > section:global(.checkout-light)::before,
+.page main > section:global(.checkout-light)::after {
+  display: none;
+}
+
+.page main > section:global(.checkout-light) > :global(.wrap) > p,
+.page main > section:global(.checkout-light) > :global(.wrap) > p b {
+  color: #dce1e5;
 }

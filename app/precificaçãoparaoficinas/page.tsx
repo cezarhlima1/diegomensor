@@ -4,15 +4,14 @@ import HeroParaOficinas from "@/components/HeroParaOficinas";
 import DepoimentosParaOficinas from "@/components/DepoimentosParaOficinas";
 import CursoParaOficinas from "@/components/CursoParaOficinas";
 import DuvidasParaOficinas from "@/components/DuvidasParaOficinas";
-import Steps from "@/components/Steps";
+import ComoFuncionaParaOficinas from "@/components/ComoFuncionaParaOficinas";
 import PerfisParaOficinas from "@/components/PerfisParaOficinas";
 import MateriaisParaOficinas from "@/components/MateriaisParaOficinas";
-import Offer from "@/components/Offer";
-import Choice from "@/components/Choice";
+import OfertaParaOficinas from "@/components/OfertaParaOficinas";
 import Author from "@/components/Author";
-import FinalOffer from "@/components/FinalOffer";
 import Faq from "@/components/Faq";
 import Guarantee from "@/components/Guarantee";
+import WhatsAppParaOficinas from "@/components/WhatsAppParaOficinas";
 import Footer from "@/components/Footer";
 import ClientEffects from "@/components/ClientEffects";
 import BackRedirect from "@/components/BackRedirect";
@@ -30,26 +29,14 @@ export default function PrecificacaoParaOficinasPage() {
         <DepoimentosParaOficinas />
         <CursoParaOficinas />
         <DuvidasParaOficinas />
-        <Steps titles={[
-          "Por que precificação primeiro?",
-          "A importância de cobrar certo",
-          "Quanto custa manter sua oficina aberta?",
-          "Planilha na prática",
-          "Precificando de forma correta",
-          "Quanto cada mecânico deve produzir?",
-          "Contratar mais funcionários pode diminuir o custo da sua hora",
-          "O que é o Tempario?",
-          "Como funciona o Tempario Automotivo",
-          "Pague aluguel para você mesmo",
-        ]} />
+        <ComoFuncionaParaOficinas />
         <MateriaisParaOficinas />
+        <OfertaParaOficinas />
         <PerfisParaOficinas />
-        <Offer />
-        <Choice />
         <Author />
-        <FinalOffer />
         <Faq />
         <Guarantee />
+        <WhatsAppParaOficinas />
       </main>
       <Footer />
       <ClientEffects />

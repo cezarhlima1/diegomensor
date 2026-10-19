@@ -1,6 +1,5 @@
 .section {
   border-block: 1px solid #39adf31a;
-  background: radial-gradient(ellipse at 50% 0, #0495f00d, transparent 65%);
 }
 
 .grid {
@@ -20,9 +19,9 @@
   justify-content: center;
   aspect-ratio: 16 / 11;
   padding: 10px;
-  border: 1px solid #ffffff14;
+  border: 1px solid #172b3a1a;
   border-radius: 12px;
-  background: #17232d;
+  background: #f6f8fa;
   overflow: hidden;
 }
 
