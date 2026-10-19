@@ -1,5 +1,6 @@
 .collage {
-  width: min(100%, 720px);
+  position: relative;
+  width: min(100%, 820px);
   margin: 0 auto 40px;
 }
 
@@ -7,11 +8,12 @@
   display: block;
   height: auto;
   border: 1px solid #ffffff20;
-  border-radius: 6px;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 24%);
 }
 
 .course {
-  width: 80%;
+  width: 88%;
   margin-inline: auto;
 }
 

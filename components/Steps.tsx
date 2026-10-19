@@ -41,7 +41,7 @@ export default function Steps({ titles }: { titles?: string[] } = {}) {
     ? titles.map((title, index) => ({ n: String(index + 1).padStart(2, "0"), title, desc: "" }))
     : steps;
   return (
-    <section className="py-[72px] md:py-24">
+    <section data-steps className="py-[72px] md:py-24">
       <div className="wrap">
         <h2 className="section-title text-center mx-auto max-w-[24ch] reveal">
           Os {displayedSteps.length} passos que fazem <span className="text-blue">a conta finalmente fechar</span> dentro

@@ -1,5 +1,5 @@
 .page {
-  --color-blue: #82b8d5;
+  --color-blue: #39adf3;
   --color-blue-soft: #b2cddd;
   background: #11161b;
   color: #dce1e5;
@@ -19,7 +19,7 @@
 
 .page h1 {
   font-size: clamp(32px, 4.5vw, 52px);
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.18;
 }
 
@@ -31,11 +31,15 @@
   text-wrap: balance;
 }
 
-.page :global(.hero-bg),
 .page :global(.pointer-glow),
 .page :global(.hero-badge .dot),
 .page :global(.btn)::after {
   display: none;
+}
+
+.page :global(.hero-bg) {
+  display: block;
+  background: radial-gradient(ellipse at 50% 15%, #0495f026, transparent 65%);
 }
 
 .page :global(.hero-badge),
@@ -50,17 +54,17 @@
 }
 
 .page :global(.btn) {
-  background: #82b8d5;
-  color: #111b23;
-  border-radius: 8px;
-  box-shadow: none;
+  background: linear-gradient(180deg, #36b0fa, #148bd4);
+  color: #071722;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px -12px #0495f08c;
   font-weight: 700;
   transform: none !important;
 }
 
 .page :global(.btn):hover {
-  background: #a0cbe2;
-  box-shadow: none;
+  background: #5cc2ff;
+  box-shadow: 0 10px 30px -12px #0495f099;
   filter: none;
 }
 
@@ -73,16 +77,15 @@
 .page :global(.testi),
 .page :global(.price-card),
 .page :global(.step) {
-  box-shadow: none;
+  box-shadow: 0 12px 32px -20px #0009;
   text-shadow: none;
 }
 
 .page :global(.step) {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid #ffffff1a !important;
-  border-radius: 0;
-  padding: 24px 0;
+  background: linear-gradient(145deg, #172631, #131c24);
+  border: 1px solid #76b5d923 !important;
+  border-radius: 14px;
+  padding: 26px;
   transform: none;
 }
 
@@ -114,7 +117,7 @@
 
 .page > div:has(> [role="timer"]) {
   min-height: 44px;
-  background: #1c262f;
+  background: linear-gradient(90deg, #112c40, #173c56, #112c40);
   box-shadow: none;
   border-bottom: 1px solid #ffffff12;
   font-size: 13px;
@@ -129,12 +132,11 @@
 
 .page [aria-labelledby="duvidas-title"] li,
 .page [aria-labelledby="perfis-title"] li {
-  background: transparent;
-  box-shadow: none;
-  border: 0;
-  border-top: 1px solid #ffffff1a;
-  border-radius: 0;
-  padding: 28px 0;
+  background: linear-gradient(145deg, #17232d, #141c23);
+  box-shadow: 0 12px 32px -24px #0008;
+  border: 1px solid #ffffff0f;
+  border-radius: 14px;
+  padding: 28px;
 }
 
 .page [aria-labelledby="duvidas-title"] li > span,
@@ -156,10 +158,9 @@
 }
 
 .page [aria-labelledby="perfis-title"] ul + div {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid #ffffff1a;
-  border-radius: 0;
+  background: #219de90a;
+  border: 1px solid #39adf32b;
+  border-radius: 14px;
 }
 
 .page [aria-labelledby="perfis-title"] ul + div p {
@@ -172,10 +173,161 @@
     padding-right: 24px;
   }
 
-  .page main > section:has(:global(.step)) :global(.grid) {
+  .page main > section[data-steps] :global(.grid) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 48px;
-    row-gap: 8px;
+    row-gap: 20px;
+  }
+}
+
+/* Cada seção tem sua própria composição, mantendo a mesma paleta. */
+.page [aria-labelledby="depoimentos-title"] article > p {
+  border-left: 3px solid var(--color-blue);
+  padding-left: 24px;
+}
+
+.page [aria-labelledby="depoimentos-title"] :global(.testi) {
+  background: #141c23;
+  border-color: #ffffff1a;
+  box-shadow: 0 12px 32px -20px #0009;
+}
+
+.page [aria-labelledby="curso-title"] {
+  background: radial-gradient(ellipse at 50% 40%, #0495f014, transparent 70%), #11161b;
+  border-bottom: 1px solid #5db8ed1a;
+}
+
+.page [aria-labelledby="curso-title"] h2 {
+  max-width: 34ch;
+}
+
+.page [aria-labelledby="duvidas-title"] {
+  background: #11161b;
+}
+
+.page [aria-labelledby="duvidas-title"] h2 {
+  text-align: left;
+  margin: 0;
+  max-width: 22ch;
+}
+
+.page [aria-labelledby="duvidas-title"] ul {
+  display: block;
+  margin: 0;
+}
+
+.page [aria-labelledby="duvidas-title"] li {
+  border: 0;
+  border-bottom: 1px solid #ffffff24;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 22px 0;
+}
+
+.page [aria-labelledby="duvidas-title"] li:first-child {
+  padding-top: 0;
+}
+
+.page [aria-labelledby="duvidas-title"] li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.page main > section[data-steps] {
+  background: #11161b;
+}
+
+.page [data-steps] :global(.step) {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 16px;
+  padding: 22px 0;
+  border: 0 !important;
+  border-bottom: 1px solid #ffffff1a !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page [data-steps] :global(.step-num) {
+  display: none;
+}
+
+.page [data-steps] :global(.step-big) {
+  display: block;
+  color: #39adf3;
+  font-size: 21px;
+  font-weight: 500;
+  text-shadow: none;
+  margin: 0;
+}
+
+.page [data-steps] :global(.step):last-child {
+  display: block;
+  padding: 28px 32px;
+  margin-top: 20px;
+  text-align: center;
+  border: 1px solid #39adf340 !important;
+  border-radius: 12px;
+  background: #219de90a;
+}
+
+.page [aria-labelledby="perfis-title"] li {
+  background: linear-gradient(145deg, #17232d, #141c23);
+  border: 1px solid #ffffff0f;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.page [aria-labelledby="perfis-title"] li p {
+  color: #b8c9d5;
+}
+
+.page [aria-labelledby="perfis-title"] ul + div {
+  background: #219de90a;
+  border: 1px solid #39adf32b;
+}
+
+@media (min-width: 900px) {
+  .page [aria-labelledby="duvidas-title"] > :global(.wrap) {
+    display: grid;
+    grid-template-columns: .9fr 1.1fr;
+    align-items: start;
+    gap: 80px;
+  }
+
+  .page [aria-labelledby="perfis-title"] > :global(.wrap) {
+    display: grid;
+    grid-template-columns: .8fr 1.2fr;
+    align-items: start;
+    gap: 40px 64px;
+  }
+
+  .page [aria-labelledby="perfis-title"] > :global(.wrap) > div:first-child,
+  .page [aria-labelledby="perfis-title"] h2 {
+    text-align: left;
+    margin-inline: 0;
+  }
+
+  .page [aria-labelledby="perfis-title"] ul {
+    margin-top: 0;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .page [aria-labelledby="perfis-title"] ul + div {
+    grid-column: 1 / -1;
+    margin-top: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 899px) {
+  .page [aria-labelledby="duvidas-title"] h2 {
+    max-width: 32ch;
+    margin-bottom: 36px;
   }
 }
 

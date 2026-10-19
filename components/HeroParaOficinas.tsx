@@ -8,11 +8,11 @@ export default function HeroParaOficinas() {
 
       <div className="wrap max-w-[940px] text-center">
         <div className={styles.collage} aria-label="Prévia das aulas e dos materiais incluídos no treinamento">
-          <img src="/imagem10.png" alt="Área do curso com as aulas de precificação" width={2718} height={1260} fetchPriority="high" className={styles.course} />
+          <img src="/previa-curso.jpg" alt="Área do curso com as aulas de precificação" width={2718} height={1260} fetchPriority="high" loading="eager" className={styles.course} />
           <div className={styles.materials}>
-            <img src="/imagem7.png" alt="Planilha de peças com tabela de markup automático" width={1776} height={1088} />
-            <img src="/imagem8.png" alt="Planilha de despesas e cálculo do valor da mão de obra" width={1932} height={1120} />
-            <img src="/imagem9.png" alt="Instruções práticas para usar a planilha de precificação" width={1600} height={1142} />
+            <img src="/previa-markup.jpg" alt="Planilha de peças com tabela de markup automático" width={1776} height={1088} />
+            <img src="/previa-mao-de-obra.jpg" alt="Planilha de despesas e cálculo do valor da mão de obra" width={1932} height={1120} />
+            <img src="/previa-instrucoes.jpg" alt="Instruções práticas para usar a planilha de precificação" width={1600} height={1142} />
           </div>
         </div>
         <div className="mx-auto flex w-full max-w-[820px] flex-col items-center">
