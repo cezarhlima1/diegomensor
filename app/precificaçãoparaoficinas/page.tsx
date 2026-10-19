@@ -6,6 +6,7 @@ import CursoParaOficinas from "@/components/CursoParaOficinas";
 import DuvidasParaOficinas from "@/components/DuvidasParaOficinas";
 import Steps from "@/components/Steps";
 import PerfisParaOficinas from "@/components/PerfisParaOficinas";
+import MateriaisParaOficinas from "@/components/MateriaisParaOficinas";
 import Offer from "@/components/Offer";
 import Choice from "@/components/Choice";
 import Author from "@/components/Author";
@@ -41,6 +42,7 @@ export default function PrecificacaoParaOficinasPage() {
           "Como funciona o Tempario Automotivo",
           "Pague aluguel para você mesmo",
         ]} />
+        <MateriaisParaOficinas />
         <PerfisParaOficinas />
         <Offer />
         <Choice />
