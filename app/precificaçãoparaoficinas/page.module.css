@@ -10,11 +10,23 @@
 }
 
 .page main > section {
-  padding-block: 80px;
+  padding-block: 96px;
+  border-top: 1px solid #ffffff12;
+  scroll-margin-top: 56px;
+}
+
+.page main > section:where(:nth-of-type(odd):not(:global(.checkout-light))) {
+  background-color: #111b26;
+}
+
+.page main > section:where(:nth-of-type(even):not(:global(.checkout-light))) {
+  background-color: #1b232b;
 }
 
 .page main > section:first-child {
   padding-top: 140px;
+  background-color: #0e1823;
+  border-top: 0;
 }
 
 .page h1 {
@@ -24,9 +36,9 @@
 }
 
 .page :global(.section-title) {
-  font-size: clamp(26px, 3.1vw, 38px);
-  font-weight: 650;
-  line-height: 1.3;
+  font-size: clamp(27px, 3.3vw, 40px);
+  font-weight: 700;
+  line-height: 1.28;
   letter-spacing: -.02em;
   text-wrap: balance;
 }
@@ -130,6 +142,10 @@
   line-height: 1.6;
 }
 
+.page main > section[aria-labelledby="depoimentos-title"] {
+  background: #202830;
+}
+
 .page [aria-labelledby="duvidas-title"] li,
 .page [aria-labelledby="perfis-title"] li {
   background: linear-gradient(145deg, #17232d, #141c23);
@@ -192,8 +208,8 @@
   box-shadow: 0 12px 32px -20px #0009;
 }
 
-.page [aria-labelledby="curso-title"] {
-  background: radial-gradient(ellipse at 50% 40%, #0495f014, transparent 70%), #11161b;
+.page main > section[aria-labelledby="curso-title"] {
+  background: radial-gradient(ellipse at 50% 40%, #0495f014, transparent 70%), #102c3a;
   border-bottom: 1px solid #5db8ed1a;
 }
 
@@ -201,8 +217,8 @@
   max-width: 34ch;
 }
 
-.page [aria-labelledby="duvidas-title"] {
-  background: #11161b;
+.page main > section[aria-labelledby="duvidas-title"] {
+  background: #283541;
 }
 
 .page [aria-labelledby="duvidas-title"] h2 {
@@ -235,7 +251,15 @@
 }
 
 .page main > section[data-steps] {
-  background: #11161b;
+  background: #111d2d;
+}
+
+.page main > section[aria-labelledby="materiais-title"] {
+  background: #17384b;
+}
+
+.page main > section[aria-labelledby="perfis-title"] {
+  background: #252d35;
 }
 
 .page [data-steps] :global(.step) {
