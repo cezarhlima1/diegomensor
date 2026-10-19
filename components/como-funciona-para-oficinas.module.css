@@ -56,8 +56,8 @@
 @media (max-width: 767px) {
   .sequence {
     grid-template-columns: 1fr;
-    gap: 32px;
-    margin-top: 36px;
+    gap: 48px;
+    margin-top: 44px;
   }
 
   .step {
@@ -84,7 +84,7 @@
 
   .step:not(:last-child)::after {
     top: 56px;
-    bottom: -20px;
+    bottom: -34px;
     left: 21px;
     right: auto;
     width: 2px;
@@ -93,7 +93,7 @@
 
   .step:not(:last-child)::before {
     top: auto;
-    bottom: -20px;
+    bottom: -34px;
     left: 17px;
     right: auto;
     rotate: 135deg;

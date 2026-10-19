@@ -1,7 +1,7 @@
 .collage {
   position: relative;
   width: min(100%, 820px);
-  margin: 0 auto 40px;
+  margin: 36px auto 0;
   padding: 20px 12px 44px;
   isolation: isolate;
 }
@@ -55,7 +55,7 @@
 
 @media (max-width: 600px) {
   .collage {
-    margin-bottom: 28px;
+    margin-top: 32px;
   }
 
   .course {
