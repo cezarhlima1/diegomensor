@@ -1,4 +1,3 @@
-import SectionCta from "./SectionCta";
 import { WhatsApp } from "./icons";
 import styles from "./whatsapp-para-oficinas.module.css";
 
@@ -19,7 +18,6 @@ export default function WhatsAppParaOficinas() {
           <WhatsApp className="h-6 w-6 shrink-0" />
           FALAR COM A EQUIPE NO WHATSAPP
         </a>
-        <SectionCta />
       </div>
     </section>
   );

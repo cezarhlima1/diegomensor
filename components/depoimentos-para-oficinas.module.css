@@ -62,14 +62,6 @@
   outline-offset: -3px;
 }
 
-.hint {
-  display: block;
-  margin-top: 16px;
-  color: #9bafbf;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .narrative {
   padding-left: 24px;
   border-left: 2px solid #39adf366;

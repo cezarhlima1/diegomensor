@@ -7,7 +7,7 @@ const cases = [
       { src: "/Depoimento01.png", alt: "Resultado da oficina antes de ajustar a precificação", label: "Antes" },
       { src: "/Depoimento02.png", alt: "Resultado da oficina depois de ajustar a precificação", label: "Depois" },
     ],
-    text: "Os mesmos 33 carros. Só que agora, cobrando corretamente por cada serviço.",
+    text: <>Os mesmos <strong className="text-blue">33 carros.</strong> Só que agora, <strong className="text-blue">cobrando corretamente</strong> por cada serviço.</>,
   },
   {
     images: [{ src: "/depoimentocaptura2.png", alt: "Depoimento sobre o aumento de faturamento após os ajustes de precificação", label: "" }],
@@ -33,7 +33,7 @@ export default function DepoimentosParaOficinas() {
 
         <div className={styles.cases}>
           {cases.map((item) => (
-            <article key={item.text} className={styles.card}>
+            <article key={item.images[0].src} className={styles.card}>
               <div className={styles.evidence}>
                 <div className={styles.prints}>
                   {item.images.map((image) => (
@@ -49,7 +49,6 @@ export default function DepoimentosParaOficinas() {
                     </figure>
                   ))}
                 </div>
-                <span className={styles.hint}>Abra o print para ver em tamanho original.</span>
               </div>
               <p className={styles.narrative}>
                 {item.text}
