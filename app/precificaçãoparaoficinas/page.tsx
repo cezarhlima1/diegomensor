@@ -35,8 +35,8 @@ export default function PrecificacaoParaOficinasPage() {
         <OfertaParaOficinas />
         <Author />
         <Faq />
-        <Guarantee />
         <WhatsAppParaOficinas />
+        <Guarantee />
       </main>
       <Footer />
       <ClientEffects />
