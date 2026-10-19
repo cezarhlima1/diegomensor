@@ -129,11 +129,11 @@
 
 .page > div:has(> [role="timer"]) {
   min-height: 44px;
-  background: linear-gradient(90deg, #112c40, #173c56, #112c40);
+  background: #d71920;
   box-shadow: none;
   border-bottom: 1px solid #ffffff12;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .page [aria-labelledby="depoimentos-title"] article > p {
