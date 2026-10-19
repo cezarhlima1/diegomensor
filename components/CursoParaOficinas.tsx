@@ -14,7 +14,7 @@ export default function CursoParaOficinas() {
     <section className="relative overflow-hidden py-[72px] md:py-24" aria-labelledby="curso-title">
       <div className="wrap">
         <h2 id="curso-title" className="section-title reveal mx-auto max-w-[38ch] text-center">
-          Você vai acessar imediatamente, <span className="text-blue">aulas curtas e objetivas</span> e o material necessário pra resolver essa parada da precificação ainda hoje.
+          Você vai acessar imediatamente, <span className="text-blue">aulas curtas e objetivas</span> e o material necessário pra resolver essa bagaça de precificação ainda hoje.
         </h2>
         <div className={`${styles.collage} mt-12 md:mt-16`}>
           {images.map((image, index) => (
