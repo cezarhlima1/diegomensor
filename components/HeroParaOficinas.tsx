@@ -6,14 +6,15 @@ export default function HeroParaOficinas() {
       <div className="hero-bg" aria-hidden="true" />
 
       <div className="wrap max-w-[940px] text-left">
-        <div className="flex flex-col items-start">
+        <div className="flex w-full max-w-[820px] flex-col items-start">
           <span className="hero-badge reveal">
             <span className="dot" />
             Precificação é o pilar principal da tua oficina
           </span>
 
-          <h1 className="reveal d1 font-display font-black text-[clamp(34px,5.4vw,62px)] my-6 max-w-[22ch]">
-            Organize a precificação da sua oficina ainda hoje, <span className="text-blue">sem complicação.</span>
+          <h1 className="reveal d1 my-6 w-full text-left font-display text-[clamp(32px,5vw,60px)] font-black leading-[1.12] tracking-[-.025em] [text-wrap:balance]">
+            Organize a precificação da sua oficina ainda hoje,{" "}
+            <span className="block text-blue">sem complicação.</span>
           </h1>
 
           <p className="reveal d2 max-w-[56ch] text-[clamp(16px,1.7vw,20px)] leading-[1.7] text-[#c8d7df]">

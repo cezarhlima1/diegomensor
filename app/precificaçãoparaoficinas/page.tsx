@@ -4,6 +4,8 @@ import HeroParaOficinas from "@/components/HeroParaOficinas";
 import DepoimentosParaOficinas from "@/components/DepoimentosParaOficinas";
 import CursoParaOficinas from "@/components/CursoParaOficinas";
 import DuvidasParaOficinas from "@/components/DuvidasParaOficinas";
+import Steps from "@/components/Steps";
+import PerfisParaOficinas from "@/components/PerfisParaOficinas";
 import Offer from "@/components/Offer";
 import Choice from "@/components/Choice";
 import Author from "@/components/Author";
@@ -26,6 +28,8 @@ export default function PrecificacaoParaOficinasPage() {
         <DepoimentosParaOficinas />
         <CursoParaOficinas />
         <DuvidasParaOficinas />
+        <Steps />
+        <PerfisParaOficinas />
         <Offer />
         <Choice />
         <Author />
@@ -33,9 +37,7 @@ export default function PrecificacaoParaOficinasPage() {
         <Faq />
         <Guarantee />
       </main>
-      <div className="pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        <Footer />
-      </div>
+      <Footer />
       <ClientEffects />
       <BackRedirect />
     </>
