@@ -1,0 +1,110 @@
+.cases {
+  display: grid;
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  padding: 36px;
+  border: 1px solid #ffffff14;
+  border-radius: 16px;
+  background: #151f28;
+}
+
+.evidence {
+  min-width: 0;
+  text-align: center;
+}
+
+.prints {
+  display: grid;
+  gap: 16px;
+  max-width: 380px;
+  margin-inline: auto;
+}
+
+.print {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #ffffff18;
+  border-radius: 8px;
+  background: #101820;
+}
+
+.label {
+  padding: 10px 16px;
+  color: #39adf3;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.imageLink {
+  display: block;
+  cursor: zoom-in;
+}
+
+.imageLink img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+
+.imageLink:focus-visible {
+  outline: 2px solid #39adf3;
+  outline-offset: -3px;
+}
+
+.hint {
+  display: block;
+  margin-top: 16px;
+  color: #9bafbf;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.narrative {
+  padding-left: 24px;
+  border-left: 2px solid #39adf366;
+  font-size: clamp(21px, 2.3vw, 27px);
+  font-weight: 600;
+  line-height: 1.6;
+  color: #eef3f6;
+}
+
+@media (max-width: 767px) {
+  .cases {
+    gap: 28px;
+    margin-top: 40px;
+  }
+
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    padding: 24px 20px;
+  }
+
+  .prints {
+    max-width: 260px;
+    gap: 14px;
+  }
+
+  .imageLink img {
+    max-height: 220px;
+  }
+
+  .narrative {
+    border-left: 0;
+    border-top: 1px solid #ffffff18;
+    padding: 24px 0 0;
+    font-size: 18px;
+    line-height: 1.65;
+  }
+}

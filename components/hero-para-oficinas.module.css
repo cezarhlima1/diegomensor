@@ -1,81 +1,56 @@
 .collage {
   position: relative;
-  width: min(100%, 820px);
-  margin: 36px auto 0;
-  padding: 20px 12px 44px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  width: min(100%, 720px);
+  margin: 44px auto 0;
+  padding: 12px 8px 24px;
   isolation: isolate;
 }
 
 .collage img {
   display: block;
+  width: 100%;
   height: auto;
-  border: 3px solid #263440;
+  aspect-ratio: 16 / 11;
+  object-fit: contain;
+  border: 2px solid #263440;
   border-radius: 10px;
-  box-shadow: 0 16px 40px rgb(0 0 0 / 36%);
+  background: #11161b;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 28%);
 }
 
 .course {
-  width: 86%;
-  margin-inline: auto;
-  rotate: -3deg;
+  rotate: -2deg;
 }
 
 .materials {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
-  gap: 0;
-  margin-top: -32px;
-  z-index: 1;
-}
-
-.materials img {
-  position: relative;
-  width: 108%;
-  background: #11161b;
+  display: contents;
 }
 
 .materials img:nth-child(1) {
-  rotate: -8deg;
-  translate: 0 12px;
+  rotate: 3deg;
+  translate: 0 8px;
 }
 
 .materials img:nth-child(2) {
-  rotate: 6deg;
-  translate: -4% -8px;
-  z-index: 2;
+  rotate: -3deg;
 }
 
 .materials img:nth-child(3) {
-  rotate: -5deg;
-  translate: -8% 22px;
-  z-index: 3;
+  rotate: 2deg;
+  translate: 0 8px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .collage {
-    margin-top: 32px;
+    gap: 20px 16px;
+    margin-top: 36px;
+    padding: 8px 6px 20px;
   }
 
-  .course {
-    width: 92%;
-  }
-
-  .materials {
-    margin-top: -18px;
-  }
-
-  .collage {
-    padding: 12px 8px 36px;
-  }
-
-  .materials img {
-    border-width: 2px;
-    border-radius: 6px;
-  }
-
-  .materials img:nth-child(3) {
-    translate: -8% 16px;
+  .collage img {
+    border-radius: 7px;
   }
 }

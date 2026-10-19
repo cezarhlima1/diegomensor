@@ -1,4 +1,5 @@
 import Cta from "./Cta";
+import styles from "./depoimentos-para-oficinas.module.css";
 
 const cases = [
   {
@@ -30,22 +31,27 @@ export default function DepoimentosParaOficinas() {
           Isso aqui é o que acontece quando você aprende a <span className="text-blue">precificar corretamente:</span>
         </h2>
 
-        <div className="mx-auto mt-12 max-w-[1100px] space-y-12 md:mt-16 md:space-y-20">
+        <div className={styles.cases}>
           {cases.map((item) => (
-            <article key={item.text} className="reveal grid grid-cols-1 items-center gap-7 border-b border-line pb-12 last:border-b-0 last:pb-0 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-12 md:pb-20 lg:gap-16">
-              <div className="flex min-w-0 flex-col gap-6">
-                {item.images.map((image) => (
-                  <figure key={image.src} className="testi !m-0 !p-0 overflow-hidden">
-                    {image.label && (
-                      <figcaption className="border-b border-line px-4 py-3 font-mono text-[12px] font-bold uppercase tracking-[.14em] text-blue">
-                        {image.label}
-                      </figcaption>
-                    )}
-                    <img src={image.src} alt={image.alt} loading="lazy" className="block h-auto w-full" />
-                  </figure>
-                ))}
+            <article key={item.text} className={styles.card}>
+              <div className={styles.evidence}>
+                <div className={styles.prints}>
+                  {item.images.map((image) => (
+                    <figure key={image.src} className={styles.print}>
+                      {image.label && (
+                        <figcaption className={styles.label}>
+                          {image.label}
+                        </figcaption>
+                      )}
+                      <a href={image.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${image.alt}`} className={styles.imageLink}>
+                        <img src={image.src} alt={image.alt} loading="lazy" />
+                      </a>
+                    </figure>
+                  ))}
+                </div>
+                <span className={styles.hint}>Abra o print para ver em tamanho original.</span>
               </div>
-              <p className="font-display text-[clamp(22px,2.6vw,32px)] font-bold leading-[1.45] text-offwhite">
+              <p className={styles.narrative}>
                 {item.text}
               </p>
             </article>

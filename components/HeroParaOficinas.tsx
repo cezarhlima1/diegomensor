@@ -8,11 +8,6 @@ export default function HeroParaOficinas() {
 
       <div className="wrap max-w-[940px] text-center">
         <div className="mx-auto flex w-full max-w-[820px] flex-col items-center">
-          <span className="hero-badge reveal">
-            <span className="dot" />
-            Precificação é o pilar principal da tua oficina
-          </span>
-
           <h1 className="reveal d1 my-6 w-full text-center font-display text-[clamp(32px,5vw,60px)] font-black leading-[1.12] tracking-[-.025em] [text-wrap:balance]">
             Organize a precificação da sua oficina ainda hoje,{" "}
             <span className="block text-blue">sem complicação.</span>

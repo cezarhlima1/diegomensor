@@ -142,11 +142,6 @@
   font-weight: 700;
 }
 
-.page [aria-labelledby="depoimentos-title"] article > p {
-  font-size: clamp(20px, 2.3vw, 27px);
-  font-weight: 500;
-  line-height: 1.6;
-}
 
 .page [aria-labelledby="duvidas-title"] li {
   background: linear-gradient(145deg, #17232d, #141c23);
@@ -179,16 +174,8 @@
 }
 
 /* Cada seção tem sua própria composição, mantendo a mesma paleta. */
-.page [aria-labelledby="depoimentos-title"] article > p {
-  border-left: 3px solid var(--color-blue);
-  padding-left: 24px;
-}
 
-.page [aria-labelledby="depoimentos-title"] :global(.testi) {
-  background: #18222c;
-  border-color: #ffffff1a;
-  box-shadow: 0 12px 32px -20px #0009;
-}
+
 
 .page main > section[aria-labelledby="curso-title"] {
   border-bottom: 1px solid #5db8ed1a;
@@ -299,6 +286,10 @@
     padding-top: calc(100px + env(safe-area-inset-top));
   }
 
+  .page [data-hero] > :global(.wrap) {
+    width: calc(100% - 56px);
+  }
+
   .page h1 {
     margin-block: 28px;
     font-size: clamp(29px, 7.8vw, 38px);
@@ -383,20 +374,8 @@
     white-space: nowrap;
   }
 
-  .page [aria-labelledby="depoimentos-title"] article {
-    gap: 32px;
-    padding-bottom: 48px;
-  }
 
-  .page [aria-labelledby="depoimentos-title"] article + article {
-    margin-top: 56px;
-  }
 
-  .page [aria-labelledby="depoimentos-title"] article > p {
-    padding-left: 16px;
-    font-size: 20px;
-    line-height: 1.55;
-  }
 
   .page [aria-labelledby="duvidas-title"] h2 {
     margin-bottom: 44px;
