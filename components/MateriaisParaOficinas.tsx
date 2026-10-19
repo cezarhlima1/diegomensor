@@ -22,7 +22,7 @@ const materials = [
   {
     image: "/imagem12.png",
     alt: "Checklist de manutenção preventiva incluído na aula bônus",
-    title: "Aula bônus + checklist",
+    title: "Aula bônus de checklist",
     description: "Aprenda a implementar o checklist na tua oficina para conferir se a precificação está sendo feita corretamente.",
   },
 ];
