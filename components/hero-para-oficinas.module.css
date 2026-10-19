@@ -1,11 +1,8 @@
 .collage {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
   width: min(100%, 720px);
   margin: 44px auto 0;
-  padding: 12px 8px 24px;
+  padding: 16px 8px 40px;
   isolation: isolate;
 }
 
@@ -13,44 +10,65 @@
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 11;
-  object-fit: contain;
   border: 2px solid #263440;
   border-radius: 10px;
   background: #11161b;
   box-shadow: 0 12px 30px rgb(0 0 0 / 28%);
 }
 
-.course {
-  rotate: -2deg;
-}
-
-.materials {
-  display: contents;
-}
-
-.materials img:nth-child(1) {
-  rotate: 3deg;
-  translate: 0 8px;
-}
-
-.materials img:nth-child(2) {
+.collage .course {
+  width: 80%;
+  margin-inline: auto;
   rotate: -3deg;
 }
 
+.materials {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-top: -24px;
+  z-index: 1;
+}
+
+.materials img {
+  position: relative;
+  flex: 0 0 40%;
+  width: 40%;
+  min-width: 0;
+}
+
+.materials img + img {
+  margin-left: -10%;
+}
+
+.materials img:nth-child(1) {
+  rotate: -7deg;
+  translate: 0 12px;
+}
+
+.materials img:nth-child(2) {
+  rotate: 5deg;
+  translate: 0 -6px;
+  z-index: 2;
+}
+
 .materials img:nth-child(3) {
-  rotate: 2deg;
-  translate: 0 8px;
+  rotate: -4deg;
+  translate: 0 20px;
+  z-index: 3;
 }
 
 @media (max-width: 767px) {
   .collage {
-    gap: 20px 16px;
     margin-top: 36px;
-    padding: 8px 6px 20px;
+    padding: 12px 8px 36px;
   }
 
   .collage img {
     border-radius: 7px;
+  }
+
+  .materials {
+    margin-top: -12px;
   }
 }
