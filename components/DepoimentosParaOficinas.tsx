@@ -7,7 +7,7 @@ const cases = [
       { src: "/Depoimento01.png", alt: "Resultado da oficina antes de ajustar a precificação", label: "Antes" },
       { src: "/Depoimento02.png", alt: "Resultado da oficina depois de ajustar a precificação", label: "Depois" },
     ],
-    text: <>Os mesmos <strong className="text-blue">33 carros.</strong> Só que agora, <strong className="text-blue">cobrando corretamente</strong> por cada serviço.</>,
+    text: "Os mesmos 33 carros. Só que agora, cobrando corretamente por cada serviço.",
   },
   {
     images: [{ src: "/depoimentocaptura2.png", alt: "Depoimento sobre o aumento de faturamento após os ajustes de precificação", label: "" }],
