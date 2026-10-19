@@ -1,0 +1,57 @@
+.collage {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 18px;
+  isolation: isolate;
+}
+
+.collage::before {
+  content: "";
+  position: absolute;
+  inset: 5% -5%;
+  z-index: -1;
+  background: radial-gradient(ellipse, rgb(0 157 255 / 16%), transparent 70%);
+  pointer-events: none;
+}
+
+.frame {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  background: #161b20;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 30%);
+}
+
+.featured {
+  grid-column: span 2;
+}
+
+@media (min-width: 768px) {
+  .collage {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 28px;
+    padding: 16px 12px;
+  }
+
+  .frame {
+    grid-column: span 4;
+    rotate: -2deg;
+  }
+
+  .frame:nth-child(even) {
+    rotate: 2deg;
+  }
+
+  .featured {
+    grid-column: span 8;
+    grid-row: span 2;
+    rotate: -1deg;
+  }
+
+  .featured:nth-child(even) {
+    rotate: 1deg;
+  }
+}
