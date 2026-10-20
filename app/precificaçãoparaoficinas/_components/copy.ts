@@ -29,13 +29,6 @@ export const profiles = [
   { title: "Vai começar do zero", text: "Aprenda, configure e organize a tua precificação." },
 ];
 
-export const workflow = [
-  { title: "Acesse o treinamento", text: "Em aproximadamente 40 minutos, você vai entender como funciona a precificação e encontrar os valores corretos para a tua oficina." },
-  { title: "Configure a tua calculadora", text: "Preencha os dados da tua oficina, cadastre tua hora técnica, defina o markup das peças e deixe o teu padrão de precificação pronto." },
-  { title: "Comece a usar nos orçamentos", text: "A partir daí, é só usar a ferramenta no dia a dia para precificar peças e serviços e montar cada novo orçamento com a base que você definiu." },
-  { title: "Acompanhe tudo pela ferramenta", text: "Envie o orçamento para o cliente e mantenha tudo salvo para acompanhar o que foi aprovado, não aprovado ou ainda está aguardando resposta." },
-];
-
 export const materials = [
   {
     title: "Treinamento Precificação para Oficinas", image: "/previa-curso.jpg",
@@ -59,11 +52,12 @@ export const materials = [
   },
   {
     title: "Aula bônus + checklist", image: "/material-checklist.jpg",
+    bonus: true,
     text: "Confira passo a passo o que falta ajustar na precificação da oficina.",
     summary: "Aula bônus + checklist de implementação",
   },
   {
-    title: "12 meses de acesso à Calculadora de Precificação", image: "/combo-precificacao/calculadora5.jpg",
+    title: "12 meses de acesso à Calculadora de Precificação", image: "/combo-precificacao/calculadora12.jpg",
     text: "Precifique peças e serviços, monte orçamentos e acompanhe as aprovações por 12 meses.",
     summary: "12 meses de acesso à Calculadora de Precificação",
   },

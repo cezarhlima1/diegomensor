@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Author from "@/components/Author";
 import { Check, WhatsApp } from "@/components/icons";
 import { COMBO_CHECKOUT_URL, COMBO_WHATSAPP_URL } from "./config";
-import { testimonials, situations, quickSteps, profiles, workflow, materials, faqs } from "./copy";
+import { testimonials, situations, quickSteps, profiles, materials, faqs } from "./copy";
 import styles from "./combo.module.css";
 import CalculatorShowcase from "./CalculatorShowcase";
 import ProfileIllustration from "./ProfileIllustration";
@@ -118,19 +118,14 @@ export default function ComboContent() {
         </div>
       </section>
 
-      <section aria-labelledby="combo-workflow">
-        <div className="wrap">
-          <h2 id="combo-workflow" className="section-title mx-auto max-w-[30ch] text-center">Da aula ao orçamento: <span className="text-blue">olha como funciona na prática</span></h2>
-          <ol className={styles.workflow}>{workflow.map((step, i) => <li key={step.title}><span className={styles.number} aria-hidden="true">0{i + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>)}</ol>
-          <p className={styles.closing}>Essa ferramenta foi criada e testada por quem entende de oficina e vive ela todos os dias, e podemos garantir: ela funciona na prática!</p>
-          <Action />
-        </div>
-      </section>
-
       <section aria-labelledby="combo-materials">
         <div className="wrap">
           <h2 id="combo-materials" className="section-title mx-auto max-w-[32ch] text-center">Tudo que você recebe para <span className="text-blue">ajustar e aplicar a precificação da tua oficina:</span></h2>
-          <div className={styles.materials}>{materials.map(item => <article key={item.title}><div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div><div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p></div></article>)}</div>
+          <div className={styles.materials}>{materials.map(item => <article key={item.title} className={item.bonus ? styles.bonusMaterial : undefined}>
+            {item.bonus && <span className={styles.bonusBadge}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z" /></svg>BÔNUS INCLUÍDO NO COMBO</span>}
+            <div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div>
+            <div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p></div>
+          </article>)}</div>
           <p className={styles.closing}>Você não recebe só o conteúdo para aprender a precificar. Recebe também a ferramenta para aplicar essa precificação em cada orçamento durante os próximos 12 meses.</p>
           <Action />
         </div>
@@ -140,7 +135,7 @@ export default function ComboContent() {
         <div className="wrap">
           <div className={styles.priceCard}>
             <h2 id="combo-price">O combo que vai resolver a tua precificação de forma <span>DEFINITIVA!</span></h2>
-            <ul className={styles.recap}>{materials.map(item => <li key={item.summary}><Check className={styles.check} /><span>{item.summary}</span></li>)}</ul>
+            <ul className={styles.recap}>{materials.map(item => <li key={item.summary}><Check className={styles.check} /><span>{item.bonus && <strong className={styles.recapBonus}>BÔNUS</strong>}{item.summary}</span></li>)}</ul>
             <div className={styles.anchorPrices}>
               <div><span>Calculadora de Precificação</span><b>R$ 497</b></div>
               <div><span>Treinamento Precificação para Oficinas</span><b>R$ 197</b></div>
