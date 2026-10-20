@@ -1,0 +1,2 @@
+export const COMBO_CHECKOUT_URL: string | null = "https://payfast.greenn.com.br/157546/offer/6N2jry";
+export const COMBO_WHATSAPP_URL = `https://wa.me/554792709538?text=${encodeURIComponent("Olá! Vim pela página Precificação para Oficinas e quero saber mais sobre o combo de R$597, com treinamento e 12 meses da Calculadora de Precificação.")}`;
