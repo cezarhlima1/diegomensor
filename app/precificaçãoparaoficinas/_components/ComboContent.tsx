@@ -4,6 +4,7 @@ import { Check, WhatsApp } from "@/components/icons";
 import { COMBO_CHECKOUT_URL, COMBO_WHATSAPP_URL } from "./config";
 import { testimonials, situations, quickSteps, profiles, workflow, materials, faqs } from "./copy";
 import styles from "./combo.module.css";
+import CalculatorShowcase from "./CalculatorShowcase";
 
 function Action({ children = "Quero resolver minha precificação", purchase = false }: { children?: ReactNode; purchase?: boolean }) {
   return (
@@ -15,13 +16,13 @@ function Action({ children = "Quero resolver minha precificação", purchase = f
   );
 }
 
-const calculatorImages = [1, 2, 4, 5, 6, 7, 8, 9, 10, 11];
 const gallery = [
-  ...calculatorImages.map(n => ({ src: `/combo-precificacao/calculadora${n}.jpg`, alt: `Tela ${n} da Calculadora de Precificação` })),
-  { src: "/previa-curso.jpg", alt: "Aulas do treinamento Precificação para Oficinas" },
-  { src: "/previa-instrucoes.jpg", alt: "Instruções para usar a planilha" },
-  { src: "/material-checklist.jpg", alt: "Checklist de implementação" },
-  { src: "/material-apostila.jpg", alt: "Apostila Precificação para Oficinas" },
+  { src: "/previa-curso.jpg", title: "Aulas de precificação", detail: "Aprenda em aproximadamente 40 minutos", layout: "lessons" },
+  { src: "/combo-precificacao/calculadora1.jpg", title: "Cálculo da hora técnica", detail: "Com os custos da tua oficina", layout: "hour" },
+  { src: "/combo-precificacao/calculadora2.jpg", title: "Precificação das peças", detail: "Custo + markup, tudo calculado", layout: "parts" },
+  { src: "/material-apostila.jpg", title: "Apostila de precificação", detail: "Conteúdo de apoio para consultar", layout: "book" },
+  { src: "/combo-precificacao/calculadora5.jpg", title: "Orçamentos organizados", detail: "Monte, envie e acompanhe os clientes", layout: "quotes", extra: "/combo-precificacao/calculadora9.jpg" },
+  { src: "/material-checklist.jpg", title: "Checklist de apoio", detail: "Para usar na rotina da oficina", layout: "checklist" },
 ];
 
 export default function ComboContent() {
@@ -32,10 +33,7 @@ export default function ComboContent() {
         <div className="wrap">
           <h1 id="combo-hero" className={styles.heroTitle}>Ajuste a precificação da tua oficina em <span className="text-blue">40 minutos</span> e tenha uma ferramenta que calcula cada novo orçamento pra ti.</h1>
           <p className={styles.intro}>Aprenda em <strong>40 minutos de aula</strong> como calcular corretamente a precificação da tua oficina e tenha uma ferramenta para aplicar esse padrão nos orçamentos dos teus clientes <strong>TODOS OS DIAS.</strong></p>
-          <div className={styles.heroVisual}>
-            <img src="/combo-precificacao/calculadora5.jpg" alt="Calculadora para montar o orçamento do cliente com hora técnica e peças" fetchPriority="high" loading="eager" className={styles.mainScreen} />
-            <img src="/previa-curso.jpg" alt="Treinamento de precificação incluído no combo" className={styles.lessonScreen} />
-          </div>
+          <CalculatorShowcase />
           <ul className={styles.benefits}>
             {["Calcule a hora técnica com os números da tua própria oficina", "Precifique as peças automaticamente com o teu markup", "Monte, envie e acompanhe todos os teus orçamentos em um só lugar"].map(text => <li key={text}><Check className={styles.check} /><span>{text}</span></li>)}
           </ul>
@@ -59,8 +57,24 @@ export default function ComboContent() {
       <section aria-labelledby="combo-gallery">
         <div className="wrap">
           <h2 id="combo-gallery" className="section-title mx-auto max-w-[30ch] text-center">A calculadora, as aulas e os materiais <span className="text-blue">que você vai acessar.</span></h2>
-          <div className={styles.gallery}>
-            {gallery.map((item, index) => <a key={item.src} href={item.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${item.alt}`} className={`${styles.galleryImage} ${index === 0 ? styles.galleryFeatured : ""}`}><img src={item.src} alt={item.alt} loading="lazy" /></a>)}
+          <div className={styles.collage}>
+            {gallery.map(item => <figure key={item.src} className={`${styles.collageItem} ${styles[item.layout]}`}>
+              <figcaption className={styles.collageCaption}>
+                <span>{item.title}</span>
+                <small>{item.detail}</small>
+                <svg className={styles.annotationArrow} viewBox="0 0 100 70" fill="none" aria-hidden="true">
+                  <path d="M12 6C72 0 89 20 62 56M62 56L62 38M62 56L80 49" />
+                </svg>
+              </figcaption>
+              <div className={styles.collageImages}>
+                <a href={item.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${item.title}`} className={styles.collageImage}>
+                  <img src={item.src} alt={item.title} loading="lazy" />
+                </a>
+                {item.extra && <a href={item.extra} target="_blank" rel="noopener noreferrer" aria-label="Ampliar histórico de orçamentos" className={`${styles.collageImage} ${styles.collageExtra}`}>
+                  <img src={item.extra} alt="Histórico para acompanhar a aprovação dos orçamentos" loading="lazy" />
+                </a>}
+              </div>
+            </figure>)}
           </div>
           <Action />
         </div>

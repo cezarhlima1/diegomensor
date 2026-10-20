@@ -1,531 +1,68 @@
 .page {
-  --color-blue: #39adf3;
-  --color-blue-soft: #b2cddd;
-  background: #11161b;
-  color: #dce1e5;
+  --color-blue: #087bbd;
+  --color-blue-soft: #d8effd;
+  --color-navy: #123955;
+  --color-offwhite: #173b54;
+  --color-muted: #526b7d;
+  --color-muted-dim: #61798b;
+  --color-line: #cbdfea;
+  background: #fff;
+  color: #173b54;
+  overflow-wrap: break-word;
 }
 
-.page :global(.wrap) {
-  max-width: 1040px;
-}
-
+.page :global(.wrap) { max-width: 1040px; }
 .page main > section {
   padding-block: 96px;
-  border-top: 1px solid #ffffff12;
-  scroll-margin-top: 56px;
+  border-top: 1px solid #d9e8f1;
+  scroll-margin-top: 64px;
+  background: linear-gradient(180deg, #fff, #f9fcff);
 }
-
-.page main > section:nth-of-type(odd) {
-  background: #11161b;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) {
-  --color-blue: #087bbd;
-  --color-blue-soft: #087bbd;
-  --color-muted: #52616d;
-  --color-offwhite: #172b3a;
-  --color-line: #172b3a26;
-  background: #fff;
-  color: #172b3a;
-  border-top-color: #172b3a14;
-}
-
+.page main > section:nth-of-type(3n + 2) { background: linear-gradient(155deg, #f3f8fc, #eaf4fb); }
+.page main > section:nth-of-type(3n) { background: linear-gradient(155deg, #e5f3fd, #f2f9fe); }
 .page main > section:first-child {
+  position: relative;
+  isolation: isolate;
   padding-top: 140px;
   border-top: 0;
+  background: linear-gradient(150deg, #fff 20%, #edf7fe 75%, #deeffb);
 }
-
-.page h1 {
-  font-size: clamp(32px, 4.5vw, 52px);
-  font-weight: 800;
-  line-height: 1.18;
-}
-
-.page :global(.section-title) {
-  font-size: clamp(27px, 3.3vw, 40px);
-  font-weight: 700;
-  line-height: 1.28;
-  letter-spacing: -.02em;
-  text-wrap: balance;
-}
-
-.page :global(.pointer-glow),
-.page :global(.hero-badge .dot),
-.page :global(.btn)::after {
-  display: none;
-}
-
-.page :global(.hero-bg) {
-  display: block;
-  background: radial-gradient(ellipse at 50% 15%, #0495f026, transparent 65%);
-}
-
-.page :global(.hero-badge),
-.page :global(.tag),
-.page :global(.limited) {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  letter-spacing: .06em;
-  line-height: 1.6;
-}
-
-.page :global(.btn) {
-  background: #157a43;
-  color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px -16px #157a4380;
-  font-weight: 700;
-  transform: none !important;
-}
-
-.page :global(.btn):hover {
-  background: #106336;
-  box-shadow: 0 8px 24px -16px #157a4380;
-  filter: none;
-}
-
-.page :global(.reveal) {
-  opacity: 1;
-  transform: none;
-  transition: none;
-}
-
-.page :global(.testi),
-.page :global(.price-card),
-.page :global(.step) {
-  box-shadow: 0 12px 32px -20px #0009;
-  text-shadow: none;
-}
-
-.page :global(.step) {
-  background: linear-gradient(145deg, #172631, #131c24);
-  border: 1px solid #76b5d923 !important;
-  border-radius: 14px;
-  padding: 26px;
-  transform: none;
-}
-
-.page :global(.step)::before,
-.page :global(.step-big) {
-  display: none;
-}
-
-.page :global(.step-num) {
-  margin-bottom: 16px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.page :global(.step) h3 {
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-.page :global(.step):hover {
-  box-shadow: none;
-}
-
-.page [role="timer"] {
-  background: transparent;
-  border: 0;
-  font-size: 14px;
-}
-
+.page h1 { font-size: clamp(32px, 4.5vw, 52px); font-weight: 800; line-height: 1.18; color: #123955; }
+.page :global(.section-title) { font-size: clamp(27px, 3.3vw, 40px); font-weight: 700; line-height: 1.28; letter-spacing: -.02em; text-wrap: balance; color: #123955; }
+.page :global(.text-blue) { color: #087bbd; }
+.page :global(.pointer-glow) { display: none; }
+.page :global(.hero-bg) { display: block; z-index: -1; background: radial-gradient(ellipse at 70% 25%, #a9dcfa45, transparent 65%); }
+.page :global(.reveal) { opacity: 1; transform: none; transition: none; }
+.page :global(.author-card) { background: #fff; border: 1px solid #cbdfea; box-shadow: 0 16px 44px -28px #173b5438; }
+.page :global(.author-card) p { color: #526b7d; }
+.page :global(.author-card) :global(.text-white) { color: #123955; }
+.page :global(.tag) { background: #eaf6fe; border-color: #bbdef4; color: #087bbd; box-shadow: none; }
+.page :global(.tag)::before { box-shadow: none; }
 .page > div:has(> [role="timer"]) {
-  min-height: 44px;
-  background: #d71920;
-  box-shadow: none;
-  border-bottom: 1px solid #ffffff12;
+  min-height: 48px;
+  background: #123955;
+  color: #fff;
+  box-shadow: 0 3px 16px #1239551a;
+  border-bottom: 1px solid #286386;
   font-size: 13px;
   font-weight: 700;
 }
-
-
-.page [aria-labelledby="duvidas-title"] li {
-  background: linear-gradient(145deg, #17232d, #141c23);
-  box-shadow: 0 12px 32px -24px #0008;
-  border: 1px solid #ffffff0f;
-  border-radius: 14px;
-  padding: 28px;
-}
-
-.page [aria-labelledby="duvidas-title"] li > span {
-  display: none;
-}
-
-.page [aria-labelledby="duvidas-title"] li p {
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.7;
-}
-
-@media (min-width: 768px) {
-  .page :global(.step) {
-    padding-right: 24px;
-  }
-
-  .page main > section[data-steps] :global(.grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 48px;
-    row-gap: 20px;
-  }
-}
-
-/* Cada seção tem sua própria composição, mantendo a mesma paleta. */
-
-
-
-.page main > section[aria-labelledby="curso-title"] {
-  border-bottom: 1px solid #5db8ed1a;
-}
-
-.page [aria-labelledby="curso-title"] h2 {
-  max-width: 34ch;
-}
-
-.page [aria-labelledby="duvidas-title"] h2 {
-  text-align: left;
-  margin: 0;
-  max-width: 22ch;
-}
-
-.page [aria-labelledby="duvidas-title"] ul {
-  display: block;
-  margin: 0;
-}
-
-.page [aria-labelledby="duvidas-title"] li {
-  border: 0;
-  border-bottom: 1px solid var(--color-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 22px 0;
-}
-
-.page [aria-labelledby="duvidas-title"] li:first-child {
-  padding-top: 0;
-}
-
-.page [aria-labelledby="duvidas-title"] li:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.page [data-steps] :global(.step) {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 16px;
-  padding: 22px 0;
-  border: 0 !important;
-  border-bottom: 1px solid #ffffff1a !important;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.page [data-steps] :global(.step-num) {
-  display: none;
-}
-
-.page [data-steps] :global(.step-big) {
-  display: block;
-  color: #39adf3;
-  font-size: 21px;
-  font-weight: 500;
-  text-shadow: none;
-  margin: 0;
-}
-
-.page [data-steps] :global(.step):last-child {
-  display: block;
-  padding: 28px 32px;
-  margin-top: 20px;
-  text-align: center;
-  border: 1px solid #39adf340 !important;
-  border-radius: 12px;
-  background: #219de90a;
-}
-
-@media (min-width: 900px) {
-  .page [aria-labelledby="duvidas-title"] > :global(.wrap) {
-    display: grid;
-    grid-template-columns: .9fr 1.1fr;
-    align-items: center;
-    gap: 80px;
-  }
-
-}
-
-@media (max-width: 899px) {
-  .page [aria-labelledby="duvidas-title"] h2 {
-    max-width: 32ch;
-    margin-bottom: 36px;
-  }
-}
+.page [role="timer"] { background: #ffffff12; border: 1px solid #ffffff38; font-size: 14px; }
+.page footer { background: #f3f8fc; color: #173b54; border-color: #cbdfea; }
+.page footer :global(.brand-mark) { background: #e0f1fc; color: #087bbd; border-color: #bbdef4; box-shadow: none; }
 
 @media (max-width: 767px) {
-  .page {
-    overflow-wrap: break-word;
-  }
-
-  .page :global(.wrap) {
-    width: calc(100% - 40px);
-    min-width: 0;
-  }
-
-  .page main > section {
-    padding-block: 76px;
-    scroll-margin-top: 80px;
-  }
-
-  .page main > section:first-child {
-    padding-top: calc(100px + env(safe-area-inset-top));
-  }
-
-  .page [data-hero] > :global(.wrap) {
-    width: calc(100% - 56px);
-  }
-
-  .page h1 {
-    margin-block: 28px;
-    font-size: clamp(29px, 7.8vw, 38px);
-    line-height: 1.2;
-  }
-
-  .page :global(.section-title) {
-    font-size: clamp(25px, 6.5vw, 32px);
-    line-height: 1.32;
-    text-wrap: pretty;
-  }
-
-  .page :global(.hero-badge) {
-    max-width: 32ch;
-    font-size: 10px;
-    line-height: 1.7;
-  }
-
-  .page [data-hero] p {
-    font-size: 16px;
-    line-height: 1.8;
-  }
-
-  .page [data-hero] ul {
-    width: 100%;
-    margin-block: 36px;
-    text-align: center;
-  }
-
-  .page [data-hero] li {
-    justify-content: center;
-    gap: 10px;
-    font-size: 15px;
-    line-height: 1.65;
-    font-weight: 600;
-  }
-
-  .page [data-hero] li + li {
-    margin-top: 18px;
-  }
-
-  .page [data-hero] ul + div {
-    gap: 20px;
-  }
-
-  .page [data-hero] li > span:first-child {
-    flex-shrink: 0;
-  }
-
-  .page :global(.btn) {
-    width: 100%;
-    max-width: 100%;
-    min-height: 52px;
-    padding: 16px 18px;
-    font-size: 15px;
-    line-height: 1.55;
-    white-space: normal;
-    text-align: center;
-  }
-
-  .page :global(.reassure) {
-    max-width: 36ch;
-    font-size: 11px;
-    line-height: 1.8;
-  }
-
-  .page > div:has(> [role="timer"]) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    min-height: 60px;
-    padding: calc(10px + env(safe-area-inset-top)) 20px 10px;
-    font-size: 12px;
-    line-height: 1.45;
-  }
-
-  .page [role="timer"] {
-    padding: 6px 0 6px 12px;
-    border-left: 1px solid #ffffff4d;
-    border-radius: 0;
-    font-size: 18px;
-    white-space: nowrap;
-  }
-
-
-
-
-  .page [aria-labelledby="duvidas-title"] h2 {
-    margin-bottom: 44px;
-  }
-
-  .page [aria-labelledby="duvidas-title"] li {
-    padding-block: 28px;
-  }
-
-  .page [aria-labelledby="duvidas-title"] li p {
-    font-size: 17px;
-    line-height: 1.75;
-  }
-
-  .page :global(.price-card) {
-    padding: 36px 24px;
-    border-radius: 16px;
-  }
-
-  .page :global(.price-card) ul {
-    gap: 28px;
-    margin-top: 32px;
-  }
-
-  .page :global(.price-card) li {
-    gap: 10px;
-    font-size: 15px;
-    line-height: 1.75;
-  }
-
-  .page :global(.price-main) {
-    white-space: normal;
-    text-shadow: none;
-  }
-
-  .page :global(.author-photo) {
-    min-height: 320px;
-  }
-
-  .page :global(.author-card) > div:last-child {
-    padding: 36px 24px;
-  }
-
-  .page :global(.author-card) p {
-    font-size: 16px;
-    line-height: 1.8;
-  }
-
-  .page :global(.faq-q) {
-    min-height: 56px;
-    padding: 24px 20px;
-    gap: 16px;
-    font-size: 16px;
-    line-height: 1.55;
-  }
-
-  .page :global(.faq-item) p {
-    padding-inline: 20px;
-    line-height: 1.75;
-  }
-
-  .page section:has(:global(.faq-item)) :global(.grid) {
-    gap: 16px;
-  }
-
-  .page [aria-labelledby="whatsapp-title"] + p {
-    margin-top: 28px;
-  }
-
-  .page :global(.wrap) > div:has(> :global(.shield)) {
-    padding: 36px 24px;
-    gap: 32px;
-  }
-
-  .page :global(.wrap) > div:has(> :global(.shield)) p {
-    line-height: 1.75;
-  }
-
-  .page footer :global(.wrap) {
-    flex-direction: column;
-    gap: 28px;
-  }
-
-  .page footer :global(.wrap) > div {
-    text-align: left;
-    line-height: 1.9;
-    overflow-wrap: anywhere;
-  }
-}
-
-/* Contraste completo nas dobras brancas, incluindo os blocos compartilhados. */
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :is(h2, h3),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-white),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-offwhite) {
-  color: #172b3a;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) p {
-  color: #435461;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.text-blue) {
-  color: #087bbd;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) > :global(.wrap) {
-  background: transparent;
-  box-shadow: none;
-  border: 0;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) > div[aria-hidden] {
-  display: none;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.choice-card),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.final-card),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.author-card),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.faq-item),
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"]))[aria-labelledby="perfis-title"] li,
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.wrap) > div:has(> :global(.shield)) {
-  background: #f6f8fa;
-  border-color: #172b3a26;
-  box-shadow: 0 12px 32px -24px #172b3a30;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.faq-q) {
-  color: #172b3a;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"]))[aria-labelledby="perfis-title"] ul + div {
-  border-top-color: #172b3a26;
-}
-
-.page main > section:nth-of-type(even):not(:where([aria-labelledby="depoimentos-title"])) :global(.choice-good) {
-  background: #f0f8fd;
-  border-color: #087bbd55;
-}
-
-.page main > section:global(.checkout-light)::before,
-.page main > section:global(.checkout-light)::after {
-  display: none;
-}
-
-.page main > section:global(.checkout-light) > :global(.wrap) > p,
-.page main > section:global(.checkout-light) > :global(.wrap) > p b {
-  color: #dce1e5;
-}
-
-.page main > section[aria-labelledby="depoimentos-title"] {
-  background: #1c2630;
-  border-top-color: #ffffff12;
+  .page :global(.wrap) { width: calc(100% - 40px); min-width: 0; }
+  .page main > section { padding-block: 76px; scroll-margin-top: 80px; }
+  .page main > section:first-child { padding-top: calc(112px + env(safe-area-inset-top)); }
+  .page [data-hero] > :global(.wrap) { width: calc(100% - 56px); }
+  .page h1 { margin-block: 28px; font-size: clamp(29px, 7.8vw, 38px); line-height: 1.2; }
+  .page :global(.section-title) { font-size: clamp(25px, 6.5vw, 32px); line-height: 1.32; text-wrap: pretty; }
+  .page > div:has(> [role="timer"]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; min-height: 60px; padding: calc(10px + env(safe-area-inset-top)) 20px 10px; font-size: 12px; line-height: 1.45; }
+  .page [role="timer"] { padding: 6px 0 6px 12px; border: 0; border-left: 1px solid #ffffff4d; background: transparent; border-radius: 0; font-size: 18px; white-space: nowrap; }
+  .page :global(.author-photo) { min-height: 320px; }
+  .page :global(.author-card) > div:last-child { padding: 36px 24px; }
+  .page :global(.author-card) p { font-size: 16px; line-height: 1.8; }
+  .page footer :global(.wrap) { flex-direction: column; gap: 28px; }
+  .page footer :global(.wrap) > div { text-align: left; line-height: 1.9; overflow-wrap: anywhere; }
 }
