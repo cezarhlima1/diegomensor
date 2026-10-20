@@ -22,7 +22,7 @@ export default function PrecificacaoParaOficinasPage() {
       <main>
         <ComboContent />
       </main>
-      <Footer />
+      <Footer compact />
       <ClientEffects />
       <BackRedirect />
     </div>

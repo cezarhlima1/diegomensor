@@ -53,10 +53,10 @@
 .page :global(.tag)::before { box-shadow: none; }
 .page > div:has(> [role="timer"]) {
   min-height: 48px;
-  background: #123955;
+  background: #c41420;
   color: #fff;
-  box-shadow: 0 3px 16px #1239551a;
-  border-bottom: 1px solid #286386;
+  box-shadow: 0 3px 16px #c4142026;
+  border-bottom: 1px solid #a7101a;
   font-size: 13px;
   font-weight: 700;
 }
@@ -68,13 +68,13 @@
   .page :global(.wrap) { width: calc(100% - 40px); min-width: 0; }
   .page main > section { padding-block: 76px; scroll-margin-top: 80px; }
   .page main > section:first-child { padding-top: calc(112px + env(safe-area-inset-top)); }
-  .page [data-hero] > :global(.wrap) { width: calc(100% - 56px); }
+  .page [data-hero] > :global(.wrap) { width: calc(100% - 40px); }
   .page h1 { margin-block: 28px; font-size: clamp(29px, 7.8vw, 38px); line-height: 1.2; }
   .page :global(.section-title) { font-size: clamp(25px, 6.5vw, 32px); line-height: 1.32; text-wrap: pretty; }
   .page > div:has(> [role="timer"]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; min-height: 60px; padding: calc(10px + env(safe-area-inset-top)) 20px 10px; font-size: 12px; line-height: 1.45; }
   .page [role="timer"] { padding: 6px 0 6px 12px; border: 0; border-left: 1px solid #ffffff4d; background: transparent; border-radius: 0; font-size: 18px; white-space: nowrap; }
   .page :global(.author-photo) { min-height: 320px; }
-  .page :global(.author-card) > div:last-child { padding: 36px 24px; }
+  .page :global(.author-card) > div:last-child { padding: 32px 20px; }
   .page :global(.author-card) p { font-size: 16px; line-height: 1.8; }
   .page footer :global(.wrap) { flex-direction: column; gap: 28px; }
   .page footer :global(.wrap) > div { text-align: left; line-height: 1.9; overflow-wrap: anywhere; }

@@ -5,6 +5,7 @@ import { COMBO_CHECKOUT_URL, COMBO_WHATSAPP_URL } from "./config";
 import { testimonials, situations, quickSteps, profiles, workflow, materials, faqs } from "./copy";
 import styles from "./combo.module.css";
 import CalculatorShowcase from "./CalculatorShowcase";
+import ProfileIllustration from "./ProfileIllustration";
 
 function Action({ children = "Quero resolver minha precificação", purchase = false }: { children?: ReactNode; purchase?: boolean }) {
   return (
@@ -84,7 +85,7 @@ export default function ComboContent() {
         <div className="wrap">
           <h2 id="combo-situations" className="section-title mx-auto max-w-[34ch] text-center">Se a precificação ainda não está 100% organizada na tua oficina, <span className="text-blue">provavelmente alguma dessas situações acontece por aí:</span></h2>
           <ul className={styles.situations}>{situations.map(text => <li key={text}>{text}</li>)}</ul>
-          <p className={styles.closing}>Se você se identificou com isso, o problema não é só aprender a precificar. Falta ter essa precificação organizada e aplicada na rotina da oficina.</p>
+          <p className={styles.closing}><strong>Se você se identificou com isso, o problema não é só aprender a precificar. Falta ter essa precificação organizada e aplicada na rotina da oficina.</strong></p>
           <Action />
         </div>
       </section>
@@ -92,7 +93,18 @@ export default function ComboContent() {
       <section aria-labelledby="combo-how">
         <div className="wrap">
           <h2 id="combo-how" className="section-title text-center">Como funciona <span className="text-blue">na prática:</span></h2>
-          <ol className={styles.sequence}>{quickSteps.map((step, i) => <li key={step.title}><span className={styles.number} aria-hidden="true">0{i + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>)}</ol>
+          <ol className={styles.sequence}>{quickSteps.map((step, i) => <li key={step.title}>
+            <div className={styles.stepVisual}>
+              <span className={styles.stepBadge} aria-hidden="true">0{i + 1}</span>
+              <img src={step.image} alt={step.alt} loading="lazy" />
+              <span className={styles.stepCue}>
+                {i === 0 ? <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg> : <Check />}
+                {step.cue}
+              </span>
+            </div>
+            <h3>{step.title}</h3><p>{step.text}</p>
+            {i < quickSteps.length - 1 && <svg className={styles.stepArrow} viewBox="0 0 64 32" fill="none" aria-hidden="true"><path d="M4 16h52M45 5l12 11-12 11" /></svg>}
+          </li>)}</ol>
           <Action />
         </div>
       </section>
@@ -100,7 +112,7 @@ export default function ComboContent() {
       <section aria-labelledby="combo-profiles">
         <div className="wrap">
           <h2 id="combo-profiles" className="section-title mx-auto max-w-[30ch] text-center">A Calculadora de Precificação <span className="text-blue">é para quem:</span></h2>
-          <ul className={styles.profiles}>{profiles.map(profile => <li key={profile.title}><h3>{profile.title}</h3><p>{profile.text}</p></li>)}</ul>
+          <ul className={styles.profiles}>{profiles.map((profile, i) => <li key={profile.title}><div className={styles.profileIllustration}><ProfileIllustration kind={i} /></div><h3>{profile.title}</h3><p>{profile.text}</p></li>)}</ul>
           <p className={styles.closing}>Não importa se é você ou outra pessoa da equipe que faz os orçamentos: a ideia é ter a precificação definida e uma ferramenta para aplicar a mesma base todos os dias.</p>
           <Action />
         </div>
@@ -118,7 +130,7 @@ export default function ComboContent() {
       <section aria-labelledby="combo-materials">
         <div className="wrap">
           <h2 id="combo-materials" className="section-title mx-auto max-w-[32ch] text-center">Tudo que você recebe para <span className="text-blue">ajustar e aplicar a precificação da tua oficina:</span></h2>
-          <div className={styles.materials}>{materials.map(item => <article key={item.title}><div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div><div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p><p className={styles.advantage}>{item.advantage}</p></div></article>)}</div>
+          <div className={styles.materials}>{materials.map(item => <article key={item.title}><div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div><div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p></div></article>)}</div>
           <p className={styles.closing}>Você não recebe só o conteúdo para aprender a precificar. Recebe também a ferramenta para aplicar essa precificação em cada orçamento durante os próximos 12 meses.</p>
           <Action />
         </div>
@@ -127,20 +139,27 @@ export default function ComboContent() {
       <section id="combo-offer" aria-labelledby="combo-price" data-tone="dark">
         <div className="wrap">
           <div className={styles.priceCard}>
-            <h2 id="combo-price">Tudo isso no <span>combo completo:</span></h2>
+            <h2 id="combo-price">O combo que vai resolver a tua precificação de forma <span>DEFINITIVA!</span></h2>
             <ul className={styles.recap}>{materials.map(item => <li key={item.summary}><Check className={styles.check} /><span>{item.summary}</span></li>)}</ul>
             <div className={styles.anchorPrices}>
               <div><span>Calculadora de Precificação</span><b>R$ 497</b></div>
               <div><span>Treinamento Precificação para Oficinas</span><b>R$ 197</b></div>
               <div><span>Comprando separadamente:</span><s>R$ 694</s></div>
             </div>
-            <p className={styles.priceLead}>No combo completo:</p>
-            <div className={styles.price}>R$ 597</div>
-            <p className={styles.saving}>R$ 97 a menos que comprando separadamente</p>
-            <p>Você aprende a ajustar a precificação uma vez e fica com a ferramenta para aplicar nos orçamentos da tua oficina pelos próximos 12 meses.</p>
-            <p className={styles.priceClosing}>Isso aqui é <strong>RESOLVER</strong> de uma vez por todas, aquilo que te <strong>TIRA dinheiro</strong> todos os meses.</p>
+            <div className={styles.paymentOffer}>
+              <p className={styles.priceLead}>Leve o combo completo por</p>
+              <div className={styles.price} aria-label="12 parcelas de 61 reais e 38 centavos">
+                <span className={styles.installments}>12x de</span>
+                <span className={styles.priceAmount}><span className={styles.currency}>R$</span>61,38</span>
+              </div>
+              <p className={styles.cashPrice}>ou à vista <strong>R$ 597,00</strong></p>
+              <p className={styles.saving}>Economize R$ 97 pagando à vista</p>
+              <p className={styles.installmentTotal}>Total parcelado: R$ 736,56</p>
+            </div>
             <Action purchase>QUERO O COMBO COMPLETO</Action>
             {!COMBO_CHECKOUT_URL && <p className={styles.checkoutNote}>Fale com a equipe pelo WhatsApp para adquirir o combo.</p>}
+            <p className={styles.offerSupport}>Você aprende a ajustar a precificação uma vez e fica com a ferramenta para aplicar nos orçamentos da tua oficina pelos próximos 12 meses.</p>
+            <p className={styles.priceClosing}>Isso aqui é <strong>RESOLVER</strong> de uma vez por todas, aquilo que te <strong>TIRA dinheiro</strong> todos os meses.</p>
           </div>
         </div>
       </section>
@@ -155,7 +174,7 @@ export default function ComboContent() {
         </div>
       </section>
 
-      <section aria-labelledby="combo-whatsapp">
+      <section aria-labelledby="combo-whatsapp" data-tone="dark">
         <div className="wrap">
           <h2 id="combo-whatsapp" className="section-title text-center">Ainda ficou com alguma dúvida?</h2>
           <p className={styles.intro}>Fala com a nossa equipe no WhatsApp e pergunta o que precisar antes de entrar.</p>

@@ -16,17 +16,17 @@ export const situations = [
 ];
 
 export const quickSteps = [
-  { title: "Assista às aulas", text: "Em aproximadamente 40 minutos, entenda como calcular e ajuste a precificação da tua oficina." },
-  { title: "Preencha os dados da tua oficina", text: "Coloque as informações na calculadora e deixe tua hora técnica, markup e valores configurados." },
-  { title: "Use em todos os orçamentos", text: "Monte os orçamentos do dia a dia usando a base de cálculo correta que você acabou de definir." },
+  { title: "Aprenda", text: "Cerca de 40 minutos de aulas práticas.", image: "/previa-curso.jpg", alt: "Aulas de precificação com Diego Mensor", cue: "40 min de aula" },
+  { title: "Configure", text: "Defina tua hora técnica e o markup.", image: "/combo-precificacao/calculadora1.jpg", alt: "Custos da oficina preenchidos na calculadora", cue: "A base da tua oficina" },
+  { title: "Use todos os dias", text: "Monte, envie e acompanhe os orçamentos.", image: "/combo-precificacao/calculadora7.jpg", alt: "Orçamento calculado e pronto para enviar pelo WhatsApp", cue: "Orçamento pronto" },
 ];
 
 export const profiles = [
-  { title: "Tem uma oficina pequena e faz os próprios orçamentos", text: "Quer parar de depender de valores definidos no “mais ou menos” e ter uma base certa para cobrar mão de obra e peças." },
-  { title: "Tem equipe e vários orçamentos saindo todos os dias", text: "Precisa deixar a precificação definida para que os orçamentos sigam a mesma base, independente de quem estiver montando." },
-  { title: "Trabalha com diferentes tipos de serviço", text: "Precisa ter uma hora técnica padrão e também valores diferentes para operações específicas, como diesel, carro popular ou outras categorias da oficina." },
-  { title: "Já tem a precificação calculada, mas não consegue aplicar isso na rotina", text: "Tem planilha, cálculo ou valor definido, mas na hora de fazer cada orçamento ainda precisa montar tudo separadamente." },
-  { title: "Quer organizar a precificação do zero", text: "Ainda não sabe se a hora técnica e o markup das peças estão certos e quer aprender, calcular e depois aplicar nos orçamentos." },
+  { title: "Faz tudo sozinho", text: "Uma base certa para cobrar, mesmo numa oficina pequena." },
+  { title: "Tem uma equipe", text: "Todo mundo orçando com o mesmo padrão de precificação." },
+  { title: "Atende serviços variados", text: "Horas técnicas diferentes para cada tipo de operação." },
+  { title: "Quer aplicar o que já sabe", text: "Tire os cálculos da planilha e use em cada orçamento." },
+  { title: "Vai começar do zero", text: "Aprenda, configure e organize a tua precificação." },
 ];
 
 export const workflow = [
@@ -39,38 +39,32 @@ export const workflow = [
 export const materials = [
   {
     title: "Treinamento Precificação para Oficinas", image: "/previa-curso.jpg",
-    text: "Aulas rápidas e práticas para você entender a precificação e ajustar os números da tua própria oficina.",
-    advantage: "Em aproximadamente 40 minutos, você entende o que precisa considerar e encontra a base que vai usar nos teus orçamentos.",
+    text: "Aprenda a ajustar a precificação da tua oficina em cerca de 40 minutos.",
     summary: "Treinamento Precificação para Oficinas",
   },
   {
     title: "Planilha de cálculo da hora técnica", image: "/previa-mao-de-obra.jpg",
-    text: "Preencha com os números da tua oficina para chegar ao valor correto da tua hora.",
-    advantage: "Você não parte de um valor aleatório ou do que outras oficinas cobram. O cálculo considera a realidade da tua operação.",
+    text: "Calcule o valor da tua hora de trabalho com os custos reais da oficina.",
     summary: "Planilha de cálculo da hora técnica",
   },
   {
     title: "Tabela de markup para peças", image: "/previa-markup.jpg",
-    text: "Uma tabela pronta para consultar o markup que será aplicado na venda das peças.",
-    advantage: "Facilita definir quanto precisa acrescentar sobre o custo da peça na hora de precificar.",
+    text: "Consulte quanto acrescentar ao custo de cada peça na hora de vender.",
     summary: "Tabela de markup para peças",
   },
   {
     title: "Apostila Precificação para Oficinas", image: "/material-apostila.jpg",
-    text: "Todo o conteúdo organizado em um material de apoio para consultar sempre que precisar.",
-    advantage: "Não precisa voltar às aulas toda vez que quiser revisar algum ponto da precificação.",
+    text: "Revise o conteúdo de precificação sempre que precisar.",
     summary: "Apostila Precificação para Oficinas",
   },
   {
     title: "Aula bônus + checklist", image: "/material-checklist.jpg",
-    text: "Uma aula prática para implementar o checklist de precificação dentro da oficina.",
-    advantage: "Você tem um passo a passo para conferir se os principais pontos da precificação foram ajustados.",
+    text: "Confira passo a passo o que falta ajustar na precificação da oficina.",
     summary: "Aula bônus + checklist de implementação",
   },
   {
     title: "12 meses de acesso à Calculadora de Precificação", image: "/combo-precificacao/calculadora5.jpg",
-    text: "A ferramenta que você vai usar todos os dias para colocar a precificação em prática.",
-    advantage: "Deixe tua hora técnica e markup configurados, precifique peças, monte os orçamentos dos clientes, copie para enviar no WhatsApp e acompanhe tudo pelo histórico.",
+    text: "Precifique peças e serviços, monte orçamentos e acompanhe as aprovações por 12 meses.",
     summary: "12 meses de acesso à Calculadora de Precificação",
   },
 ];

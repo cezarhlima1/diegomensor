@@ -1,10 +1,10 @@
 import { Logo } from "./icons";
 
-export default function Footer() {
+export default function Footer({ compact = false }: { compact?: boolean } = {}) {
   return (
     <footer className="border-t border-line py-12 relative z-[1]">
       <div className="wrap flex flex-wrap items-start justify-between gap-7">
-        <a href="#" className="brand flex items-center gap-[11px] font-display font-extrabold text-[18px] tracking-[-.01em]">
+        {!compact && <><a href="#" className="brand flex items-center gap-[11px] font-display font-extrabold text-[18px] tracking-[-.01em]">
           <span className="brand-mark">
             <Logo className="w-[18px] h-[18px]" />
           </span>
@@ -22,9 +22,9 @@ export default function Footer() {
           CNPJ: 66.021.375/0001-46
           <br />
           mensortreinamentos@gmail.com
-        </div>
+        </div></>}
 
-        <div className="w-full border-t border-line mt-[34px] pt-[22px] font-mono text-xs text-muted-dim flex flex-wrap justify-between gap-3.5">
+        <div className={`${compact ? "" : "border-t border-line mt-[34px] pt-[22px] "}w-full font-mono text-xs text-muted-dim flex flex-wrap justify-between gap-3.5`}>
           <span>© MENSOR TREINAMENTOS LTDA - Todos os direitos reservados</span>
           <span className="text-blue">@diegomensor</span>
         </div>
