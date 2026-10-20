@@ -81,10 +81,10 @@
 
 
 .materials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 32px; margin-top: 48px; }
-.materials article { min-width: 0; }
-.materialImage { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 11; padding: 12px; background: #fff; border: 1px solid #cbdfea; border-radius: 12px; }
+.materials article { min-width: 0; padding: 20px; border: 1px solid #cbdfea; border-radius: 18px; background: #fff; box-shadow: 0 12px 28px -24px #12395540; }
+.materialImage { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 11; padding: 0; background: #fff; border-radius: 10px; }
 .materialImage img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
-.materialCopy { margin-top: 20px; padding: 24px; border: 1px solid #cbdfea; border-radius: 12px; background: #ffffffb3; }
+.materialCopy { margin-top: 24px; padding: 0; }
 .materialCopy h3 { font-size: 23px; font-weight: 650; line-height: 1.4; }
 .materialCopy p { margin-top: 18px; font-size: 16px; line-height: 1.8; }
 .priceCard { --combo-heading: #123955; --combo-body: #526b7d; --combo-accent: #076ca7; --color-line: #cbdfea; max-width: 580px; margin: 0 auto; padding: 48px 40px; border: 1px solid #b8d6e9; border-radius: 24px; background: #fff; box-shadow: 0 24px 60px -32px #0006; color: #173b54; text-align: center; }
@@ -154,7 +154,8 @@
 
 
   .materials { grid-template-columns: 1fr; gap: 52px; margin-top: 44px; }
-  .materialCopy { margin-top: 16px; padding: 24px 20px; }
+  .materials article { padding: 20px 16px; }
+  .materialCopy { margin-top: 20px; padding: 0; }
   .materialCopy h3 { font-size: 21px; line-height: 1.4; }
   .materialCopy p { margin-top: 12px; line-height: 1.75; }
   .priceCard { padding: 32px 24px; border-radius: 20px; }
@@ -186,22 +187,12 @@
 
 }
 
-.bonusMaterial {
-  --combo-heading: #f3f8fc;
-  padding: 20px;
-  border: 1px solid #529ac5;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #123955, #0b2235);
-  box-shadow: 0 16px 36px -24px #12395580;
+.materials article.bonusMaterial {
+  border: 2px solid #76b6df;
+  box-shadow: 0 12px 28px -24px #076ca760;
 }
-.bonusBadge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; padding: 8px 12px; border: 1px solid #83ceff66; border-radius: 20px; background: #83ceff18; color: #a5dcff; font-size: 11px; font-weight: 700; letter-spacing: .05em; line-height: 1.5; }
+.bonusBadge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; padding: 8px 12px; border: 1px solid #bedff4; border-radius: 20px; background: #eaf6fe; color: #075b91; font-size: 11px; font-weight: 700; letter-spacing: .05em; line-height: 1.5; }
 .bonusBadge svg { width: 20px; height: 20px; flex-shrink: 0; }
-.bonusMaterial .materialImage { border-color: #36566d; background: #fff; }
-.bonusMaterial .materialCopy { padding: 4px 0 0; border: 0; background: transparent; }
-.bonusMaterial .materialCopy p { color: #c1d5e5; }
-
 @media (max-width: 767px) {
-  .bonusMaterial { padding: 20px 16px; }
   .bonusBadge { font-size: 10px; padding: 8px 10px; }
-  .bonusMaterial .materialCopy { padding-top: 4px; }
 }
