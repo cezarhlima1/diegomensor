@@ -1,12 +1,14 @@
 export const testimonials = [
-  { image: "depoimentocalculadora1", text: "Precificação ajustada e cada orçamento montado com os valores certos de peças e mão de obra, mesmo quando o serviço é grande." },
-  { image: "depoimentocalculadora2", text: "Você preenche as informações e a ferramenta faz os cálculos. Assim, a tua precificação não fica certa só na planilha: ela é aplicada em TODOS os orçamentos, TODOS os dias." },
-  { image: "depoimentocalculadora3", text: "Orçamentos que antes demoravam para ficar prontos, agora saem muito mais rápido. A dor de cabeça de precificar acaba com essa ferramenta!" },
+  { image: "/combo-precificacao/depoimentocalculadora1.jpg", text: "Precificação ajustada e cada orçamento montado com os valores certos de peças e mão de obra, mesmo quando o serviço é grande." },
+  { image: "/combo-precificacao/depoimentocalculadora2.jpg", text: "Você preenche as informações e a ferramenta faz os cálculos. Assim, a tua precificação não fica certa só na planilha: ela é aplicada em TODOS os orçamentos, TODOS os dias." },
+  { image: "/combo-precificacao/depoimentocalculadora3.jpg", text: "Orçamentos que antes demoravam para ficar prontos, agora saem muito mais rápido. A dor de cabeça de precificar acaba com essa ferramenta!" },
   {
-    image: null,
-    question: "Tem ajudado vocês na parte de orçamentos?",
-    messages: ["Uma benção de Deus na minha vida", "Tá me ajudando muito", "Você não tem noção do quanto essa calculadora tem feito por mim", "Mudou tudo"],
-    text: "Mais facilidade na rotina dos orçamentos: ao perguntar se a calculadora tem ajudado, a resposta foi direta — “Tá me ajudando muito” e “Mudou tudo”.",
+    image: "/depoimentocalculadora4.png",
+    text: "Mais facilidade na rotina e com impacto direto no tempo que você PERDE pra montar um orçamento e no risco de calcular de forma incorreta.",
+  },
+  {
+    image: "/depoimentocalculadora5.jpeg",
+    text: "E se calcular de forma agilizada e padronizada fosse a solução pra faturar mais? Pois é, foi isso que aconteceu com esse aluno.",
   },
 ];
 

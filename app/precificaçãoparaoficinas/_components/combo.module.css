@@ -197,11 +197,13 @@
   .bonusBadge { font-size: 10px; padding: 8px 10px; }
 }
 
-.testimonialConversation { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; max-width: 760px; margin: 0 auto; padding: 24px; border-radius: 12px; background: #f4f1eb; color: #173b54; text-align: left; }
-.testimonialQuestion { margin-bottom: 6px; padding: 12px 16px; border-left: 3px solid #076ca7; border-radius: 8px; background: #e4eef5; color: #31556e; font-size: 15px; line-height: 1.6; }
-.testimonialMessage { max-width: 100%; padding: 12px 16px; border-radius: 4px 12px 12px; background: #fff; color: #173b54; font-size: 18px; line-height: 1.6; box-shadow: 0 1px 2px #1239551a; }
+
+
+
+
+.situationEmphasis { max-width: 56ch; margin: 40px auto 0; padding: 32px; border-radius: 16px; background: #e4f2fc; color: #123955; font-size: clamp(20px, 2.3vw, 26px); line-height: 1.6; text-align: center; text-wrap: pretty; }
+.situationEmphasis strong { font-weight: 700; }
+.situationEmphasis span { display: block; margin-top: 14px; color: #076ca7; }
 @media (max-width: 767px) {
-  .testimonialConversation { padding: 16px; gap: 10px; }
-  .testimonialQuestion { padding: 10px 12px; font-size: 14px; }
-  .testimonialMessage { padding: 10px 12px; font-size: 16px; }
+  .situationEmphasis { margin-top: 32px; padding: 24px 20px; font-size: 20px; line-height: 1.65; }
 }

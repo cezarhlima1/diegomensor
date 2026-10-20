@@ -46,11 +46,8 @@ export default function ComboContent() {
         <div className="wrap">
           <h2 id="depoimentos-title" className="section-title mx-auto max-w-[30ch] text-center">Na prática, fazer os orçamentos ficou <span className="text-blue">muito mais simples e sem margem de erro.</span></h2>
           <div className={styles.testimonials}>
-            {testimonials.map(item => <article key={item.image ?? item.question} className={styles.testimonial}>
-              {item.image ? <a href={`/combo-precificacao/${item.image}.jpg`} target="_blank" rel="noopener noreferrer" aria-label="Ampliar depoimento" className={styles.testimonialImage}><img src={`/combo-precificacao/${item.image}.jpg`} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></a> : <blockquote className={styles.testimonialConversation} aria-label="Transcrição do feedback enviado pelo aluno">
-                <div className={styles.testimonialQuestion}>{item.question}</div>
-                {item.messages?.map(message => <div key={message} className={styles.testimonialMessage}>{message}</div>)}
-              </blockquote>}
+            {testimonials.map(item => <article key={item.image} className={styles.testimonial}>
+              <a href={item.image} target="_blank" rel="noopener noreferrer" aria-label="Ampliar depoimento" className={styles.testimonialImage}><img src={item.image} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></a>
               <p>{item.text}</p>
             </article>)}
           </div>
@@ -88,7 +85,7 @@ export default function ComboContent() {
         <div className="wrap">
           <h2 id="combo-situations" className="section-title mx-auto max-w-[34ch] text-center">Se a precificação ainda não está 100% organizada na tua oficina, <span className="text-blue">provavelmente alguma dessas situações acontece por aí:</span></h2>
           <ul className={styles.situations}>{situations.map(text => <li key={text}>{text}</li>)}</ul>
-          <p className={styles.closing}><strong>Se você se identificou com isso, o problema não é só aprender a precificar. Falta ter essa precificação organizada e aplicada na rotina da oficina.</strong></p>
+          <p className={styles.situationEmphasis}><strong>Se você se identificou com isso, o problema não é só aprender a precificar. <span>Falta ter essa precificação organizada e aplicada na rotina da oficina.</span></strong></p>
           <Action />
         </div>
       </section>
