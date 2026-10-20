@@ -12,12 +12,12 @@
 .showcaseScreen img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .showcaseSlide > span { display: block; padding: 14px 6px 6px; color: #173b54; font-size: 14px; line-height: 1.5; font-weight: 600; }
 .showcaseSlide:focus-visible { outline: 3px solid #076ca7; outline-offset: 4px; }
-.benefits, .recap { list-style: none; padding: 0; }
+.benefits { list-style: none; padding: 0; }
 .benefits { display: grid; gap: 18px; max-width: 660px; margin: 0 auto; }
-.benefits li, .recap li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.7; }
+.benefits li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.7; }
 .benefits li { justify-content: center; font-weight: 600; }
 .check { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 3px; }
-.benefits .check, .recap .check { color: #076ca7; }
+.benefits .check { color: #076ca7; }
 .action { display: flex; justify-content: center; margin-top: 40px; text-align: center; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; min-height: 48px; padding: 14px 24px; border-radius: 9px; background: #157a43; color: #fff; font-weight: 700; font-size: 15px; line-height: 1.6; text-decoration: none; }
 .button:hover { background: #106336; }
@@ -87,32 +87,20 @@
 .materialCopy { margin-top: 20px; padding: 24px; border: 1px solid #cbdfea; border-radius: 12px; background: #ffffffb3; }
 .materialCopy h3 { font-size: 23px; font-weight: 650; line-height: 1.4; }
 .materialCopy p { margin-top: 18px; font-size: 16px; line-height: 1.8; }
-.priceCard { --combo-heading: #123955; --combo-body: #526b7d; --combo-accent: #076ca7; --color-line: #cbdfea; max-width: 720px; margin: 0 auto; padding: 44px; border: 1px solid #39adf3; border-radius: 20px; background: linear-gradient(155deg, #fff, #f1f8fd); box-shadow: 0 18px 50px -24px #39adf355; color: #173b54; text-align: center; }
-.priceCard h2 { max-width: 22ch; margin-inline: auto; font-size: clamp(27px, 3.3vw, 36px); font-weight: 700; line-height: 1.3; color: #173b54; }
+.priceCard { --combo-heading: #123955; --combo-body: #526b7d; --combo-accent: #076ca7; --color-line: #cbdfea; max-width: 580px; margin: 0 auto; padding: 48px 40px; border: 1px solid #b8d6e9; border-radius: 24px; background: #fff; box-shadow: 0 24px 60px -32px #0006; color: #173b54; text-align: center; }
+.priceCard h2 { margin: 0 auto; max-width: 20ch; font-size: clamp(27px, 3.3vw, 34px); font-weight: 700; line-height: 1.3; }
 .priceCard h2 span { color: #076ca7; }
-.recap { display: grid; gap: 16px; max-width: 520px; margin: 32px auto 0; text-align: center; }
-.recap li { display: flex; justify-content: center; align-items: flex-start; }
-.recap li > span { min-width: 0; max-width: 34ch; }
-.anchorPrices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 32px 0; padding-block: 28px; border-block: 1px solid #cbdfea; text-align: center; }
-.anchorPrices > div { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; line-height: 1.6; }
-.anchorPrices b { font-size: 20px; color: #173b54; }
-.anchorPrices > div:last-child { grid-column: 1 / -1; justify-content: center; font-weight: 600; }
-.anchorPrices s { color: #526b7d; font-size: 22px; }
-.priceCard p { color: #526b7d; font-size: 16px; line-height: 1.8; }
-.paymentOffer { padding-block: 4px; }
-.priceCard .priceLead { font-weight: 600; color: #173b54; }
-.price { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 16px; font-weight: 900; color: #076ca7; line-height: 1.1; }
-.installments { font-size: clamp(22px, 4vw, 32px); font-weight: 600; white-space: nowrap; }
-.priceAmount { display: inline-flex; align-items: baseline; gap: 6px; font-size: clamp(48px, 11vw, 84px); letter-spacing: -.04em; white-space: nowrap; }
-.currency { font-size: clamp(22px, 4vw, 32px); font-weight: 700; letter-spacing: 0; }
-.priceCard .cashPrice { margin-top: 18px; font-size: 19px; color: #173b54; }
-.cashPrice strong { white-space: nowrap; }
-.priceCard .saving { display: inline-block; margin: 16px auto 0; padding: 6px 12px; border-radius: 20px; background: #e1f3e9; color: #106336; font-size: 13px; font-weight: 600; }
-.priceCard .installmentTotal { margin-top: 12px; font-size: 12px; color: #526b7d; }
+.priceCard p { color: #526b7d; font-size: 16px; line-height: 1.7; }
+.priceCard .offerDescription { margin-top: 12px; font-size: 15px; }
+.paymentOffer { margin-top: 32px; padding-block: 28px; border-block: 1px solid #dce8f0; }
+.price { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #076ca7; font-weight: 900; line-height: 1.1; }
+.installments { color: #173b54; font-size: 20px; font-weight: 600; }
+.priceAmount { display: inline-flex; align-items: baseline; gap: 10px; font-size: clamp(64px, 15vw, 88px); letter-spacing: -.04em; white-space: nowrap; }
+.currency { font-size: 28px; font-weight: 600; letter-spacing: 0; }
+.priceCard .cashPrice { margin-top: 18px; font-size: 17px; }
+.cashPrice strong { color: #173b54; white-space: nowrap; }
 .priceCard .action { margin-top: 28px; }
-.priceCard .button { width: 100%; max-width: 480px; min-height: 56px; }
-.priceCard .offerSupport { max-width: 46ch; margin: 28px auto 0; padding-top: 24px; border-top: 1px solid #cbdfea; font-size: 15px; }
-.priceCard .priceClosing { max-width: 44ch; margin: 20px auto 0; font-size: 15px; }
+.priceCard .button { width: 100%; max-width: 440px; min-height: 56px; }
 .checkoutNote { margin-top: 18px; font-size: 13px !important; }
 .faq { display: grid; gap: 16px; max-width: 840px; margin: 48px auto 0; }
 .faq details { min-width: 0; border: 1px solid var(--color-line); border-radius: 12px; background: #fff; }
@@ -169,10 +157,11 @@
   .materialCopy { margin-top: 16px; padding: 24px 20px; }
   .materialCopy h3 { font-size: 21px; line-height: 1.4; }
   .materialCopy p { margin-top: 12px; line-height: 1.75; }
-  .priceCard { padding: 36px 22px; border-radius: 16px; }
-  .recap { gap: 18px; }
-  .recap li { gap: 8px; font-size: 15px; line-height: 1.75; }
-  .anchorPrices { column-gap: 16px; }
+  .priceCard { padding: 32px 24px; border-radius: 20px; }
+  .paymentOffer { margin-top: 24px; padding-block: 24px; }
+
+
+
   .priceCard .action .button { width: 100%; }
   .faq { margin-top: 40px; }
   .faq summary { padding: 22px 20px; font-size: 16px; gap: 16px; line-height: 1.65; }
@@ -194,7 +183,7 @@
   .profiles { column-gap: 16px; }
   .profiles h3 { font-size: 17px; }
   .priceCard { padding: 28px 18px; }
-  .price { gap: 8px; }
+
 }
 
 .bonusMaterial {
@@ -210,7 +199,7 @@
 .bonusMaterial .materialImage { border-color: #36566d; background: #fff; }
 .bonusMaterial .materialCopy { padding: 4px 0 0; border: 0; background: transparent; }
 .bonusMaterial .materialCopy p { color: #c1d5e5; }
-.recapBonus { display: inline-block; margin-right: 8px; padding: 2px 7px; border-radius: 5px; background: #dceffc; color: #075b91; font-size: 11px; font-weight: 700; vertical-align: middle; letter-spacing: .04em; }
+
 @media (max-width: 767px) {
   .bonusMaterial { padding: 20px 16px; }
   .bonusBadge { font-size: 10px; padding: 8px 10px; }

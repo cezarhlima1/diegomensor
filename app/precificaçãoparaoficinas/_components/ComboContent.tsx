@@ -134,27 +134,17 @@ export default function ComboContent() {
       <section id="combo-offer" aria-labelledby="combo-price" data-tone="dark">
         <div className="wrap">
           <div className={styles.priceCard}>
-            <h2 id="combo-price">O combo que vai resolver a tua precificação de forma <span>DEFINITIVA!</span></h2>
-            <ul className={styles.recap}>{materials.map(item => <li key={item.summary}><Check className={styles.check} /><span>{item.bonus && <strong className={styles.recapBonus}>BÔNUS</strong>}{item.summary}</span></li>)}</ul>
-            <div className={styles.anchorPrices}>
-              <div><span>Calculadora de Precificação</span><b>R$ 497</b></div>
-              <div><span>Treinamento Precificação para Oficinas</span><b>R$ 197</b></div>
-              <div><span>Comprando separadamente:</span><s>R$ 694</s></div>
-            </div>
+            <h2 id="combo-price">Garanta o <span>combo completo</span></h2>
+            <p className={styles.offerDescription}>Treinamento + 12 meses de calculadora</p>
             <div className={styles.paymentOffer}>
-              <p className={styles.priceLead}>Leve o combo completo por</p>
               <div className={styles.price} aria-label="12 parcelas de 61 reais e 38 centavos">
                 <span className={styles.installments}>12x de</span>
                 <span className={styles.priceAmount}><span className={styles.currency}>R$</span>61,38</span>
               </div>
               <p className={styles.cashPrice}>ou à vista <strong>R$ 597,00</strong></p>
-              <p className={styles.saving}>Economize R$ 97 pagando à vista</p>
-              <p className={styles.installmentTotal}>Total parcelado: R$ 736,56</p>
             </div>
             <Action purchase>QUERO O COMBO COMPLETO</Action>
             {!COMBO_CHECKOUT_URL && <p className={styles.checkoutNote}>Fale com a equipe pelo WhatsApp para adquirir o combo.</p>}
-            <p className={styles.offerSupport}>Você aprende a ajustar a precificação uma vez e fica com a ferramenta para aplicar nos orçamentos da tua oficina pelos próximos 12 meses.</p>
-            <p className={styles.priceClosing}>Isso aqui é <strong>RESOLVER</strong> de uma vez por todas, aquilo que te <strong>TIRA dinheiro</strong> todos os meses.</p>
           </div>
         </div>
       </section>
