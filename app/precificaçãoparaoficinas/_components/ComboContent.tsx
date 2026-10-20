@@ -32,7 +32,7 @@ export default function ComboContent() {
         <div className="hero-bg" aria-hidden="true" />
         <div className="wrap">
           <h1 id="combo-hero" className={styles.heroTitle}>Ajuste a precificação da tua oficina em <span className="text-blue">40 minutos</span> e tenha uma ferramenta que calcula cada novo orçamento pra ti.</h1>
-          <p className={styles.intro}>Aprenda em <strong>40 minutos de aula</strong> como calcular corretamente a precificação da tua oficina e tenha uma ferramenta para aplicar esse padrão nos orçamentos dos teus clientes <strong>TODOS OS DIAS.</strong></p>
+          <p className={styles.intro}>Você define a base certa uma vez e usa a ferramenta no dia a dia para precificar peças e serviços, montar orçamentos e acompanhar o que foi aprovado ou ainda está aguardando.</p>
           <CalculatorShowcase />
           <ul className={styles.benefits}>
             {["Calcule a hora técnica com os números da tua própria oficina", "Precifique as peças automaticamente com o teu markup", "Monte, envie e acompanhe todos os teus orçamentos em um só lugar"].map(text => <li key={text}><Check className={styles.check} /><span>{text}</span></li>)}
@@ -54,7 +54,7 @@ export default function ComboContent() {
         </div>
       </section>
 
-      <section aria-labelledby="combo-gallery">
+      <section aria-labelledby="combo-gallery" data-tone="dark">
         <div className="wrap">
           <h2 id="combo-gallery" className="section-title mx-auto max-w-[30ch] text-center">A calculadora, as aulas e os materiais <span className="text-blue">que você vai acessar.</span></h2>
           <div className={styles.collage}>
@@ -118,13 +118,13 @@ export default function ComboContent() {
       <section aria-labelledby="combo-materials">
         <div className="wrap">
           <h2 id="combo-materials" className="section-title mx-auto max-w-[32ch] text-center">Tudo que você recebe para <span className="text-blue">ajustar e aplicar a precificação da tua oficina:</span></h2>
-          <div className={styles.materials}>{materials.map(item => <article key={item.title}><div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div><div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p><p className={styles.advantage}><strong>Vantagem:</strong> {item.advantage}</p></div></article>)}</div>
+          <div className={styles.materials}>{materials.map(item => <article key={item.title}><div className={styles.materialImage}><img src={item.image} alt={item.title} loading="lazy" /></div><div className={styles.materialCopy}><h3>{item.title}</h3><p>{item.text}</p><p className={styles.advantage}>{item.advantage}</p></div></article>)}</div>
           <p className={styles.closing}>Você não recebe só o conteúdo para aprender a precificar. Recebe também a ferramenta para aplicar essa precificação em cada orçamento durante os próximos 12 meses.</p>
           <Action />
         </div>
       </section>
 
-      <section id="combo-offer" aria-labelledby="combo-price">
+      <section id="combo-offer" aria-labelledby="combo-price" data-tone="dark">
         <div className="wrap">
           <div className={styles.priceCard}>
             <h2 id="combo-price">Tudo isso no <span>combo completo:</span></h2>

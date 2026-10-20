@@ -9,11 +9,11 @@
 .showcaseScreen { height: 300px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 9px; background: #11161b; }
 .showcaseScreen img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .showcaseSlide > span { display: block; padding: 14px 6px 6px; color: #173b54; font-size: 14px; line-height: 1.5; font-weight: 600; }
-.showcaseSlide:focus-visible { outline: 3px solid #087bbd; outline-offset: 4px; }
+.showcaseSlide:focus-visible { outline: 3px solid #076ca7; outline-offset: 4px; }
 .showcaseTrack[data-paused="true"], .showcaseViewport:hover .showcaseTrack, .showcaseViewport:focus-within .showcaseTrack { animation-play-state: paused; }
 .showcaseToggle { padding: 8px 16px; border: 1px solid #b8d6e9; border-radius: 20px; background: #ffffffb3; color: #075b91; font-size: 12px; line-height: 1.5; cursor: pointer; }
 .showcaseToggle:hover { background: #e5f3fd; }
-.showcaseToggle:focus-visible { outline: 3px solid #087bbd; outline-offset: 3px; }
+.showcaseToggle:focus-visible { outline: 3px solid #076ca7; outline-offset: 3px; }
 @keyframes showcaseScroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) {
   .showcaseViewport { overflow-x: auto; }
@@ -25,9 +25,9 @@
 .benefits li, .recap li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.7; }
 .benefits li { justify-content: center; font-weight: 600; }
 .check { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 3px; }
-.benefits .check, .recap .check { color: #087bbd; }
+.benefits .check, .recap .check { color: #076ca7; }
 .action { display: flex; justify-content: center; margin-top: 40px; text-align: center; }
-.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; min-height: 48px; padding: 14px 24px; border-radius: 9px; background: #087bbd; color: #fff; font-weight: 700; font-size: 15px; line-height: 1.6; text-decoration: none; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; min-height: 48px; padding: 14px 24px; border-radius: 9px; background: #076ca7; color: #fff; font-weight: 700; font-size: 15px; line-height: 1.6; text-decoration: none; }
 .button:hover { background: #075b91; }
 .button:focus-visible, .collageImage:focus-visible, .testimonialImage:focus-visible { outline: 3px solid #39adf3; outline-offset: 4px; }
 .testimonials { display: grid; gap: 32px; margin-top: 48px; }
@@ -38,9 +38,9 @@
 .collage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 48px 20px; margin-top: 56px; padding: 16px 16px 40px; background: radial-gradient(ellipse at 50% 50%, #39adf311, transparent 70%); }
 .collageItem { min-width: 0; margin: 0; position: relative; }
 .collageCaption { position: relative; z-index: 2; min-height: 116px; padding: 0 8px 52px; }
-.collageCaption > span { display: block; color: #087bbd; font-family: "Segoe Print", "Bradley Hand", cursive; font-size: clamp(19px, 2.1vw, 24px); font-weight: 600; line-height: 1.35; rotate: -3deg; }
-.collageCaption small { display: block; margin-top: 8px; color: #526b7d; font-size: 13px; line-height: 1.5; }
-.annotationArrow { position: absolute; bottom: -2px; left: 30%; width: 76px; height: 56px; color: #087bbd; rotate: 12deg; }
+.collageCaption > span { display: block; color: var(--combo-accent); font-family: "Segoe Print", "Bradley Hand", cursive; font-size: clamp(19px, 2.1vw, 24px); font-weight: 600; line-height: 1.35; rotate: -3deg; }
+.collageCaption small { display: block; margin-top: 8px; color: var(--combo-body); font-size: 13px; line-height: 1.5; }
+.annotationArrow { position: absolute; bottom: -2px; left: 30%; width: 76px; height: 56px; color: var(--combo-accent); rotate: 12deg; }
 .annotationArrow path { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .collageImages { position: relative; }
 .collageImage { display: block; overflow: hidden; border: 1px solid #b8d6e9; border-radius: 8px; background: #edf6fc; box-shadow: 0 18px 35px #173b5426; cursor: zoom-in; rotate: -4deg; transition: transform .2s; }
@@ -67,7 +67,7 @@
 .sequence h3, .workflow h3 { margin-top: 24px; font-size: 20px; line-height: 1.4; font-weight: 700; text-transform: uppercase; }
 .sequence p, .workflow p, .profiles p { margin-top: 16px; font-size: 16px; line-height: 1.8; color: #526b7d; }
 .profiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin: 48px 0 0; padding: 0; list-style: none; }
-.profiles li { min-width: 0; padding: 30px; border: 1px solid #cbdfea; border-top: 2px solid #087bbd55; border-radius: 12px; background: #fff; }
+.profiles li { min-width: 0; padding: 30px; border: 1px solid #cbdfea; border-top: 2px solid #076ca755; border-radius: 12px; background: #fff; }
 .profiles li:last-child { grid-column: 1 / -1; max-width: calc(50% - 14px); margin: 0 auto; }
 .profiles h3 { font-size: 23px; font-weight: 650; line-height: 1.4; text-wrap: pretty; }
 .workflow { display: grid; gap: 28px; max-width: 840px; margin: 48px auto 0; padding: 0; list-style: none; }
@@ -81,9 +81,9 @@
 .materialCopy h3 { font-size: 23px; font-weight: 650; line-height: 1.4; }
 .materialCopy p { margin-top: 18px; font-size: 16px; line-height: 1.8; }
 .advantage { padding-top: 18px; border-top: 1px solid #cbdfea; }
-.priceCard { max-width: 720px; margin: 0 auto; padding: 44px; border: 1px solid #39adf3; border-radius: 20px; background: linear-gradient(155deg, #fff, #f1f8fd); box-shadow: 0 18px 50px -24px #39adf355; color: #173b54; text-align: center; }
+.priceCard { --combo-heading: #123955; --combo-body: #526b7d; --combo-accent: #076ca7; --color-line: #cbdfea; max-width: 720px; margin: 0 auto; padding: 44px; border: 1px solid #39adf3; border-radius: 20px; background: linear-gradient(155deg, #fff, #f1f8fd); box-shadow: 0 18px 50px -24px #39adf355; color: #173b54; text-align: center; }
 .priceCard h2 { font-size: clamp(27px, 3.3vw, 36px); line-height: 1.3; color: #173b54; }
-.priceCard h2 span { color: #087bbd; }
+.priceCard h2 span { color: #076ca7; }
 .recap { display: grid; gap: 18px; margin-top: 32px; text-align: left; }
 .anchorPrices { display: grid; gap: 16px; margin: 32px 0; padding-block: 28px; border-block: 1px solid #173b5426; text-align: left; }
 .anchorPrices > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 20px; line-height: 1.6; }
@@ -91,8 +91,8 @@
 .anchorPrices s { color: #526b7d; }
 .priceCard p { color: #526b7d; font-size: 16px; line-height: 1.8; }
 .priceLead { font-weight: 600; }
-.price { margin-top: 12px; font-size: clamp(58px, 8vw, 80px); font-weight: 900; color: #087bbd; line-height: 1.1; letter-spacing: -.04em; }
-.saving { margin: 16px 0 28px; font-size: 14px !important; color: #087bbd !important; }
+.price { margin-top: 12px; font-size: clamp(58px, 8vw, 80px); font-weight: 900; color: #076ca7; line-height: 1.1; letter-spacing: -.04em; }
+.saving { margin: 16px 0 28px; font-size: 14px !important; color: #076ca7 !important; }
 .priceClosing { margin-top: 24px; }
 .checkoutNote { margin-top: 18px; font-size: 13px !important; }
 .faq { display: grid; gap: 16px; max-width: 840px; margin: 48px auto 0; }
