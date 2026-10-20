@@ -46,8 +46,11 @@ export default function ComboContent() {
         <div className="wrap">
           <h2 id="depoimentos-title" className="section-title mx-auto max-w-[30ch] text-center">Na prática, fazer os orçamentos ficou <span className="text-blue">muito mais simples e sem margem de erro.</span></h2>
           <div className={styles.testimonials}>
-            {testimonials.map(item => <article key={item.image} className={styles.testimonial}>
-              <a href={`/combo-precificacao/${item.image}.jpg`} target="_blank" rel="noopener noreferrer" aria-label="Ampliar depoimento" className={styles.testimonialImage}><img src={`/combo-precificacao/${item.image}.jpg`} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></a>
+            {testimonials.map(item => <article key={item.image ?? item.question} className={styles.testimonial}>
+              {item.image ? <a href={`/combo-precificacao/${item.image}.jpg`} target="_blank" rel="noopener noreferrer" aria-label="Ampliar depoimento" className={styles.testimonialImage}><img src={`/combo-precificacao/${item.image}.jpg`} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></a> : <blockquote className={styles.testimonialConversation} aria-label="Transcrição do feedback enviado pelo aluno">
+                <div className={styles.testimonialQuestion}>{item.question}</div>
+                {item.messages?.map(message => <div key={message} className={styles.testimonialMessage}>{message}</div>)}
+              </blockquote>}
               <p>{item.text}</p>
             </article>)}
           </div>
