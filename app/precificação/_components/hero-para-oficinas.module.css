@@ -1,0 +1,74 @@
+.collage {
+  position: relative;
+  width: min(100%, 720px);
+  margin: 44px auto 0;
+  padding: 16px 8px 40px;
+  isolation: isolate;
+}
+
+.collage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid #263440;
+  border-radius: 10px;
+  background: #11161b;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 28%);
+}
+
+.collage .course {
+  width: 80%;
+  margin-inline: auto;
+  rotate: -3deg;
+}
+
+.materials {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-top: -24px;
+  z-index: 1;
+}
+
+.materials img {
+  position: relative;
+  flex: 0 0 40%;
+  width: 40%;
+  min-width: 0;
+}
+
+.materials img + img {
+  margin-left: -10%;
+}
+
+.materials img:nth-child(1) {
+  rotate: -7deg;
+  translate: 0 12px;
+}
+
+.materials img:nth-child(2) {
+  rotate: 5deg;
+  translate: 0 -6px;
+  z-index: 2;
+}
+
+.materials img:nth-child(3) {
+  rotate: -4deg;
+  translate: 0 20px;
+  z-index: 3;
+}
+
+@media (max-width: 767px) {
+  .collage {
+    margin-top: 36px;
+    padding: 12px 8px 36px;
+  }
+
+  .collage img {
+    border-radius: 7px;
+  }
+
+  .materials {
+    margin-top: -12px;
+  }
+}

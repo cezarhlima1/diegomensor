@@ -1,0 +1,72 @@
+.profiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 960px;
+  margin: 48px auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile {
+  padding: 32px;
+  border: 1px solid #ffffff12;
+  border-top: 2px solid #39adf377;
+  border-radius: 12px;
+  background: #17212a;
+}
+
+.profile h3 {
+  max-width: 26ch;
+  font-size: clamp(21px, 2.2vw, 25px);
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -.015em;
+  text-wrap: balance;
+}
+
+.profile p {
+  margin-top: 16px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #b8c9d5;
+}
+
+.closing {
+  max-width: 960px;
+  margin: 48px auto 0;
+  padding-top: 32px;
+  border-top: 1px solid #ffffff1a;
+  text-align: center;
+}
+
+.closing p {
+  max-width: 54ch;
+  margin-inline: auto;
+  font-size: clamp(19px, 2.2vw, 24px);
+  font-weight: 500;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+@media (max-width: 767px) {
+  .profiles {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-top: 44px;
+  }
+
+  .profile {
+    padding: 30px 24px;
+  }
+
+  .profile h3 {
+    font-size: 22px;
+    line-height: 1.4;
+  }
+
+  .closing {
+    margin-top: 44px;
+    padding-top: 36px;
+  }
+}
