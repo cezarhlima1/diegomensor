@@ -17,13 +17,14 @@ function Action({ children = "Quero resolver minha precificação", purchase = f
   );
 }
 
-const gallery = [
-  { src: "/previa-curso.jpg", title: "Aulas de precificação", detail: "Aprenda em aproximadamente 40 minutos", layout: "lessons" },
-  { src: "/combo-precificacao/calculadora1.jpg", title: "Cálculo da hora técnica", detail: "Com os custos da tua oficina", layout: "hour" },
-  { src: "/combo-precificacao/calculadora2.jpg", title: "Precificação das peças", detail: "Custo + markup, tudo calculado", layout: "parts" },
-  { src: "/material-apostila.jpg", title: "Apostila de precificação", detail: "Conteúdo de apoio para consultar", layout: "book" },
-  { src: "/combo-precificacao/calculadora5.jpg", title: "Orçamentos organizados", detail: "Monte, envie e acompanhe os clientes", layout: "quotes", extra: "/combo-precificacao/calculadora9.jpg" },
-  { src: "/material-checklist.jpg", title: "Checklist de apoio", detail: "Para usar na rotina da oficina", layout: "checklist" },
+const walkthrough = [
+  { src: "/previa-curso.jpg", title: "Assista às aulas", detail: "Entenda como precificar peças e serviços e como aplicar o passo a passo na ferramenta.", alt: "Área de aulas do treinamento de precificação para oficinas" },
+  { src: "/combo-precificacao/calculadora1.jpg", title: "Padronize o valor da mão de obra", detail: "Configure o valor da sua hora técnica na ferramenta. Você pode cadastrar um ou mais valores, conforme os serviços da sua oficina.", alt: "Calculadora com os custos da oficina e o cálculo do valor da hora técnica" },
+  { src: "/combo-precificacao/calculadora2.jpg", title: "Defina o padrão de markup", detail: "Configure o markup que será aplicado ao custo das peças para calcular o preço de venda.", alt: "Configuração do percentual de markup de uma peça na calculadora" },
+  { src: "/combo-precificacao/calculadora4.jpg", title: "Informe o custo da peça e veja o cálculo pronto", detail: "Insira o valor de custo da peça e a quantidade. A ferramenta aplica o markup e calcula automaticamente o valor final das peças.", alt: "Detalhamento das peças com os valores calculados e o total" },
+  { src: "/combo-precificacao/calculadora5.jpg", title: "Preencha os dados do cliente e dos serviços", detail: "Informe os dados do cliente, como ele chegou até a oficina e a quantidade de horas de cada serviço a ser realizado.", alt: "Formulário do orçamento com dados do cliente, origem e seleção da hora técnica", extra: "/combo-precificacao/calculadora6.jpg", extraAlt: "Preenchimento da quantidade de horas de serviço por peça" },
+  { src: "/combo-precificacao/calculadora11.jpg", title: "Envie o orçamento pelo WhatsApp", detail: "O orçamento já fica organizado em uma mensagem pronta. É só copiar, colar e enviar no WhatsApp do cliente.", alt: "Mensagem de orçamento pronta no WhatsApp com peças, mão de obra e valor total" },
+  { src: "/combo-precificacao/calculadora9.jpg", title: "Acompanhe o histórico dos orçamentos", detail: "Consulte os orçamentos e atualize o status de cada um: aguardando aprovação, aprovado ou não aprovado.", alt: "Histórico de orçamentos com os status aguardando aprovação, aprovado e não aprovado" },
 ];
 
 export default function ComboContent() {
@@ -57,26 +58,24 @@ export default function ComboContent() {
 
       <section aria-labelledby="combo-gallery" data-tone="dark">
         <div className="wrap">
-          <h2 id="combo-gallery" className="section-title mx-auto max-w-[30ch] text-center">A calculadora, as aulas e os materiais <span className="text-blue">que você vai acessar.</span></h2>
-          <div className={styles.collage}>
-            {gallery.map(item => <figure key={item.src} className={`${styles.collageItem} ${styles[item.layout]}`}>
-              <figcaption className={styles.collageCaption}>
-                <span>{item.title}</span>
-                <small>{item.detail}</small>
-                <svg className={styles.annotationArrow} viewBox="0 0 100 70" fill="none" aria-hidden="true">
-                  <path d="M12 6C72 0 89 20 62 56M62 56L62 38M62 56L80 49" />
-                </svg>
-              </figcaption>
-              <div className={styles.collageImages}>
-                <a href={item.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${item.title}`} className={styles.collageImage}>
-                  <img src={item.src} alt={item.title} loading="lazy" />
+          <h2 id="combo-gallery" className="section-title text-center">Esse é o <span className="text-blue">passo a passo:</span></h2>
+          <ol className={styles.walkthrough}>
+            {walkthrough.map((step, index) => <li key={step.title} className={styles.walkthroughStep}>
+              <div className={styles.walkthroughCopy}>
+                <span className={styles.walkthroughNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+              </div>
+              <div className={styles.walkthroughImages}>
+                <a href={step.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${step.title}`} className={styles.walkthroughImage}>
+                  <img src={step.src} alt={step.alt} loading="lazy" />
                 </a>
-                {item.extra && <a href={item.extra} target="_blank" rel="noopener noreferrer" aria-label="Ampliar histórico de orçamentos" className={`${styles.collageImage} ${styles.collageExtra}`}>
-                  <img src={item.extra} alt="Histórico para acompanhar a aprovação dos orçamentos" loading="lazy" />
+                {step.extra && <a href={step.extra} target="_blank" rel="noopener noreferrer" aria-label="Ampliar: horas de cada serviço" className={styles.walkthroughImage}>
+                  <img src={step.extra} alt={step.extraAlt} loading="lazy" />
                 </a>}
               </div>
-            </figure>)}
-          </div>
+            </li>)}
+          </ol>
           <Action />
         </div>
       </section>
