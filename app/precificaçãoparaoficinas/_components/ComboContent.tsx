@@ -18,13 +18,13 @@ function Action({ children = "Quero resolver minha precificação", purchase = f
 }
 
 const walkthrough = [
-  { src: "/previa-curso.jpg", title: "Assista às aulas", detail: "Entenda como precificar peças e serviços e como aplicar o passo a passo na ferramenta.", alt: "Área de aulas do treinamento de precificação para oficinas" },
+  { src: "/previa-curso.jpg", title: "Assista às aulas", detail: "São 40 minutos, pra você entender como precificar peças e serviços e como aplicar o passo a passo na ferramenta.", alt: "Área de aulas do treinamento de precificação para oficinas" },
   { src: "/combo-precificacao/calculadora1.jpg", title: "Padronize o valor da mão de obra", detail: "Configure o valor da sua hora técnica na ferramenta. Você pode cadastrar um ou mais valores, conforme os serviços da sua oficina.", alt: "Calculadora com os custos da oficina e o cálculo do valor da hora técnica" },
-  { src: "/combo-precificacao/calculadora2.jpg", title: "Defina o padrão de markup", detail: "Configure o markup que será aplicado ao custo das peças para calcular o preço de venda.", alt: "Configuração do percentual de markup de uma peça na calculadora" },
-  { src: "/combo-precificacao/calculadora4.jpg", title: "Informe o custo da peça e veja o cálculo pronto", detail: "Insira o valor de custo da peça e a quantidade. A ferramenta aplica o markup e calcula automaticamente o valor final das peças.", alt: "Detalhamento das peças com os valores calculados e o total" },
-  { src: "/combo-precificacao/calculadora5.jpg", title: "Preencha os dados do cliente e dos serviços", detail: "Informe os dados do cliente, como ele chegou até a oficina e a quantidade de horas de cada serviço a ser realizado.", alt: "Formulário do orçamento com dados do cliente, origem e seleção da hora técnica", extra: "/combo-precificacao/calculadora6.jpg", extraAlt: "Preenchimento da quantidade de horas de serviço por peça" },
+  { src: "/calculadora13.png", title: "Defina o padrão de markup", detail: "Configure o markup que será aplicado ao custo das peças para calcular o preço de venda.", alt: "Configuração do percentual de markup de uma peça na calculadora" },
+  { src: "/combo-precificacao/calculadora2.jpg", title: "Informe o custo da peça e veja o cálculo pronto", detail: "Insira o valor de custo da peça e a quantidade. A ferramenta aplica o markup e calcula automaticamente o valor final das peças.", alt: "Custo e quantidade da peça com markup aplicado e valor final calculado" },
+  { src: "/combo-precificacao/calculadora5.jpg", title: "Preencha os dados do cliente e dos serviços", detail: "Informe os dados do cliente, como ele chegou até a oficina e a quantidade de horas de cada serviço a ser realizado.", alt: "Formulário do orçamento com dados do cliente, origem e seleção da hora técnica" },
   { src: "/combo-precificacao/calculadora11.jpg", title: "Envie o orçamento pelo WhatsApp", detail: "O orçamento já fica organizado em uma mensagem pronta. É só copiar, colar e enviar no WhatsApp do cliente.", alt: "Mensagem de orçamento pronta no WhatsApp com peças, mão de obra e valor total" },
-  { src: "/combo-precificacao/calculadora9.jpg", title: "Acompanhe o histórico dos orçamentos", detail: "Consulte os orçamentos e atualize o status de cada um: aguardando aprovação, aprovado ou não aprovado.", alt: "Histórico de orçamentos com os status aguardando aprovação, aprovado e não aprovado" },
+  { src: "/combo-precificacao/calculadora9.jpg", title: "Acompanhe o histórico dos orçamentos", detail: "Consulte os orçamentos e atualize o status de cada um: aguardando aprovação, aprovado ou não aprovado.", alt: "Histórico de orçamentos com os status aguardando aprovação, aprovado e não aprovado", extra: "/combo-precificacao/calculadora8.jpg", extraAlt: "Resultados dos orçamentos e origem dos clientes" },
 ];
 
 export default function ComboContent() {
@@ -70,7 +70,7 @@ export default function ComboContent() {
                 <a href={step.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${step.title}`} className={styles.walkthroughImage}>
                   <img src={step.src} alt={step.alt} loading="lazy" />
                 </a>
-                {step.extra && <a href={step.extra} target="_blank" rel="noopener noreferrer" aria-label="Ampliar: horas de cada serviço" className={styles.walkthroughImage}>
+                {step.extra && <a href={step.extra} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${step.extraAlt}`} className={styles.walkthroughImage}>
                   <img src={step.extra} alt={step.extraAlt} loading="lazy" />
                 </a>}
               </div>
