@@ -85,19 +85,12 @@ export default function CalculatorShowcase() {
           state.lastX = event.clientX;
         }}
         onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag}
-        onClickCapture={event => {
-          if (motion.current.dragged && event.detail > 0) { event.preventDefault(); event.stopPropagation(); }
-        }}
         onDragStart={event => event.preventDefault()}
         onFocusCapture={event => {
           // Keep keyboard focus visible, while pointer interaction resumes the loop.
           if (event.target.matches(":focus-visible")) {
             motion.current.focused = true;
-            const slide = event.target.closest("a");
-            if (slide) {
-              motion.current.offset = -slide.offsetLeft;
-              moveBy(0);
-            }
+
           }
         }}
         onBlurCapture={event => {
@@ -113,16 +106,13 @@ export default function CalculatorShowcase() {
           {[0, 1].map(copy => (
             <div key={copy} className={styles.showcaseGroup} aria-hidden={copy === 1 ? true : undefined}>
               {screens.map(screen => (
-                <a key={screen.number} className={styles.showcaseSlide}
-                  href={`/combo-precificacao/calculadora${screen.number}.jpg`}
-                  target="_blank" rel="noopener noreferrer" tabIndex={copy === 1 ? -1 : undefined}
-                  aria-label={`Ampliar: ${screen.title}`}>
+                <div key={screen.number} className={styles.showcaseSlide}>
                   <div className={styles.showcaseScreen}>
                     <img src={`/combo-precificacao/calculadora${screen.number}.jpg`}
                       alt={copy === 0 ? screen.title : ""} width={420} height={300} decoding="async" />
                   </div>
                   <span>{screen.title}</span>
-                </a>
+                </div>
               ))}
             </div>
           ))}

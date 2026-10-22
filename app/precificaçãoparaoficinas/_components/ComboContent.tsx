@@ -48,7 +48,7 @@ export default function ComboContent() {
           <h2 id="depoimentos-title" className="section-title mx-auto max-w-[30ch] text-center">Na prática, fazer os orçamentos ficou <span className="text-blue">muito mais simples e sem margem de erro.</span></h2>
           <div className={styles.testimonials}>
             {testimonials.map(item => <article key={item.image} className={styles.testimonial}>
-              <a href={item.image} target="_blank" rel="noopener noreferrer" aria-label="Ampliar depoimento" className={styles.testimonialImage}><img src={item.image} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></a>
+              <div className={styles.testimonialImage}><img src={item.image} alt="Depoimento de aluno sobre os orçamentos feitos na calculadora" loading="lazy" /></div>
               <p>{item.text}</p>
             </article>)}
           </div>
@@ -67,12 +67,12 @@ export default function ComboContent() {
                 <p>{step.detail}</p>
               </div>
               <div className={styles.walkthroughImages}>
-                <a href={step.src} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${step.title}`} className={styles.walkthroughImage}>
+                <div className={styles.walkthroughImage}>
                   <img src={step.src} alt={step.alt} loading="lazy" />
-                </a>
-                {step.extra && <a href={step.extra} target="_blank" rel="noopener noreferrer" aria-label={`Ampliar: ${step.extraAlt}`} className={styles.walkthroughImage}>
+                </div>
+                {step.extra && <div className={styles.walkthroughImage}>
                   <img src={step.extra} alt={step.extraAlt} loading="lazy" />
-                </a>}
+                </div>}
               </div>
             </li>)}
           </ol>
