@@ -1643,8 +1643,6 @@ function Pipeline({
                       <div>
                         <div className={styles.cardTitle}><button type="button" aria-label={`${selectedLeadIds.has(lead.id) ? "Desmarcar" : "Selecionar"} ${lead.name}`} aria-pressed={selectedLeadIds.has(lead.id)} onClick={(event) => { event.stopPropagation(); toggleLeadSelection(lead.id); }}>{selectedLeadIds.has(lead.id) ? "✓" : ""}</button><h3>{lead.name}</h3></div>
                         <p><span>Origem</span>{lead.source}</p>
-                        {lead.application?.sheetsIscas?.funnel && <p><span>Interesse atual</span>{lead.application.sheetsIscas.funnel}</p>}
-                        {!!lead.application?.history?.length && <p><span>Aplicações</span>{lead.application.history.length + 1} entradas · jornada preservada</p>}
                         {lead.product && lead.product !== "Não informado" && <em className={styles.productTag} style={{ color: productColor(lead.product), borderColor: `${productColor(lead.product)}66`, background: `${productColor(lead.product)}18` }}>{lead.product}</em>}
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
                         {followUpKey && <div className={`${styles.followUpAlert} ${styles[`followUp_${followUpState}`]}`}><i>↗</i><span>{followUpState === "late" ? "Retorno atrasado" : followUpState === "today" ? "Retornar hoje" : "Retornar"}</span><b>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(lead.followUpAt!))}</b></div>}
