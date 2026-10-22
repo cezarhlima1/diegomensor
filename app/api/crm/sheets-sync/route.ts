@@ -33,13 +33,17 @@ export async function POST(request: Request) {
   try {
     const result = await withCrmTransaction(async (db) => {
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", ["sheets-iscas-sync"]);
-      const matches = await db.query("select id,name,company,application from public.crm_leads where ($1<>'' and public.crm_normalized_phone(phone)=$1) or ($2<>'' and source='Forms - Manychat' and lower(name)=lower($2) and (phone='' or $1='') and (company='' or $3='' or lower(company)=lower($3))) for update", [contact.phone, contact.name, contact.company]);
+      const matches = await db.query("select id,name,company,stage,application from public.crm_leads where ($1<>'' and public.crm_normalized_phone(phone)=$1) or ($2<>'' and source='Forms - Manychat' and lower(name)=lower($2) and (phone='' or $1='') and (company='' or $3='' or lower(company)=lower($3))) for update", [contact.phone, contact.name, contact.company]);
       if (matches.rows.length > 1) return { conflict: true };
       const existing = matches.rows[0];
       const application = { ...sheetApplication(contact), ...(syncRecordId ? { syncRecordId } : {}) };
       if (existing) {
+        const baseline = body.baseline === true && Boolean(applicationId);
+        if (baseline && existing.stage !== "Novo lead") {
+          return { id: existing.id, created: false, skipped: true, reason: "existing-lead-outside-new" };
+        }
         const incoming = application;
-        const { repeated } = await updateIncomingLead(existing.id, { ...incoming, submittedAt: new Date().toISOString() }, "Forms - Manychat", { company: contact.company, phone: contact.phone }, db);
+        const { repeated } = await updateIncomingLead(existing.id, { ...incoming, submittedAt: new Date().toISOString() }, "Forms - Manychat", { company: contact.company, phone: contact.phone }, db, { baseline });
         return { id: existing.id, created: false, reactivated: repeated };
       }
       const source = "Forms - Manychat";
@@ -53,7 +57,10 @@ export async function POST(request: Request) {
     });
     if (result.conflict) return NextResponse.json({ ok: false, error: "duplicate-phone-conflict" }, { status: 409 });
     return NextResponse.json({ ok: true, ...result });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "ambiguous-legacy-application") {
+      return NextResponse.json({ ok: false, error: "application-identity-conflict" }, { status: 409 });
+    }
     console.error("Sheets CRM synchronization failed");
     return NextResponse.json({ ok: false, error: "sync-failed" }, { status: 503 });
   }

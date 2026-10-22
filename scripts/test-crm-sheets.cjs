@@ -90,19 +90,21 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   const state = { CRM_SECRET: 'test-only-secret', CRM_SPREADSHEET_ID: 'sheet' };
   const rows = [['André', 'Atual', '12974038745', '', '', '', '']];
   let status = 503, requests = 0, released = 0;
+  const payloads = [];
   const ids = [];
   const sheet = { getLastRow: () => rows.length + 1, getLastColumn: () => 8, getSheetId: () => 0,
     getRange: (row, column) => ({
       getDisplayValues: () => row === 1 ? [['username','oficina','celular','pessoas','funil','faturamento','problema','CRM_APLICACAO_ID']] : column === 8 ? rows.map((_, i) => [ids[i] || '']) : rows,
       setValue: value => { ids[row - 2] = value; },
+      setValues: values => { values.forEach((value,i) => { ids[i] = value[0]; }); },
     }),
   };
   const context = {
-    PropertiesService: { getScriptProperties: () => ({ getProperties: () => ({ ...state }), setProperty: (k, v) => { state[k] = v; } }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperties: () => ({ ...state }), setProperty: (k, v) => { state[k] = v; }, setProperties: values => Object.assign(state, values) }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => { released++; } }) },
     SpreadsheetApp: { openById: () => ({ getId: () => 'sheet', getSheetByName: () => sheet }) },
     Utilities: { getUuid: () => crypto.randomUUID(), DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (_, value) => crypto.createHash('sha256').update(value).digest(), base64Encode: value => value.toString('base64') },
-    UrlFetchApp: { fetch: () => { requests++; return { getResponseCode: () => status, getContentText: () => JSON.stringify({ ok: status === 200 }) }; } },
+    UrlFetchApp: { fetch: (_, options) => { requests++; payloads.push(JSON.parse(options.payload)); return { getResponseCode: () => status, getContentText: () => JSON.stringify({ ok: status === 200 }) }; } },
     console: { error: () => {} },
   };
   vm.createContext(context);
@@ -116,6 +118,9 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   rows.push(['Novo', '', '11999999999', '', '', '', '']);
   context.sincronizarPendentes();
   assert.equal(requests, 3);
+  assert.equal(payloads[0].baseline, true);
+  assert.equal(payloads[0].applicationId, payloads[1].applicationId);
+  assert.equal(payloads[2].baseline, false);
   assert.equal(released, 4);
   rows.reverse(); ids.reverse();
   context.sincronizarPendentes();
@@ -123,6 +128,11 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   rows[0][1] = 'Oficina atualizada';
   context.sincronizarPendentes();
   assert.equal(requests, 4, 'editing sends an update with the existing application ID');
+  rows.push([...rows[0]]); ids.push(ids[0]);
+  context.sincronizarPendentes();
+  assert.equal(requests, 5);
+  assert.notEqual(payloads[4].applicationId, ids[0], 'a copied row receives its own application ID');
+  assert.equal(payloads[4].baseline,false);
 });
 
 test('reentry reuses the existing contact and reports reactivation without creating another lead', async () => {
@@ -222,6 +232,17 @@ test('editing and syncing the same row updates data; another row counts as a new
   assert.equal(mergeIncomingApplication(original,{...edited,syncRecordId:'sheet:Leads:43'},'Manychat').repeated,true);
 });
 
+test('assigning legacy IDs matches the correct old application before falling back to its funnel', () => {
+  const first = { sheetsIscas: {name:'Maria',funnel:'Mentoria',people:'2'} };
+  const latest = { sheetsIscas: {name:'Maria',funnel:'Mentoria',people:'6'},history:[first] };
+  const adopted = mergeIncomingApplication(latest,{...first,syncRecordId:'sheet:old-entry'},'Manychat');
+  assert.equal(adopted.repeated,false);
+  assert.equal(adopted.historical,true);
+  assert.equal(adopted.application.sheetsIscas.people,'6');
+  assert.equal(adopted.application.history[0].syncRecordId,'sheet:old-entry');
+  assert.throws(() => mergeIncomingApplication(latest,{syncRecordId:'sheet:unknown',sheetsIscas:{name:'Maria',funnel:'Mentoria',people:'10'}},'Manychat'),/ambiguous-legacy-application/);
+});
+
 test('three Manychat interests are three applications; resyncing any of them never changes the latest interest', () => {
   const source = 'Forms - Manychat';
   const incoming = (id, funnel) => ({syncRecordId:id,sheetsIscas:{name:'Maria',phone:'11993864504',funnel},answers:[],submittedAt:'2026-10-22T12:00:00Z'});
@@ -243,4 +264,49 @@ test('three Manychat interests are three applications; resyncing any of them nev
     assert.equal(current.history.length,2);
     assert.equal(current.submittedAt,'2026-10-22T12:00:00Z');
   }
+});
+
+test('initial spreadsheet baseline leaves contacts in all other stages untouched', async () => {
+  for (const stage of ['Primeiro contato', 'Follow up', 'Fechado', 'Desqualificado']) {
+    const { send, calls } = endpoint([{ id: 'existing', stage, application: {} }]);
+    const response = await send({applicationId:'initial-id',baseline:true,celular:'12974038745',funil:'Mentoria'});
+    const result = await response.json();
+    assert.equal(response.status,200);
+    assert.equal(result.skipped,true);
+    assert.equal(calls.some(c => c.sql.startsWith('update') || c.sql.startsWith('insert')),false);
+  }
+});
+test('initial baseline in Novo lead does not add a false second application or reentry', async () => {
+  const {send,calls}=endpoint([{id:'existing',stage:'Novo lead',source:'Direct',application:{}}]);
+  const result=await (await send({applicationId:'initial-id',baseline:true,celular:'12974038745',funil:'Mentoria'})).json();
+  assert.equal(result.reactivated,false);
+  const update=calls.find(c=>c.sql.startsWith('update'));
+  assert.equal(update.params[8],false);
+  assert.equal(update.params[6].includes('Segunda aplicação'),false);
+  assert.equal(JSON.parse(update.params[7]).length,0);
+  assert.equal(JSON.parse(update.params[5]).history.length,0);
+});
+
+test('first setup appends IDs after DATA without overwriting existing columns', () => {
+  const state={CRM_SECRET:'test-only-secret',CRM_SPREADSHEET_ID:'sheet'};
+  const headers=['username','oficina','celular','pessoas','funil','faturamento','problema','DATA'];
+  const data=[['Maria','Oficina','11993864504','3','Mentoria','30 mil','Gestão','2026-10-22 09:00:00']];
+  const payloads=[];
+  const sheet={getLastRow:()=>2,getLastColumn:()=>headers.length,getSheetId:()=>0,getRange:(row,col,count,width)=>({
+    getDisplayValues:()=>row===1?[headers.slice(0,width)]:data.map(values=>Array.from({length:width},(_,i)=>values[col-1+i]||'')),
+    setValue:value=>{if(row===1)headers[col-1]=value;else data[row-2][col-1]=value;},
+    setValues:values=>{values.forEach((value,i)=>{data[row-2+i][col-1]=value[0];});},
+  })};
+  const context={
+    PropertiesService:{getScriptProperties:()=>({getProperties:()=>({...state}),setProperty:(k,v)=>{state[k]=v;},setProperties:values=>Object.assign(state,values)})},
+    LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
+    SpreadsheetApp:{openById:()=>({getId:()=>'sheet',getSheetByName:()=>sheet})},
+    Utilities:{getUuid:()=>crypto.randomUUID(),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,value)=>crypto.createHash('sha256').update(value).digest(),base64Encode:value=>value.toString('base64')},
+    UrlFetchApp:{fetch:(_,options)=>{payloads.push(JSON.parse(options.payload));return {getResponseCode:()=>200,getContentText:()=>'{"ok":true}'};}},console,
+  };
+  vm.createContext(context);vm.runInContext(fs.readFileSync('scripts/planilha-iscas-para-crm.gs','utf8'),context);
+  context.sincronizarPendentes();context.sincronizarPendentes();
+  assert.equal(headers[7],'DATA');assert.equal(headers[8],'CRM_APLICACAO_ID');
+  assert.equal(data[0][7],'2026-10-22 09:00:00');assert.equal(payloads.length,1);
+  assert.equal(payloads[0].applicationId,data[0][8]);assert.equal(payloads[0].baseline,true);
 });

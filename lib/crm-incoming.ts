@@ -22,17 +22,21 @@ export function mergeIncomingApplication(current: IncomingApplication, incoming:
   const { history: oldHistory, ...snapshot } = current;
   const entryKey = applicationKey(incoming, source);
   const recorded = [snapshot, ...(oldHistory || [])];
-  const matchingIndex = recorded.findIndex(entry => {
+  let matchingIndex = recorded.findIndex(entry => {
     if (incoming.sheetsIscas) {
       if (incoming.syncRecordId && entry.syncRecordId) return incoming.syncRecordId === entry.syncRecordId;
       if (!entry.sheetsIscas) return false;
-      if (incoming.syncRecordId && !entry.syncRecordId) {
-        return (entry.sheetsIscas as Record<string, unknown>).funnel === (incoming.sheetsIscas as Record<string, unknown>).funnel;
-      }
       return canonical(entry.sheetsIscas) === canonical(incoming.sheetsIscas);
     }
     return incoming.sessionId ? !entry.sheetsIscas && entry.sessionId === incoming.sessionId : applicationKey(entry, String(entry.source || source)) === entryKey;
   });
+  if (matchingIndex < 0 && incoming.sheetsIscas && incoming.syncRecordId) {
+    const legacyMatches = recorded.map((entry, index) => ({ entry, index })).filter(({ entry }) =>
+      !entry.syncRecordId && entry.sheetsIscas &&
+      (entry.sheetsIscas as Record<string, unknown>).funnel === (incoming.sheetsIscas as Record<string, unknown>).funnel);
+    if (legacyMatches.length > 1) throw new Error("ambiguous-legacy-application");
+    if (legacyMatches.length === 1) matchingIndex = legacyMatches[0].index;
+  }
   const repeated = matchingIndex < 0 && Boolean(Object.keys(snapshot).length);
   const history = [...(oldHistory || [])];
   // Reimporting an old application must not replace the most recent interest.
@@ -52,21 +56,23 @@ export function mergeIncomingApplication(current: IncomingApplication, incoming:
 
 }
 
-export async function updateIncomingLead(id: string, incoming: IncomingApplication, source: string, contact: { name?: string; phone?: string; company?: string; email?: string } = {}, client?: PoolClient) {
+export async function updateIncomingLead(id: string, incoming: IncomingApplication, source: string, contact: { name?: string; phone?: string; company?: string; email?: string } = {}, client?: PoolClient, options: { baseline?: boolean } = {}) {
   const update = async (db: PoolClient) => {
     const lead = (await db.query("select * from public.crm_leads where id=$1 for update", [id])).rows[0];
     if (!lead) throw new Error("incoming-lead-not-found");
-    const { repeated, historical, application } = mergeIncomingApplication({ source: lead.source, ...(lead.application || {}) }, incoming, source);
+    const current = options.baseline && !Object.keys(lead.application || {}).length ? {} : { source: lead.source, ...(lead.application || {}) };
+    const { repeated, historical, application } = mergeIncomingApplication(current, incoming, source);
+    const newEntry = repeated && !options.baseline;
     if (historical) {
       await db.query("update public.crm_leads set application=$2::jsonb,updated_at=now() where id=$1", [id, JSON.stringify(application)]);
       return { repeated: false };
     }
     const at = incoming.submittedAt || new Date().toISOString();
     const history = [...(lead.journey_history || [])];
-    if (repeated) history.push({ id: `reentry:${application.entryKey}:${at}`, kind: "reentry", at, stage: "Novo lead", source, funnel: (incoming.sheetsIscas as Record<string, unknown> | undefined)?.funnel, previousStage: lead.stage });
+    if (newEntry) history.push({ id: `reentry:${application.entryKey}:${at}`, kind: "reentry", at, stage: "Novo lead", source, funnel: (incoming.sheetsIscas as Record<string, unknown> | undefined)?.funnel, previousStage: lead.stage });
     let tags: string[] = lead.tags || [];
-    if (repeated && !tags.includes("Segunda aplicação")) tags = [...tags, "Segunda aplicação"];
-    if (repeated && tags.some(tag => tag.trim().toLowerCase() === "desqualificado")) tags = [...tags.filter(tag => tag.trim().toLowerCase() !== "desqualificado"), "Já desqualificado"];
+    if (newEntry && !tags.includes("Segunda aplicação")) tags = [...tags, "Segunda aplicação"];
+    if (newEntry && tags.some(tag => tag.trim().toLowerCase() === "desqualificado")) tags = [...tags.filter(tag => tag.trim().toLowerCase() !== "desqualificado"), "Já desqualificado"];
     // Source, original dates, sales, notes, scheduling and previous journey stay intact.
     await db.query(`update public.crm_leads set
       name=coalesce(nullif($2,''),name),phone=coalesce(nullif($3,''),phone),
@@ -75,8 +81,8 @@ export async function updateIncomingLead(id: string, incoming: IncomingApplicati
       stage=case when $9 then 'Novo lead' else stage end,
       display_date=case when $9 then to_char($10::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY') else display_date end,
       updated_at=now() where id=$1`,
-    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), repeated, at]);
-    return { repeated };
+    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), newEntry, at]);
+    return { repeated: newEntry };
   };
   return client ? update(client) : withCrmTransaction(update);
 }

@@ -14,7 +14,8 @@ const SHEET_NAME = "Leads";
 function onOpen() {
   SpreadsheetApp.getUi().createMenu("CRM ISCAS")
     .addItem("Ativar sincronização automática", "instalarSincronizacao")
-    .addItem("Sincronizar tudo agora", "sincronizarTodasAsLinhas").addToUi();
+    .addItem("Sincronizar tudo agora", "sincronizarTodasAsLinhas")
+    .addItem("Ver resultado da sincronização", "verResultadoSincronizacao").addToUi();
 }
 
 function instalarSincronizacao() {
@@ -40,6 +41,12 @@ function sincronizarTodasAsLinhas() {
   SpreadsheetApp.getUi().alert(result || "Já existe uma sincronização em execução.");
 }
 
+function verResultadoSincronizacao() {
+  const props = PropertiesService.getScriptProperties();
+  SpreadsheetApp.getUi().alert((props.getProperty("CRM_LAST_RESULT") || "Nenhuma sincronização executada.") +
+    "\n\n" + (props.getProperty("CRM_LAST_ERRORS") || ""));
+}
+
 function sincronizarPendentes() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(1000)) return;
@@ -60,27 +67,50 @@ function sincronizarPendentes() {
     }
     const rows = sheet.getRange(2, 1, count, 7).getDisplayValues();
     const ids = sheet.getRange(2, idColumn, count, 1).getDisplayValues();
+    if (!state.CRM_ID_BASELINE_INITIALIZED) {
+      const initialProperties = { CRM_ID_BASELINE_INITIALIZED: "true" };
+      const initialIds = {};
+      rows.forEach(function(values, index) {
+        if (values.every(function(value) { return !value.trim(); })) return;
+        let id = String(ids[index][0] || "").trim();
+        if (!id || initialIds[id]) id = Utilities.getUuid();
+        initialIds[id] = true;
+        ids[index][0] = id;
+        initialProperties["CRM_BASELINE_" + id] = "true";
+      });
+      sheet.getRange(2, idColumn, count, 1).setValues(ids);
+      props.setProperties(initialProperties);
+      Object.assign(state, initialProperties);
+    }
+    const idOwners = {};
+    ids.forEach(function(row, index) {
+      const id = String(row[0] || "").trim();
+      if (id && !Object.prototype.hasOwnProperty.call(idOwners, id)) idOwners[id] = index;
+    });
     const start = Math.min(Number(state.CRM_CURSOR) || 0, count - 1);
     const deadline = Date.now() + 240000;
     let sent = 0, failed = 0, scanned = 0;
+    const errors = [];
     for (; scanned < count && Date.now() < deadline; scanned++) {
       const index = (start + scanned) % count;
       const values = rows[index];
       if (values.every(function(value) { return !value.trim(); })) continue;
       let applicationId = String(ids[index][0] || "").trim();
-      if (!applicationId) {
+      if (!applicationId || idOwners[applicationId] !== index) {
         applicationId = Utilities.getUuid();
         sheet.getRange(index + 2, idColumn).setValue(applicationId);
+        idOwners[applicationId] = index;
       }
       const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([applicationId, values])));
       const key = "CRM_APPLICATION_" + applicationId;
       if (state[key] === hash) continue;
-      const payload = { applicationId: applicationId, spreadsheetId: spreadsheet.getId(), sheetId: sheet.getSheetId(), rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
+      const payload = { applicationId: applicationId, baseline: state["CRM_BASELINE_" + applicationId] === "true", spreadsheetId: spreadsheet.getId(), sheetId: sheet.getSheetId(), rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
       try {
         const response = UrlFetchApp.fetch(CRM_ENDPOINT_URL, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), headers: { Authorization: "Bearer " + state.CRM_SECRET }, muteHttpExceptions: true });
         const code = response.getResponseCode();
         if (code !== 200 || JSON.parse(response.getContentText()).ok !== true) {
           failed++;
+          if (errors.length < 10) errors.push("Linha " + (index + 2) + ": HTTP " + code);
           console.error("Falha na linha " + (index + 2) + ": HTTP " + code);
           // Stop global failures, but keep invalid/incomplete rows pending.
           if (code === 401 || code === 404 || code >= 500) break;
@@ -90,6 +120,7 @@ function sincronizarPendentes() {
         sent++;
       } catch (error) {
         failed++;
+        if (errors.length < 10) errors.push("Linha " + (index + 2) + ": não foi possível confirmar o envio.");
         console.error("Falha na linha " + (index + 2) + ". Será tentada novamente.");
         break;
       }
@@ -98,6 +129,7 @@ function sincronizarPendentes() {
     const status = sent + " linha(s) enviada(s); " + failed + " falha(s). Linhas pendentes serão tentadas na próxima execução.";
     props.setProperty("CRM_LAST_RUN", new Date().toISOString());
     props.setProperty("CRM_LAST_RESULT", status);
+    props.setProperty("CRM_LAST_ERRORS", errors.join("\n"));
     if (failed) throw new Error(status);
     return status;
   } finally {
