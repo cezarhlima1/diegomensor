@@ -203,6 +203,18 @@ test('JSONB field ordering never turns a sheet synchronization into a second app
   assert.equal(result.repeated, false);
   assert.equal(result.application.history.length, 0);
 });
+
+test('resyncing #ERROR! revenue matches the corrected application instead of creating a second one', () => {
+  const contact = mapping.sheetContact({ username: 'Erika', celular: '11993864504', funil: 'Mentoria', faturamento: '#ERROR!' });
+  assert.equal(contact.revenue, 'Mais de R$ 150 mil');
+  const incoming = mapping.sheetApplication(contact);
+  const existing = JSON.parse(JSON.stringify(incoming));
+  existing.sheetsIscas = Object.fromEntries(Object.entries(existing.sheetsIscas).reverse());
+  const result = mergeIncomingApplication(existing, incoming, 'Forms - Manychat');
+  assert.equal(result.repeated, false);
+  assert.equal(result.application.history.length, 0);
+  assert.equal(result.application.answers.find(a => a.numero === 8).resposta, 'Mais de R$ 150 mil');
+});
 test('editing and syncing the same row updates data; another row counts as a new entry', () => {
   const original = {syncRecordId:'sheet:Leads:42',sheetsIscas:{name:'Erika',funnel:'Hora'},answers:[]};
   const edited = {...original,sheetsIscas:{...original.sheetsIscas,people:'6'}};

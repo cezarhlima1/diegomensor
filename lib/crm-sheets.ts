@@ -4,7 +4,8 @@ export function sheetContact(body: Record<string, unknown>) {
   const field = (key: string) => typeof body[key] === "string" || typeof body[key] === "number" ? String(body[key]).trim().slice(0, 2000) : "";
   let phone = field("celular").replace(/\D/g, "");
   if (/^55\d{10,11}$/.test(phone)) phone = phone.slice(2);
-  return { name: field("username"), company: field("oficina"), phone, people: field("pessoas"), funnel: field("funil"), revenue: field("faturamento"), problem: field("problema") };
+  const revenue = field("faturamento");
+  return { name: field("username"), company: field("oficina"), phone, people: field("pessoas"), funnel: field("funil"), revenue: revenue === "#ERROR!" ? "Mais de R$ 150 mil" : revenue, problem: field("problema") };
 }
 
 export function sheetProduct(funnel: string) {
