@@ -38,13 +38,13 @@ test('preserves previously completed answers and attribution on reimport', () =>
 
 function endpoint(rows = [], reactivated = false) {
   const calls = [];
-  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: sql.startsWith('select id,') ? rows : sql.includes('returning id') && reactivated ? [{ id: rows[0].id }] : [] }; } };
-  const reentry = load('lib/crm-reentry.ts');
+  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: (sql.startsWith('select id,') || sql.startsWith('select *')) ? rows : sql.includes('returning id') && reactivated ? [{ id: rows[0].id }] : [] }; } };
+  const incoming = load('lib/crm-incoming.ts', { './crm-db': { withCrmTransaction: async callback => callback(db) } });
   const route = load('app/api/crm/sheets-sync/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
     '@/lib/crm-db': { withCrmTransaction: async (callback) => callback(db) },
     '@/lib/crm-sheets': mapping,
-    '@/lib/crm-reentry': reentry,
+    '@/lib/crm-incoming': incoming,
   }, { process: { env: { SHEETS_TO_CRM_SECRET: 'test-only-secret' } } });
   const send = (body, secret = 'test-only-secret') => route.POST(new Request('https://example.test/api/crm/sheets-sync', { method: 'POST', headers: { authorization: 'Bearer ' + secret }, body: JSON.stringify(body) }));
   return { send, calls };
@@ -81,7 +81,8 @@ test('matches existing phone and avoids resetting commercial fields; conflicts a
   assert.equal((await (await send({ celular: '12974038745' })).json()).id, 'existing');
   assert.equal(calls.some(c => c.sql.startsWith('insert into public.crm_leads(')), false);
   const update = calls.find(c => c.sql.startsWith('update public.crm_leads'));
-  assert.equal(/stage=|gross_value=|product=|notes=/.test(update.sql), false);
+  assert.equal(/source=|gross_value=|product=|notes=|created_at=/.test(update.sql), false);
+  assert.match(update.sql, /stage=case/);
   assert.equal((await endpoint([{ id: 'a' }, { id: 'b' }]).send({ celular: '12974038745' })).status, 409);
 });
 
@@ -120,7 +121,7 @@ test('reentry reuses the existing contact and reports reactivation without creat
   assert.equal(result.created, false);
   assert.equal(result.reactivated, true);
   assert.equal(calls.some(c => c.sql.startsWith('insert into public.crm_leads(')), false);
-  const reentry = calls.find(c => c.sql.includes('returning id'));
+  const reentry = calls.find(c => c.sql.startsWith('update public.crm_leads'));
   assert.equal(reentry.params[0], 'archived');
 });
 
@@ -138,4 +139,47 @@ test('reactivation is conditional and retains notes, purchases and journey histo
   assert.equal(/notes=|journey_history=|crm_purchases/.test(sql), false);
   assert.match(sql, /meeting_scheduled_for=null/);
   assert.match(sql, /follow_up_at=null/);
+});
+
+const { mergeIncomingApplication } = load('lib/crm-incoming.ts', { './crm-db': {} });
+test('second, third and fourth entries retain previous answers and complete application history', () => {
+  let current = { source: 'Direct', sessionId: 'first', answers: [{numero: 1, pergunta: 'Nome', resposta: 'Maria'}, {numero: 2, pergunta: 'Cidade', resposta: 'São Paulo'}] };
+  for (let i = 2; i <= 4; i++) {
+    const result = mergeIncomingApplication(current, {sessionId: `session-${i}`, answers: [{numero: 1, pergunta: 'Nome', resposta: `Maria ${i}`}, {numero: 2, pergunta: 'Cidade', resposta: 'Não preenchido'}]}, 'Manychat');
+    assert.equal(result.repeated, true);
+    current = result.application;
+    assert.equal(current.history.length, i - 1);
+    assert.equal(current.answers.find(a => a.pergunta === 'Cidade').resposta, 'São Paulo');
+    assert.equal(current.answers.find(a => a.pergunta === 'Nome').resposta, `Maria ${i}`);
+  }
+  assert.equal(current.history[0].source, 'Direct');
+  assert.equal(current.history[0].answers[0].resposta, 'Maria');
+  const retry = mergeIncomingApplication(current, { sessionId: 'session-4', answers: [] }, 'Manychat');
+  assert.equal(retry.repeated, false);
+  assert.equal(retry.application.history.length, 3);
+});
+test('sheet retries preserve history without reopening the same entry', () => {
+  const incoming = { sheetsIscas: {name: 'Maria', funnel: 'Mentoria'}, answers: [] };
+  const initial = mergeIncomingApplication({source: 'Direct'}, incoming, 'Manychat');
+  assert.equal(initial.repeated, true);
+  const retry = mergeIncomingApplication(initial.application, {...incoming, submittedAt: 'later'}, 'Manychat');
+  assert.equal(retry.repeated, false);
+  assert.equal(retry.application.history.length, 1);
+});
+
+test('reentry changes stage while preserving original acquisition, notes, dates and financial fields', async () => {
+  const lead = { id: 'lead', source: 'Direct', stage: 'Fechado', application: { sessionId: 'old', answers: [] }, tags: ['Cliente'], journey_history: [{id: 'old-stage',kind:'stage',at:'2026-01-01',stage:'Fechado'}] };
+  const calls = [];
+  const db = { query: async (sql, params) => { calls.push({sql,params}); return {rows: sql.startsWith('select *') ? [lead] : []}; } };
+  const { updateIncomingLead } = load('lib/crm-incoming.ts', { './crm-db': { withCrmTransaction: async callback => callback(db) } });
+  const result = await updateIncomingLead('lead', {sessionId:'new', submittedAt:'2026-10-21T12:00:00Z',answers:[]}, 'Manychat', {});
+  assert.equal(result.repeated, true);
+  const update = calls.find(c => c.sql.startsWith('update'));
+  assert.equal(/\b(source|created_at|notes|gross_value|net_value|closed_at|meeting_at|conversation_at|product)\s*=/.test(update.sql), false);
+  assert.equal(update.params[8], true);
+  const history = JSON.parse(update.params[7]);
+  assert.equal(history[0].id, 'old-stage');
+  assert.equal(history[1].previousStage, 'Fechado');
+  assert.equal(history[1].source, 'Manychat');
+  assert.equal(JSON.parse(update.params[5]).history[0].source, 'Direct');
 });

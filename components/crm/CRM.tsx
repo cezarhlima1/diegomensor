@@ -14,6 +14,8 @@ type View = CrmModule | "acoes" | "admin";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
+  source?: string;
+  history?: LeadApplication[];
   submittedAt?: string;
   attribution?: { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; landingPage?: string };
   answers?: Array<{ numero: number; pergunta: string; resposta: string }>;
@@ -2199,8 +2201,8 @@ function LeadDrawer({
         <section className={styles.applicationSection}>
           <small>Aplicação da mentoria</small>
           <div className={styles.applicationSummary}>
-            <span><small>Origem</small><b>{lead.application?.attribution?.utmSource || "Não preenchido"}</b></span>
-            <span><small>Canal</small><b>{lead.application?.attribution?.utmMedium || "Não preenchido"}</b></span>
+            <span><small>Primeira origem</small><b>{lead.source || "Não preenchido"}</b></span>
+            <span><small>Canal desta aplicação</small><b>{lead.application?.source || lead.application?.attribution?.utmSource || "Não preenchido"}</b></span>
             <span><small>Faturamento</small><b>{applicationRevenue || "Não preenchido"}</b></span>
             <span><small>Aplicação</small><b>{lead.application?.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(lead.application.submittedAt)) : "Sem data"}</b></span>
           </div>
@@ -2209,6 +2211,10 @@ function LeadDrawer({
             <div>{applicationAnswers.map((answer) => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b className={answer.resposta === "Não preenchido" ? styles.unfilledAnswer : undefined}>{answer.resposta}</b></p></article>)}</div>
             {(lead.application?.attribution?.utmCampaign || lead.application?.attribution?.utmContent) && <footer><span>Campanha</span><b>{[lead.application?.attribution?.utmCampaign, lead.application?.attribution?.utmContent].filter(Boolean).join(" · ")}</b></footer>}
           </details>
+          {(lead.application?.history || []).map((application, index) => <details key={index} className={styles.applicationDetails}>
+            <summary>Aplicação anterior {index + 1} · {application.source || application.attribution?.utmSource || "Origem não registrada"} · {application.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(application.submittedAt)) : "Sem data"}</summary>
+            <div>{(application.answers || []).map(answer => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b>{answer.resposta}</b></p></article>)}</div>
+          </details>)}
         </section>
         <section className={styles.leadOpportunitySection}>
           <small>Oportunidade atual</small>
@@ -2259,7 +2265,7 @@ function LeadDrawer({
         </section>
         <section className={styles.leadDatesSection}>
           <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
-            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'reentry' ? `Nova entrada por ${item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
             {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
           </details>
         </section>

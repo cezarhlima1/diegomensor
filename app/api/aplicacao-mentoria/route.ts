@@ -1,4 +1,4 @@
-import { reactivateDisqualifiedLead } from "@/lib/crm-reentry";
+import { updateIncomingLead } from "@/lib/crm-incoming";
 import { NextResponse } from "next/server";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
 import { crmPool } from "@/lib/crm-db";
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         "select id from public.crm_leads where regexp_replace(phone,'\\D','','g')=any($1::text[]) limit 1",
         [phoneVariants(phone)],
       );
-      if (existing.rows[0]?.id) await reactivateDisqualifiedLead(db, existing.rows[0].id);
+
       if (!existing.rows[0]?.id) {
         const expectedSource = crmSourceForAttribution(attribution);
         const crmSource = await registeredCrmSource(db, expectedSource);
@@ -171,7 +171,6 @@ export async function POST(request: Request) {
     const application = { sessionId, submittedAt, attribution, answers: readableAnswers };
     const expectedSource = crmSourceForAttribution(attribution);
     const crmSource = await registeredCrmSource(db, expectedSource);
-    if (!crmSource) throw new Error("CRM_SOURCE_NOT_REGISTERED");
     const applicationColumn = await db.query(
       "select 1 from information_schema.columns where table_schema='public' and table_name='crm_leads' and column_name='application' limit 1",
     );
@@ -181,36 +180,9 @@ export async function POST(request: Request) {
       [phoneVariants(answers.whatsapp)],
     );
     if (existing.rows[0]?.id) {
-      const isFormDraft = existing.rows[0].notes === "Iniciou o formulário e informou nome e WhatsApp.";
-      const isSameApplication = Boolean(sessionId && existing.rows[0].application_session_id === sessionId);
-      if (supportsApplication && isFormDraft) {
-        await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), crmSource, submittedAt],
-        );
-      } else if (supportsApplication && isSameApplication) {
-        await db.query(
-          "update public.crm_leads set application=$2::jsonb,updated_at=now() where id=$1",
-          [existing.rows[0].id, JSON.stringify(application)],
-        );
-      } else if (supportsApplication) {
-        await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),application=$5::jsonb,source=$6,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$7,display_date=to_char($7::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, JSON.stringify(application), crmSource, submittedAt],
-        );
-      } else if (isFormDraft) {
-        await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, crmSource, submittedAt],
-        );
-      } else {
-        await db.query(
-          "update public.crm_leads set name=$2,phone=$3,email=coalesce(nullif($4,''),email),source=$5,product='Mentoria OAG',stage='Novo lead',gross_value=0,net_value=null,created_at=$6,display_date=to_char($6::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY'),conversation_at=null,meeting_at=null,proposal_at=null,closed_at=null,next_action='',notes=case when exists(select 1 from unnest(coalesce(tags,'{}'::text[])) tag where lower(trim(tag)) in ('desqualificado','já desqualificado')) then notes else '' end,tags=case when 'Segunda aplicação'=any(coalesce(tags,'{}'::text[])) then tags else array_append(coalesce(tags,'{}'::text[]),'Segunda aplicação') end,updated_at=now() where id=$1",
-          [existing.rows[0].id, answers.nome, answers.whatsapp, email, crmSource, submittedAt],
-        );
-      }
-      await reactivateDisqualifiedLead(db, existing.rows[0].id);
+      await updateIncomingLead(existing.rows[0].id, application, crmSource || expectedSource || attribution.utmSource, { name: answers.nome, phone: answers.whatsapp, email });
     } else {
+      if (!crmSource) throw new Error("CRM_SOURCE_NOT_REGISTERED");
       if (supportsApplication) {
         await db.query(
           "insert into public.crm_leads(id,name,company,phone,email,notes,tags,source,product,stage,gross_value,temperature,next_action,display_date,created_at,application) values($1,$2,'',$3,$4,'',$5,$6,'Mentoria OAG','Novo lead',0,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),$7,$8::jsonb)",
