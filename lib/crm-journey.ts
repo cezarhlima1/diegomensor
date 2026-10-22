@@ -1,6 +1,6 @@
 import { contactDay } from './crm-contact-summary';
 
-export type JourneyEvent = { id: string; kind: 'stage' | 'return-completed' | 'no-show' | 'reentry'; at: string; source?: string; previousStage?: string; scheduledFor?: string | null; stage?: string };
+export type JourneyEvent = { id: string; kind: 'stage' | 'return-completed' | 'no-show' | 'reentry'; at: string; funnel?: string; source?: string; previousStage?: string; scheduledFor?: string | null; stage?: string };
 type JourneyLead = { stage: string; contactCheckpoints?: string[]; journeyHistory?: JourneyEvent[]; followUpAt?: string | null; meetingScheduledFor?: string | null; meetingOutcome?: string | null };
 export function markContact<T extends JourneyLead>(lead: T, now: string): T {
   const checkpoints = lead.contactCheckpoints || [];

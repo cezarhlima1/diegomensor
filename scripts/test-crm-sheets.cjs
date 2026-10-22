@@ -90,12 +90,18 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   const state = { CRM_SECRET: 'test-only-secret', CRM_SPREADSHEET_ID: 'sheet' };
   const rows = [['André', 'Atual', '12974038745', '', '', '', '']];
   let status = 503, requests = 0, released = 0;
-  const sheet = { getLastRow: () => rows.length + 1, getSheetId: () => 0, getRange: () => ({ getDisplayValues: () => rows }) };
+  const ids = [];
+  const sheet = { getLastRow: () => rows.length + 1, getLastColumn: () => 8, getSheetId: () => 0,
+    getRange: (row, column) => ({
+      getDisplayValues: () => row === 1 ? [['username','oficina','celular','pessoas','funil','faturamento','problema','CRM_APLICACAO_ID']] : column === 8 ? rows.map((_, i) => [ids[i] || '']) : rows,
+      setValue: value => { ids[row - 2] = value; },
+    }),
+  };
   const context = {
     PropertiesService: { getScriptProperties: () => ({ getProperties: () => ({ ...state }), setProperty: (k, v) => { state[k] = v; } }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => { released++; } }) },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: () => sheet }) },
-    Utilities: { DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (_, value) => crypto.createHash('sha256').update(value).digest(), base64Encode: value => value.toString('base64') },
+    SpreadsheetApp: { openById: () => ({ getId: () => 'sheet', getSheetByName: () => sheet }) },
+    Utilities: { getUuid: () => crypto.randomUUID(), DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (_, value) => crypto.createHash('sha256').update(value).digest(), base64Encode: value => value.toString('base64') },
     UrlFetchApp: { fetch: () => { requests++; return { getResponseCode: () => status, getContentText: () => JSON.stringify({ ok: status === 200 }) }; } },
     console: { error: () => {} },
   };
@@ -111,6 +117,12 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   context.sincronizarPendentes();
   assert.equal(requests, 3);
   assert.equal(released, 4);
+  rows.reverse(); ids.reverse();
+  context.sincronizarPendentes();
+  assert.equal(requests, 3, 'reordering rows keeps the same application identities');
+  rows[0][1] = 'Oficina atualizada';
+  context.sincronizarPendentes();
+  assert.equal(requests, 4, 'editing sends an update with the existing application ID');
 });
 
 test('reentry reuses the existing contact and reports reactivation without creating another lead', async () => {
@@ -182,4 +194,41 @@ test('reentry changes stage while preserving original acquisition, notes, dates 
   assert.equal(history[1].previousStage, 'Fechado');
   assert.equal(history[1].source, 'Manychat');
   assert.equal(JSON.parse(update.params[5]).history[0].source, 'Direct');
+});
+
+test('JSONB field ordering never turns a sheet synchronization into a second application', () => {
+  const sheetsIscas = { name: 'Erika', phone: '11993864504', funnel: 'Hora', company: 'Sonic', people: '4-6' };
+  const reordered = Object.fromEntries(Object.entries(sheetsIscas).reverse());
+  const result = mergeIncomingApplication({source:'Forms - Manychat',sheetsIscas:reordered}, {sheetsIscas,submittedAt:'now'}, 'Forms - Manychat');
+  assert.equal(result.repeated, false);
+  assert.equal(result.application.history.length, 0);
+});
+test('editing and syncing the same row updates data; another row counts as a new entry', () => {
+  const original = {syncRecordId:'sheet:Leads:42',sheetsIscas:{name:'Erika',funnel:'Hora'},answers:[]};
+  const edited = {...original,sheetsIscas:{...original.sheetsIscas,people:'6'}};
+  assert.equal(mergeIncomingApplication(original,edited,'Manychat').repeated,false);
+  assert.equal(mergeIncomingApplication(original,{...edited,syncRecordId:'sheet:Leads:43'},'Manychat').repeated,true);
+});
+
+test('three Manychat interests are three applications; resyncing any of them never changes the latest interest', () => {
+  const source = 'Forms - Manychat';
+  const incoming = (id, funnel) => ({syncRecordId:id,sheetsIscas:{name:'Maria',phone:'11993864504',funnel},answers:[],submittedAt:'2026-10-22T12:00:00Z'});
+  const cost = incoming('id-cost', 'Planilha de custo da hora');
+  const pricing = incoming('id-pricing', 'Precificação');
+  const mentoring = incoming('id-mentoring', 'Mentoria');
+  let current = {...cost,source};
+  for (const next of [pricing, mentoring]) {
+    const result = mergeIncomingApplication(current,next,source);
+    assert.equal(result.repeated,true);
+    current = result.application;
+  }
+  assert.equal(current.history.length,2);
+  for (const next of [cost, pricing, mentoring, cost, pricing]) {
+    const result = mergeIncomingApplication(current,{...next,submittedAt:'2026-10-23T12:00:00Z'},source);
+    assert.equal(result.repeated,false);
+    current = result.application;
+    assert.equal(current.sheetsIscas.funnel,'Mentoria');
+    assert.equal(current.history.length,2);
+    assert.equal(current.submittedAt,'2026-10-22T12:00:00Z');
+  }
 });

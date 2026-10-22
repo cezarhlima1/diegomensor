@@ -15,6 +15,7 @@ type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" |
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
   source?: string;
+  sheetsIscas?: { funnel?: string };
   history?: LeadApplication[];
   submittedAt?: string;
   attribution?: { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string; landingPage?: string };
@@ -1642,6 +1643,8 @@ function Pipeline({
                       <div>
                         <div className={styles.cardTitle}><button type="button" aria-label={`${selectedLeadIds.has(lead.id) ? "Desmarcar" : "Selecionar"} ${lead.name}`} aria-pressed={selectedLeadIds.has(lead.id)} onClick={(event) => { event.stopPropagation(); toggleLeadSelection(lead.id); }}>{selectedLeadIds.has(lead.id) ? "✓" : ""}</button><h3>{lead.name}</h3></div>
                         <p><span>Origem</span>{lead.source}</p>
+                        {lead.application?.sheetsIscas?.funnel && <p><span>Interesse atual</span>{lead.application.sheetsIscas.funnel}</p>}
+                        {!!lead.application?.history?.length && <p><span>Aplicações</span>{lead.application.history.length + 1} entradas · jornada preservada</p>}
                         {lead.product && lead.product !== "Não informado" && <em className={styles.productTag} style={{ color: productColor(lead.product), borderColor: `${productColor(lead.product)}66`, background: `${productColor(lead.product)}18` }}>{lead.product}</em>}
                         {lead.tags?.length ? <div className={styles.cardTags}>{lead.tags.slice(0,3).map((tag) => <span key={tag} style={{ color: tagColor(tag), borderColor: `${tagColor(tag)}55`, background: `${tagColor(tag)}16` }}>{tag}</span>)}</div> : null}
                         {followUpKey && <div className={`${styles.followUpAlert} ${styles[`followUp_${followUpState}`]}`}><i>↗</i><span>{followUpState === "late" ? "Retorno atrasado" : followUpState === "today" ? "Retornar hoje" : "Retornar"}</span><b>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(lead.followUpAt!))}</b></div>}
@@ -2199,20 +2202,21 @@ function LeadDrawer({
           {contactCheckpoints.length > 0 ? <div className={styles.contactHistoryList}>{contactCheckpoints.map((checkpoint) => <article key={checkpoint}><i>✓</i><span><b>{brazilDateKey(checkpoint) === today ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(checkpoint))}</b><small>{new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(checkpoint))}</small></span><button type="button" aria-label="Remover contato do histórico" title="Remover contato" onClick={() => removeContactCheckpoint(checkpoint)}>×</button></article>)}</div> : <p className={styles.emptyContactHistory}>Nenhum contato registrado.</p>}
         </section>
         <section className={styles.applicationSection}>
-          <small>Aplicação da mentoria</small>
+          <small>Aplicações e interesses do contato</small>
           <div className={styles.applicationSummary}>
             <span><small>Primeira origem</small><b>{lead.source || "Não preenchido"}</b></span>
             <span><small>Canal desta aplicação</small><b>{lead.application?.source || lead.application?.attribution?.utmSource || "Não preenchido"}</b></span>
             <span><small>Faturamento</small><b>{applicationRevenue || "Não preenchido"}</b></span>
             <span><small>Aplicação</small><b>{lead.application?.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(lead.application.submittedAt)) : "Sem data"}</b></span>
           </div>
+          <p>Interesse atual: <strong>{lead.application?.sheetsIscas?.funnel || lead.application?.attribution?.utmCampaign || "Não informado"}</strong> · {(lead.application?.history?.length || 0) + (lead.application ? 1 : 0)} aplicações registradas</p>
           <details className={styles.applicationDetails}>
-            <summary>Ver respostas <b>{filledApplicationAnswers}/{applicationAnswers.length}</b></summary>
+            <summary>Ver respostas da aplicação atual <b>{filledApplicationAnswers}/{applicationAnswers.length}</b></summary>
             <div>{applicationAnswers.map((answer) => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b className={answer.resposta === "Não preenchido" ? styles.unfilledAnswer : undefined}>{answer.resposta}</b></p></article>)}</div>
             {(lead.application?.attribution?.utmCampaign || lead.application?.attribution?.utmContent) && <footer><span>Campanha</span><b>{[lead.application?.attribution?.utmCampaign, lead.application?.attribution?.utmContent].filter(Boolean).join(" · ")}</b></footer>}
           </details>
           {(lead.application?.history || []).map((application, index) => <details key={index} className={styles.applicationDetails}>
-            <summary>Aplicação anterior {index + 1} · {application.source || application.attribution?.utmSource || "Origem não registrada"} · {application.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(application.submittedAt)) : "Sem data"}</summary>
+            <summary>Aplicação anterior {index + 1} · {application.sheetsIscas?.funnel || application.source || application.attribution?.utmSource || "Origem não registrada"} · {application.submittedAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(new Date(application.submittedAt)) : "Sem data"}</summary>
             <div>{(application.answers || []).map(answer => <article key={answer.numero}><span>{String(answer.numero).padStart(2, "0")}</span><p><small>{answer.pergunta}</small><b>{answer.resposta}</b></p></article>)}</div>
           </details>)}
         </section>
@@ -2265,7 +2269,7 @@ function LeadDrawer({
         </section>
         <section className={styles.leadDatesSection}>
           <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
-            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'reentry' ? `Nova entrada por ${item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'reentry' ? `Nova entrada por ${item.funnel || item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
             {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
           </details>
         </section>

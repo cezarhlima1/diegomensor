@@ -26,15 +26,19 @@ export async function POST(request: Request) {
   const contact = sheetContact(body);
   // A username can identify a contact while its phone is still missing.
   if ((!contact.phone && !contact.name) || (contact.phone && !/^\d{10,11}$/.test(contact.phone))) return NextResponse.json({ ok: false, error: "invalid-contact" }, { status: 422 });
+  // The application ID belongs to the submission, never to its row position.
+  const applicationId = typeof body.applicationId === "string" ? body.applicationId.trim().slice(0, 200) : "";
+  const syncRecordId = applicationId
+    ? `${String(body.spreadsheetId || "iscas").slice(0, 200)}:${applicationId}` : undefined;
   try {
     const result = await withCrmTransaction(async (db) => {
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", ["sheets-iscas-sync"]);
       const matches = await db.query("select id,name,company,application from public.crm_leads where ($1<>'' and public.crm_normalized_phone(phone)=$1) or ($2<>'' and source='Forms - Manychat' and lower(name)=lower($2) and (phone='' or $1='') and (company='' or $3='' or lower(company)=lower($3))) for update", [contact.phone, contact.name, contact.company]);
       if (matches.rows.length > 1) return { conflict: true };
       const existing = matches.rows[0];
-      const application = sheetApplication(contact, existing?.application || {});
+      const application = { ...sheetApplication(contact), ...(syncRecordId ? { syncRecordId } : {}) };
       if (existing) {
-        const incoming = sheetApplication(contact);
+        const incoming = application;
         const { repeated } = await updateIncomingLead(existing.id, { ...incoming, submittedAt: new Date().toISOString() }, "Forms - Manychat", { company: contact.company, phone: contact.phone }, db);
         return { id: existing.id, created: false, reactivated: repeated };
       }

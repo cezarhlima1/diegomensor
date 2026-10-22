@@ -1,6 +1,8 @@
 /**
  * Planilha Automações de cadastro ISCAS, aba Leads (colunas A:G):
  * username, oficina, celular, pessoas, funil, faturamento, problema.
+ * CRM_APLICACAO_ID identifica cada aplicação e acompanha a linha ao ordenar.
+ * Não apague nem reutilize esse ID em novas aplicações.
  * Substitua o script antigo por este. Mantenha CRM_SECRET nas propriedades
  * do script, igual a SHEETS_TO_CRM_SECRET no servidor. Execute instalarSincronizacao
  * uma vez e autorize. O relógio captura também inclusões feitas por API/scripts.
@@ -50,7 +52,14 @@ function sincronizarPendentes() {
     if (!sheet) throw new Error("Aba Leads não encontrada.");
     const count = sheet.getLastRow() - 1;
     if (count <= 0) return "Nenhuma linha para sincronizar.";
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    let idColumn = headers.indexOf("CRM_APLICACAO_ID") + 1;
+    if (!idColumn) {
+      idColumn = sheet.getLastColumn() + 1;
+      sheet.getRange(1, idColumn).setValue("CRM_APLICACAO_ID");
+    }
     const rows = sheet.getRange(2, 1, count, 7).getDisplayValues();
+    const ids = sheet.getRange(2, idColumn, count, 1).getDisplayValues();
     const start = Math.min(Number(state.CRM_CURSOR) || 0, count - 1);
     const deadline = Date.now() + 240000;
     let sent = 0, failed = 0, scanned = 0;
@@ -58,10 +67,15 @@ function sincronizarPendentes() {
       const index = (start + scanned) % count;
       const values = rows[index];
       if (values.every(function(value) { return !value.trim(); })) continue;
-      const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(values)));
-      const key = "CRM_ROW_" + sheet.getSheetId() + "_" + (index + 2);
+      let applicationId = String(ids[index][0] || "").trim();
+      if (!applicationId) {
+        applicationId = Utilities.getUuid();
+        sheet.getRange(index + 2, idColumn).setValue(applicationId);
+      }
+      const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([applicationId, values])));
+      const key = "CRM_APPLICATION_" + applicationId;
       if (state[key] === hash) continue;
-      const payload = { rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
+      const payload = { applicationId: applicationId, spreadsheetId: spreadsheet.getId(), sheetId: sheet.getSheetId(), rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
       try {
         const response = UrlFetchApp.fetch(CRM_ENDPOINT_URL, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), headers: { Authorization: "Bearer " + state.CRM_SECRET }, muteHttpExceptions: true });
         const code = response.getResponseCode();
