@@ -137,7 +137,7 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
 
 test('reentry reuses the existing contact and reports reactivation without creating another lead', async () => {
   const { send, calls } = endpoint([{ id: 'archived', application: {} }], true);
-  const response = await send({ celular: '12974038745' });
+  const response = await send({ celular: '12974038745', applicationId: 'new-application' });
   const result = await response.json();
   assert.equal(result.id, 'archived');
   assert.equal(result.created, false);
@@ -309,4 +309,18 @@ test('first setup appends IDs after DATA without overwriting existing columns', 
   assert.equal(headers[7],'DATA');assert.equal(headers[8],'CRM_APLICACAO_ID');
   assert.equal(data[0][7],'2026-10-22 09:00:00');assert.equal(payloads.length,1);
   assert.equal(payloads[0].applicationId,data[0][8]);assert.equal(payloads[0].baseline,true);
+});
+
+test('DATA preserves the application date instead of the synchronization clock', () => {
+  assert.equal(mapping.sheetEntryDate('2026-10-23 08:32:40'),'2026-10-23T11:32:40.000Z');
+  assert.equal(mapping.sheetEntryDate(''),null);
+  assert.equal(mapping.sheetEntryDate('2026-02-31 10:00:00'),null);
+});
+test('a legacy sheet without application ID cannot silently reopen an existing lead', async () => {
+  const {send,calls}=endpoint([{id:'existing',stage:'Follow up',source:'Direct',application:{}}]);
+  const result=await (await send({celular:'12974038745',funil:'Mentoria'})).json();
+  assert.equal(result.reactivated,false);
+  const update=calls.find(c=>c.sql.startsWith('update'));
+  assert.equal(update.params[8],false);
+  assert.equal(JSON.parse(update.params[5]).entryAudit.status,'review');
 });

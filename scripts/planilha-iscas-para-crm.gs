@@ -66,6 +66,8 @@ function sincronizarPendentes() {
       sheet.getRange(1, idColumn).setValue("CRM_APLICACAO_ID");
     }
     const rows = sheet.getRange(2, 1, count, 7).getDisplayValues();
+    const dateColumn = headers.findIndex(function(value) { return String(value).trim().toUpperCase() === "DATA"; }) + 1;
+    const dates = dateColumn ? sheet.getRange(2, dateColumn, count, 1).getDisplayValues() : [];
     const ids = sheet.getRange(2, idColumn, count, 1).getDisplayValues();
     if (!state.CRM_ID_BASELINE_INITIALIZED) {
       const initialProperties = { CRM_ID_BASELINE_INITIALIZED: "true" };
@@ -101,10 +103,11 @@ function sincronizarPendentes() {
         sheet.getRange(index + 2, idColumn).setValue(applicationId);
         idOwners[applicationId] = index;
       }
-      const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([applicationId, values])));
+      const sheetDate = dates[index] ? String(dates[index][0] || "").trim() : "";
+      const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([applicationId, values, sheetDate])));
       const key = "CRM_APPLICATION_" + applicationId;
       if (state[key] === hash) continue;
-      const payload = { applicationId: applicationId, baseline: state["CRM_BASELINE_" + applicationId] === "true", spreadsheetId: spreadsheet.getId(), sheetId: sheet.getSheetId(), rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
+      const payload = { sheetDate: sheetDate, applicationId: applicationId, baseline: state["CRM_BASELINE_" + applicationId] === "true", spreadsheetId: spreadsheet.getId(), sheetId: sheet.getSheetId(), rowNumber: index + 2, username: values[0], oficina: values[1], celular: values[2], pessoas: values[3], funil: values[4], faturamento: values[5], problema: values[6] };
       try {
         const response = UrlFetchApp.fetch(CRM_ENDPOINT_URL, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), headers: { Authorization: "Bearer " + state.CRM_SECRET }, muteHttpExceptions: true });
         const code = response.getResponseCode();

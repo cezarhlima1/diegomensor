@@ -31,3 +31,13 @@ export function sheetApplication(contact: ReturnType<typeof sheetContact>, curre
   }
   return { ...current, answers, attribution: { utmSource: "isca", utmCampaign: contact.funnel, ...current.attribution }, sheetsIscas: { ...contact } };
 }
+
+// DATA in this spreadsheet is written in São Paulo local time.
+export function sheetEntryDate(value: unknown) {
+  if (typeof value !== "string") return null;
+  const raw = value.trim().replace(" ", "T");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(raw)) return null;
+  const parsed = new Date(`${raw}-03:00`);
+  if (!Number.isFinite(parsed.getTime()) || new Date(parsed.getTime() - 3 * 3600000).toISOString().slice(0, 19) !== raw) return null;
+  return parsed.toISOString();
+}

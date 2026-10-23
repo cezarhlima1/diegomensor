@@ -50,6 +50,7 @@ export function mergeIncomingApplication(current: IncomingApplication, incoming:
   if (repeated) history.push(snapshot);
   const application: IncomingApplication = {
     ...incoming, entryKey, source, answers: [...answers.values()], history,
+    ...(matchingIndex === 0 && current.entryAudit ? { entryAudit: current.entryAudit } : {}),
     submittedAt: matchingIndex === 0 ? current.submittedAt || incoming.submittedAt : incoming.submittedAt,
   };
   return { repeated, historical: false, application };
@@ -62,26 +63,40 @@ export async function updateIncomingLead(id: string, incoming: IncomingApplicati
     if (!lead) throw new Error("incoming-lead-not-found");
     const current = options.baseline && !Object.keys(lead.application || {}).length ? {} : { source: lead.source, ...(lead.application || {}) };
     const { repeated, historical, application } = mergeIncomingApplication(current, incoming, source);
-    const newEntry = repeated && !options.baseline;
+    const identifiedEntry = Boolean(incoming.syncRecordId || incoming.sessionId);
+    let newEntry = repeated && !options.baseline && identifiedEntry;
+    if (repeated && !options.baseline && !identifiedEntry) {
+      application.entryAudit = { status: "review", entryAt: null, reasons: ["Possível nova aplicação sem ID fixo; conferir antes de reabrir o atendimento"] };
+    }
     if (historical) {
       await db.query("update public.crm_leads set application=$2::jsonb,updated_at=now() where id=$1", [id, JSON.stringify(application)]);
       return { repeated: false };
     }
     const at = incoming.submittedAt || new Date().toISOString();
+    const lastContact = Math.max(0, ...(lead.contact_checkpoints || []).map((value: string) => Date.parse(value) || 0),
+      ...(lead.journey_history || []).filter((event: { kind: string; stage?: string }) => ["stage", "return-completed", "no-show"].includes(event.kind) && event.stage !== "Novo lead")
+        .map((event: { at: string }) => Date.parse(event.at) || 0));
+    if (newEntry && incoming.sheetDate && (Date.parse(at) || 0) <= lastContact) {
+      newEntry = false;
+      application.entryAudit = { status: "review", entryAt: at, reasons: ["Já houve atendimento após esta aplicação; conferir antes de reabrir"] };
+    }
+    if (newEntry) application.entryAudit = { status: "confirmed", entryAt: at };
     const history = [...(lead.journey_history || [])];
     if (newEntry) history.push({ id: `reentry:${application.entryKey}:${at}`, kind: "reentry", at, stage: "Novo lead", source, funnel: (incoming.sheetsIscas as Record<string, unknown> | undefined)?.funnel, previousStage: lead.stage });
     let tags: string[] = lead.tags || [];
     if (newEntry && !tags.includes("Segunda aplicação")) tags = [...tags, "Segunda aplicação"];
     if (newEntry && tags.some(tag => tag.trim().toLowerCase() === "desqualificado")) tags = [...tags.filter(tag => tag.trim().toLowerCase() !== "desqualificado"), "Já desqualificado"];
+    const needsReview = lead.stage === "Novo lead" && (application.entryAudit as { status?: string } | undefined)?.status === "review";
+    const reviewStage = needsReview && (await db.query("select name from public.crm_pipeline_stages where name='Revisar entrada' limit 1")).rows[0];
     // Source, original dates, sales, notes, scheduling and previous journey stay intact.
     await db.query(`update public.crm_leads set
       name=coalesce(nullif($2,''),name),phone=coalesce(nullif($3,''),phone),
       company=coalesce(nullif($4,''),company),email=coalesce(nullif($5,''),email),
       application=$6::jsonb,tags=$7,journey_history=$8::jsonb,
-      stage=case when $9 then 'Novo lead' else stage end,
+      stage=case when $9 then 'Novo lead' when $11 then 'Revisar entrada' else stage end,
       display_date=case when $9 then to_char($10::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY') else display_date end,
       updated_at=now() where id=$1`,
-    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), newEntry, at]);
+    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), newEntry, at, Boolean(reviewStage)]);
     return { repeated: newEntry };
   };
   return client ? update(client) : withCrmTransaction(update);

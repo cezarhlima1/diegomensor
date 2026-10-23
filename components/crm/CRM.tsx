@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
 import { recordJourney, completeReturn, type JourneyEvent } from '@/lib/crm-journey';
+import { compareNewLeadEntries, type EntryAudit } from "@/lib/crm-entry-order";
 import ContactSummary from './ContactSummary';
 import { contactDay, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
@@ -14,6 +15,9 @@ type View = CrmModule | "acoes" | "admin";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
+  entryAudit?: EntryAudit;
+  sessionId?: string;
+  sheetDate?: string | null;
   source?: string;
   sheetsIscas?: { funnel?: string };
   history?: LeadApplication[];
@@ -1535,10 +1539,11 @@ function Pipeline({
       if (sourceFilter.size > 0 && !sourceFilter.has(lead.source.trim())) continue;
       if (revenueFilter.size > 0 && !revenueFilter.has(leadRevenueRange(lead) || "")) continue;
       if (tagFilter.size > 0 && !(lead.tags || []).some((tag) => tagFilter.has(tag))) continue;
-      if (!search && archived(lead)) continue;
+      if (!search && archived(lead) && visibleStage(lead) !== "Revisar entrada") continue;
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
     }
+    grouped.get("Novo lead")?.sort(compareNewLeadEntries);
     const closedStage = stages.find((stage) => stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "fechado");
     if (closedStage) grouped.get(closedStage)?.sort((left, right) => {
       const latestClosing = (lead: Lead) => purchasesForLead(lead, products).reduce((latest, purchase) => Math.max(latest, new Date(purchase.closedAt).getTime() || 0), 0);
@@ -2201,6 +2206,9 @@ function LeadDrawer({
         </section>
         <section className={styles.applicationSection}>
           <small>Aplicações e interesses do contato</small>
+          {lead.application?.entryAudit && <p>{lead.application.entryAudit.status === "confirmed"
+            ? `Entrada conferida: ${lead.application.entryAudit.entryAt ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(lead.application.entryAudit.entryAt)) : "sem data"}`
+            : `Revisar entrada: ${(lead.application.entryAudit.reasons || []).join("; ")}`}</p>}
           <div className={styles.applicationSummary}>
             <span><small>Primeira origem</small><b>{lead.source || "Não preenchido"}</b></span>
             <span><small>Canal desta aplicação</small><b>{lead.application?.source || lead.application?.attribution?.utmSource || "Não preenchido"}</b></span>
