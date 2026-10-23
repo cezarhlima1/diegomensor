@@ -7,10 +7,10 @@ import styles from "./combo.module.css";
 import CalculatorShowcase from "./CalculatorShowcase";
 import ProfileIllustration from "./ProfileIllustration";
 
-function Action({ children = "Quero resolver minha precificação", purchase = false }: { children?: ReactNode; purchase?: boolean }) {
+function Action({ children = "Quero resolver minha precificação" }: { children?: ReactNode }) {
   return (
     <div className={styles.action}>
-      <a className={styles.button} href={purchase ? (COMBO_CHECKOUT_URL ?? COMBO_WHATSAPP_URL) : "#combo-offer"}>
+      <a className={styles.button} href={COMBO_CHECKOUT_URL ?? COMBO_WHATSAPP_URL}>
         {children}
       </a>
     </div>
@@ -142,7 +142,7 @@ export default function ComboContent() {
               </div>
               <p className={styles.cashPrice}>ou à vista <strong>R$ 597,00</strong></p>
             </div>
-            <Action purchase>QUERO O COMBO COMPLETO</Action>
+            <Action>QUERO O COMBO COMPLETO</Action>
             {!COMBO_CHECKOUT_URL && <p className={styles.checkoutNote}>Fale com a equipe pelo WhatsApp para adquirir o combo.</p>}
           </div>
         </div>
