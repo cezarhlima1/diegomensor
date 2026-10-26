@@ -40,15 +40,14 @@ export default function OficinaOrganizada() {
   const initialTime = Date.now();
   return <div data-oficina-page className={`destrave-theme ${styles.page}`}>
     <LotCountdown initialTime={initialTime} />
-    <ScrollOpening />
     <section className={styles.hero}>
       <div className={styles.heroCopy} id="promessa">
-        <Image className={styles.smallLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" priority />
+        <h1><span className={styles.heroPrelude}>Em uma aula, aprenda como </span><em>organizar a rotina do pátio</em><span className={styles.heroOutcome}> e ter mais controle da tua oficina.</span></h1>
         <div className={styles.eventDate}><span><Calendar aria-hidden="true" />25 de novembro</span><span><Clock aria-hidden="true" />19h</span></div>
         <p className={styles.eventFormat}>QUARTA-FEIRA • ONLINE E AO VIVO</p>
-        <h1><span className={styles.heroPrelude}>Em uma aula, aprenda como </span><em>organizar a rotina do pátio</em><span className={styles.heroOutcome}> e ter mais controle da tua oficina.</span></h1>
       </div>
-      <div className={styles.heroBenefits}><h2>Durante a imersão você vai:</h2><CheckList items={heroCheckpoints} /><Cta>QUERO PARTICIPAR DA IMERSÃO</Cta></div>
+      <ScrollOpening />
+      <div className={styles.heroBenefits} id="conteudo-imersao"><h2>Durante a imersão você vai:</h2><CheckList items={heroCheckpoints} /><Cta>QUERO PARTICIPAR DA IMERSÃO</Cta></div>
     </section>
 
     <section className={`${styles.section} ${styles.problem}`}>
