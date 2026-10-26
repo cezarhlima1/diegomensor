@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { destraveFaqs } from "./copy";
 
-export default function DestraveFaq({ scheduleAnswer }: { scheduleAnswer?: string }) {
+export default function DestraveFaq({ scheduleAnswer, items = destraveFaqs }: { scheduleAnswer?: string; items?: { q: string; a: string }[] }) {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
@@ -17,7 +17,7 @@ export default function DestraveFaq({ scheduleAnswer }: { scheduleAnswer?: strin
         </div>
 
         <div className="grid gap-3 mt-10">
-          {destraveFaqs.map((item, i) => {
+          {items.map((item, i) => {
             const isOpen = open === i;
             const answer = i === 1 && scheduleAnswer ? scheduleAnswer : item.a;
             return (
