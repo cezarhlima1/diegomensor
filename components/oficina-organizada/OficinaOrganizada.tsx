@@ -54,7 +54,14 @@ export default function OficinaOrganizada() {
       <div className={styles.narrow}>
         <span className={styles.warningSymbol} role="img" aria-label="Alerta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="m12 3 10 18H2L12 3Z" strokeLinejoin="round"/><path d="M12 9v5m0 3v.1" strokeLinecap="round"/></svg></span>
         <h2>SUA OFICINA FUNCIONA <em>ASSIM?</em></h2>
-        <ul className={styles.problemList}>{["Você precisa saber onde está cada carro.","A equipe pergunta o tempo todo o que precisa fazer.","Tem serviço parado e você nem sempre sabe o motivo.","Tudo precisa passar por você para andar."].map(text=><li key={text}><span aria-hidden="true">×</span><strong>{text}</strong></li>)}</ul>
+        <ul className={styles.problemList}>{[
+          "Tem carro parado ocupando espaço e ninguém sabe exatamente o que está esperando.",
+          "Os mecânicos precisam perguntar o tempo todo qual é o próximo serviço.",
+          "Peça não chegou, cliente não aprovou ou orçamento não saiu e o carro simplesmente fica parado.",
+          "Você promete prazo pro cliente sem saber se a oficina realmente consegue cumprir.",
+          "Quando você não está na oficina, a equipe se perde nas prioridades e o serviço não anda do mesmo jeito.",
+          "No final do dia, todo mundo trabalhou pra caramba… mas você não sabe onde o tempo foi perdido.",
+        ].map(text=><li key={text}><span aria-hidden="true">×</span><strong>{text}</strong></li>)}</ul>
         <p className={styles.problemConclusion}>Se você se identificou, o problema pode estar na forma como os serviços estão organizados.</p>
         <Cta>QUERO ORGANIZAR MINHA OFICINA</Cta>
       </div>
@@ -64,6 +71,7 @@ export default function OficinaOrganizada() {
       <div className={styles.container}><h2>DURANTE A IMERSÃO VOCÊ VAI <em>APRENDER:</em></h2></div>
       <div className={styles.lessonGrid}>{lessons.map(([title,text,photo,alt],i)=><article className={styles.lesson} key={title} data-motion>
         <div className={styles.lessonTitle}><span aria-hidden="true">0{i+1}</span><h3>{title}</h3></div>
+        {photo === 4 && <p className={styles.lessonRibbon}>Eu vou te mostrar 3 tipos de quadros para organizar!</p>}
         <WorkshopPhoto number={photo} alt={alt} focusBoard={photo===6} sizes="(max-width: 767px) 100vw, 550px" />
         <p className={styles.lessonDescription}><Check aria-hidden="true" />{text}</p>
       </article>)}</div>
@@ -78,7 +86,7 @@ export default function OficinaOrganizada() {
     <section className={`${styles.section} ${styles.practice}`}>
       <div className={styles.container}>
         <p className={styles.attention}><span aria-hidden="true">🚨</span> ATENÇÃO</p>
-        <h2>NÃO É TEORIA. É O QUE FUNCIONA DENTRO DE UMA OFICINA DE VERDADE.</h2>
+        <h2>NÃO É TEORIA. É O QUE <em>FUNCIONA</em> DENTRO DE UMA <em>OFICINA</em> DE VERDADE.</h2>
         <p className={styles.practiceIntro}>Eu vou te mostrar exatamente como organizo os serviços dentro da minha oficina e apresentar outras formas de aplicar esse processo na sua. <strong>Você vai entender como adaptar o fluxo ao tamanho da sua equipe e à realidade da sua oficina.</strong></p>
       </div>
       <div className={styles.practicePhoto} data-motion><WorkshopPhoto number={6} alt="Quadro de programação da oficina, com foco nas etapas dos serviços" focusBoard sizes="(max-width: 767px) 100vw, 1000px" /></div>
@@ -87,13 +95,13 @@ export default function OficinaOrganizada() {
 
     <section className={`${styles.section} ${styles.audience}`}><div className={styles.narrow}>
       <h2>ESSA IMERSÃO É PARA <em>VOCÊ QUE:</em></h2>
-      <CheckList items={["Tem uma oficina pequena ou grande, com 2 funcionários ou 10.","Tem equipe, mas ainda precisa ficar em cima de tudo.","Já usa sistema, mas ainda falta organização no dia a dia.","Quer saber o que está acontecendo sem precisar perguntar toda hora.","Quer fazer os serviços andarem com mais organização."]} />
+      <CheckList items={["Tem uma oficina pequena ou grande, com 2 funcionários ou 10 ou mais.","Tem equipe, mas ainda precisa ficar em cima de tudo.","Já usa sistema, mas ainda falta organização no dia a dia.","Quer saber o que está acontecendo sem precisar perguntar toda hora.","Quer fazer os serviços andarem com mais organização."]} />
     </div></section>
 
     <section className={`${styles.section} ${styles.about}`}><div className={styles.author}>
       <div className={styles.authorPhoto}><WorkshopPhoto number={5} alt="Diego Mensor em frente ao quadro da própria oficina" sizes="(max-width: 767px) 100vw, 520px" /></div>
-      <div className={styles.authorCopy}><p className={styles.eyebrow}>Eu vou te ensinar,</p><h2>Sou DIEGO <em>MENSOR</em></h2>
-        <p>Trabalho há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos sou dono dela.</strong></p>
+      <div className={styles.authorCopy}>
+        <p className={styles.authorIntroduction}>Eu vou te ensinar. Sou <strong className={styles.authorName}>DIEGO <em>MENSOR</em></strong>, trabalho há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos sou dono dela.</strong></p>
         <p>Hoje, além de administrar 2 oficinas, ajudo outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
         <p>Assim como você, já vivi uma oficina onde tudo dependia de mim e sim eu estava sobrecarregado. Foi organizando a gestão e ajustando os processos na prática que as coisas mudaram completamente.</p>
         <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
@@ -101,7 +109,7 @@ export default function OficinaOrganizada() {
     </div></section>
 
     <section className={`${styles.section} ${styles.year}`}><div className={styles.container}>
-      <h2><em>2026</em> ESTÁ ACABANDO.</h2>
+      <h2><em>2026</em> ESTÁ <span className={styles.endingAccent}>ACABANDO.</span></h2>
       <p className={styles.yearQuestion}>Você vai entrar em 2027 com a mesma bagunça dentro da sua oficina?</p>
       <p>Ainda dá tempo de começar a organizar.</p><p>E o primeiro passo é entender <strong>como os serviços precisam funcionar da entrada até a entrega.</strong></p>
     </div></section>
@@ -109,10 +117,10 @@ export default function OficinaOrganizada() {
     <section className={`${styles.section} ${styles.offer}`} id="ingresso"><div className={styles.offerInner}>
       <p className={styles.eyebrow}>GARANTA SEU INGRESSO</p>
       <Image className={styles.offerLogo} src="/logo-oficinaorganizada.png" alt="Operação: Oficina Organizada" width={2000} height={2000} sizes="340px" />
+      <div className={styles.offerDate}><Calendar aria-hidden="true" /><div><strong>25 de novembro • 19h</strong><span>QUARTA-FEIRA • ONLINE E AO VIVO</span></div></div>
       <LotPricing initialTime={initialTime} />
       <LotCountdown variant="offer" initialTime={initialTime} />
       <CheckList items={["Acesso ao treinamento","Material de apoio","Bônus para quem estiver até o final"]} />
-      <div className={styles.offerDate}><Calendar aria-hidden="true" /><div><strong>25 de novembro • 19h</strong><span>QUARTA-FEIRA • ONLINE E AO VIVO</span></div></div>
       <Cta checkout>QUERO GARANTIR MEU INGRESSO</Cta>
     </div></section>
     <div className={styles.faq}><DestraveFaq items={faqs} /></div>

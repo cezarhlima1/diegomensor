@@ -86,7 +86,8 @@
 .authorCopy .cta{margin-top:8px}
 .year{background:radial-gradient(ellipse at 50% 40%,#a33e2b13,transparent 65%),#0d0c0c;text-align:center}
 .year h2{font-family:var(--font-archivo),sans-serif;font-size:clamp(50px,8vw,104px);line-height:1;max-width:none;letter-spacing:-.025em}
-.year h2 em{color:#e17f6d}
+.year h2 em{color:#ec5703}
+.endingAccent{color:#e15749}
 .page .yearQuestion{font-family:var(--font-archivo);font-size:clamp(25px,3.4vw,38px);font-weight:750;line-height:1.35;max-width:28ch;margin:30px auto;color:#f5e5da;text-wrap:balance}
 .year p:not(.yearQuestion){font-size:17px;line-height:1.7;max-width:620px;margin:12px auto}
 .offer{background:radial-gradient(ellipse at 50% 0%,#ec570320,transparent 70%),#f6f0e8;border-top:3px solid #ec5703;text-align:center;color:#1c1b1a}
@@ -230,3 +231,10 @@
 }
 @media(max-width:350px){.hero h1{font-size:36px}.eventDate{font-size:13px;gap:16px}.urgencyBar{gap:10px;padding-inline:10px}.urgencyLabel{font-size:9px}.timer{gap:5px}.timer>span{min-width:25px}.price{font-size:98px}}
 @media(prefers-reduced-motion:reduce){.page *,.page *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.inView{opacity:1;translate:none}}
+
+.page .lessonRibbon{padding:12px 18px;background:#af2b21;color:#fff7f1;font-size:15px;font-weight:850;line-height:1.5;text-align:center;text-wrap:balance;border-block:1px solid #ffb6a52b}
+@media(max-width:767px){.page .lessonRibbon{padding:12px 20px;font-size:14px}}
+
+.authorCopy>p.authorIntroduction{font-size:20px;line-height:1.75;color:#f3e9df;text-wrap:pretty;margin-bottom:24px}
+.authorName{display:inline;font-family:var(--font-archivo),sans-serif;font-size:1.3em;font-weight:900;letter-spacing:-.025em;white-space:nowrap}
+@media(max-width:767px){.authorCopy>p.authorIntroduction{font-size:19px;line-height:1.75;margin-bottom:22px}}
