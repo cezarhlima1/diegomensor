@@ -44,9 +44,9 @@ export default function OficinaOrganizada() {
         <Image className={styles.smallLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" priority />
         <div className={styles.eventDate}><span><Calendar aria-hidden="true" />25 de novembro</span><span><Clock aria-hidden="true" />19h</span></div>
         <p className={styles.eventFormat}>QUARTA-FEIRA • ONLINE E AO VIVO</p>
-        <h1><span>Em uma aula, aprenda como </span><em>organizar a rotina do pátio</em><span> e ter mais controle da tua oficina.</span></h1>
+        <h1><span className={styles.heroPrelude}>Em uma aula, aprenda como </span><em>organizar a rotina do pátio</em><span className={styles.heroOutcome}> e ter mais controle da tua oficina.</span></h1>
       </div>
-      <div className={styles.heroPhoto}><WorkshopPhoto number={1} alt="Diego Mensor mostrando o quadro de serviços dentro da própria oficina" priority sizes="(max-width: 767px) 100vw, 1000px" /></div>
+      <div className={styles.heroPhoto}><WorkshopPhoto number={1} alt="Diego Mensor mostrando o quadro de serviços dentro da própria oficina" caption="Diego Mensor, dentro da própria oficina." priority sizes="(max-width: 767px) calc(100vw - 40px), 900px" /></div>
       <div className={styles.heroBenefits}><h2>Durante a imersão você vai:</h2><CheckList items={heroCheckpoints} /><Cta>QUERO PARTICIPAR DA IMERSÃO</Cta></div>
     </section>
 
