@@ -46,9 +46,10 @@ export default function ScrollOpening({ children }: { children: ReactNode }) {
       <Image className={styles.openingPhoto} src="/oficina-organizada/fotoquadro1.webp" alt="Diego Mensor mostrando o quadro de serviços dentro da própria oficina" fill sizes="100vw" priority />
       <div className={styles.openingGradient} aria-hidden="true" />
       <div className={styles.openingFade} aria-hidden="true" />
-      <Image className={styles.openingLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="150px" />
-      <a className={styles.scrollCue} href="#promessa"><span>DENTRO DE UMA OFICINA DE VERDADE</span><strong>Role para descobrir <span aria-hidden="true">↓</span></strong></a>
     </div>
-    <div className={styles.openingContent}>{children}</div>
+    <div className={styles.openingContent}>
+      <Image className={styles.openingLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="96px" />
+      {children}
+    </div>
   </div>;
 }

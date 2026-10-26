@@ -251,28 +251,19 @@
 .openingPhoto{object-fit:contain;object-position:center;transform:translateY(var(--opening-shift)) scale(var(--opening-scale));transform-origin:center;will-change:transform}
 .openingGradient{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#00000005 0%,transparent 45%,#100f0e99 78%,#100f0e 100%)}
 .openingFade{position:absolute;inset:0;z-index:2;background:#100f0e;opacity:var(--opening-fade);pointer-events:none;will-change:opacity}
-.scrollCue{position:absolute;z-index:3;bottom:35px;left:20px;right:20px;display:grid;justify-items:center;gap:10px;color:#fff4e8;opacity:calc(1 - var(--opening-fade));text-align:center}
-.scrollCue>span{font-size:10px;letter-spacing:.16em;font-weight:600;color:#e9cab5}
-.scrollCue strong{font-size:15px;line-height:1.5;font-weight:750}
-.scrollCue strong span{display:inline-block;margin-left:10px;color:#f2a776;font-size:23px}
-.scrollCue:focus-visible{outline:2px solid #ec5703;outline-offset:7px}
 .page .hero{background:linear-gradient(180deg,#100f0e,#1c1b1a 70%);padding-top:0}
 .heroCopy[id]{scroll-margin-top:90px}
 @media(max-width:767px){
-  .photoScene{--opening-height:min(75vw,480px)}
+  .photoScene{--opening-height:min(78vw,500px)}
 
   .photoScene[data-enhanced=true] .photoSticky{top:66px}
   .openingPhoto{object-fit:cover;object-position:55% center}
-  .scrollCue{bottom:18px;gap:6px}
-  .scrollCue>span{font-size:9px;letter-spacing:.12em}
-  .scrollCue strong{font-size:14px}
   .page .hero{padding-top:0}
 }
-@media(prefers-reduced-motion:reduce){.photoScene[data-enhanced=true]{height:auto}.photoScene[data-enhanced=true] .photoSticky{position:relative;top:auto}.openingPhoto{transform:none;will-change:auto}.openingFade{opacity:0;will-change:auto}.scrollCue strong span{animation:none}}
+@media(prefers-reduced-motion:reduce){.photoScene[data-enhanced=true]{height:auto}.photoScene[data-enhanced=true] .photoSticky{position:relative;top:auto}.openingPhoto{transform:none;will-change:auto}.openingFade{opacity:0;will-change:auto}}
 
-.openingLogo{position:absolute;z-index:3;top:24px;left:50%;translate:-50% 0;width:150px;height:64px;object-fit:contain;opacity:calc(1 - var(--opening-fade));filter:drop-shadow(0 3px 12px #0009)}
+.openingLogo{position:relative;display:block;width:96px;height:48px;object-fit:contain;margin:-10px auto 18px;filter:drop-shadow(0 3px 12px #0009)}
 .heroBenefits[id]{scroll-margin-top:90px}
-@media(max-width:767px){.openingLogo{top:18px;width:135px;height:58px}}
+@media(max-width:767px){.openingLogo{width:88px;height:44px;margin:-8px auto 16px}}
 
-.openingContent{position:relative;z-index:4;background:#100f0e;padding:34px 0 1px;isolation:isolate}
-@media(max-width:767px){.openingContent{padding-top:27px}}
+.openingContent{position:relative;z-index:4;background:#100f0e;padding:0 0 1px;isolation:isolate}
