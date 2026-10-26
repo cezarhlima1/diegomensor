@@ -3,6 +3,8 @@ import FacebookPixel from "@/components/FacebookPixel";
 import ClarityScript from "@/components/ClarityScript";
 import OficinaOrganizada from "@/components/oficina-organizada/OficinaOrganizada";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Operação: Oficina Organizada — Diego Mensor",
   description:

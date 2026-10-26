@@ -4,13 +4,11 @@ import Footer from "@/components/Footer";
 import { ArrowRight, Calendar, Check, Clock } from "@/components/icons";
 import DestraveFaq from "@/components/destrave/DestraveFaq";
 import WorkshopPhoto from "./WorkshopPhoto";
-import { LotCountdown, PageMotion } from "./Experience";
+import { LotCountdown, LotPricing, PageMotion } from "./Experience";
 import testimonials from "./testimonials.json";
 import styles from "./oficina-organizada.module.css";
 
 const CHECKOUT_URL = "https://payfast.greenn.com.br/redirect/300783";
-const lotStartedAt = "2026-10-26T19:40:35Z";
-const lotDeadline = process.env.NEXT_PUBLIC_OFICINA_LOTE_DEADLINE || null;
 const heroCheckpoints = [
   "Aprender, na prática, como funciona o quadro de serviços.",
   "Entender o passo a passo que cada serviço deve seguir, da entrada até a finalização.",
@@ -38,8 +36,9 @@ function CheckList({items}:{items:string[]}) {
 }
 
 export default function OficinaOrganizada() {
+  const initialTime = Date.now();
   return <div data-oficina-page className={`destrave-theme ${styles.page}`}>
-    <LotCountdown deadline={lotDeadline} startedAt={lotStartedAt} />
+    <LotCountdown initialTime={initialTime} />
     <section className={styles.hero}>
       <div className={styles.heroCopy}>
         <Image className={styles.smallLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" priority />
@@ -73,7 +72,7 @@ export default function OficinaOrganizada() {
 
     <section className={`${styles.section} ${styles.socialProof}`}>
       <div className={styles.container}><h2>No último evento, os donos de oficina <em>falaram isso aqui:</em></h2></div>
-      <div className={styles.testimonialWall}>{testimonials.map(t=><figure key={t.number} className={styles.testimonial} data-motion><Image src={`/oficina-organizada/depoimentoquadro${t.number}.webp`} alt={`Depoimento ${t.number} de participante do último evento de Diego Mensor`} width={t.width} height={t.height} sizes="(max-width: 600px) 90vw, (max-width: 1000px) 43vw, 340px" /></figure>)}</div>
+      <div className={styles.testimonialWall}>{testimonials.map(t=><figure key={t.number} className={styles.testimonial} data-motion><Image src={`/oficina-organizada/depoimentoquadro${t.number}.webp`} alt={`Depoimento ${t.number} de participante do último evento de Diego Mensor`} width={t.width} height={t.height} sizes="(max-width: 767px) 90vw, 720px" /></figure>)}</div>
     </section>
 
     <section className={`${styles.section} ${styles.practice}`}>
@@ -111,9 +110,8 @@ export default function OficinaOrganizada() {
     <section className={`${styles.section} ${styles.offer}`} id="ingresso"><div className={styles.offerInner}>
       <p className={styles.eyebrow}>GARANTA SEU INGRESSO</p>
       <Image className={styles.offerLogo} src="/logo-oficinaorganizada.png" alt="Operação: Oficina Organizada" width={2000} height={2000} sizes="340px" />
-      <div className={styles.lotBadge}>PRIMEIRO LOTE</div>
-      <div className={styles.price}><span>R$</span>37<small>,00</small></div>
-      <LotCountdown variant="offer" deadline={lotDeadline} startedAt={lotStartedAt} />
+      <LotPricing initialTime={initialTime} />
+      <LotCountdown variant="offer" initialTime={initialTime} />
       <CheckList items={["Acesso ao treinamento","Material de apoio","Bônus para quem estiver até o final"]} />
       <div className={styles.offerDate}><Calendar aria-hidden="true" /><div><strong>25 de novembro • 19h</strong><span>QUARTA-FEIRA • ONLINE E AO VIVO</span></div></div>
       <Cta checkout>QUERO GARANTIR MEU INGRESSO</Cta>

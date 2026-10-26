@@ -56,10 +56,13 @@
 .lesson .focusBoard img{aspect-ratio:1.77}
 .socialProof{background:#100f0e;overflow:hidden}
 .socialProof h2{text-transform:none;max-width:26ch}
-.testimonialWall{width:min(calc(100% - 60px),1100px);margin:50px auto 12px;columns:3;column-gap:22px;padding:10px 0}
-.testimonial{break-inside:avoid;position:relative;margin:0 0 22px!important;border:1px solid #ffffff18;border-radius:9px;background:#1c1b1a;box-shadow:0 14px 35px #0006;transform:rotate(-1.5deg);overflow:hidden;transition:transform .25s,box-shadow .25s}
-.testimonial:nth-child(3n+2){transform:rotate(1.5deg);margin-top:10px!important}
-.testimonial:nth-child(4n){transform:rotate(-.6deg);z-index:1}
+.testimonialWall{display:flex;flex-direction:column;align-items:center;width:min(calc(100% - 70px),800px);margin:50px auto 12px;padding:15px 0 25px}
+.testimonial{position:relative;width:88%;align-self:flex-start;margin:0!important;border:1px solid #ffffff18;border-radius:9px;background:#1c1b1a;box-shadow:0 14px 35px #0006;transform:rotate(-2deg);overflow:hidden;transition:transform .25s,box-shadow .25s}
+.testimonial+.testimonial{margin-top:-8px!important}
+.testimonial:nth-child(even){align-self:flex-end;width:91%;transform:rotate(2deg)}
+.testimonial:nth-child(3n){width:85%;align-self:center;transform:rotate(-1deg)}
+.testimonial:nth-child(5n){width:94%;transform:rotate(1.2deg)}
+.testimonial:nth-child(4n){transform:rotate(-1.5deg)}
 .testimonial img{display:block;width:100%;height:auto}
 .practice{background:#191615}
 .attention{display:flex;align-items:center;justify-content:center;gap:12px;color:#ed8172!important;letter-spacing:.14em;font-size:15px;font-weight:900;margin-bottom:22px!important}
@@ -141,7 +144,7 @@
 @keyframes liveGlow{0%,100%{opacity:.65;box-shadow:0 0 7px #ffbb8e55}50%{opacity:1;box-shadow:0 0 14px #ffbb8e99}}
 @keyframes progressShine{from{translate:-100% 0}to{translate:100% 0}}
 @media(hover:hover){.cta:hover{transform:translateY(-2px);box-shadow:0 16px 36px -12px #ec570390}.testimonial:hover{transform:rotate(0) scale(1.025);z-index:3;box-shadow:0 20px 40px #0007}}
-@media(max-width:1000px){.testimonialWall{columns:2}.author{gap:28px}.authorCopy>p:not(.eyebrow){font-size:15px}.authorCopy .cta{font-size:11px;padding-inline:15px}.lessonTitle h3{font-size:21px}}
+@media(max-width:1000px){.author{gap:28px}.authorCopy>p:not(.eyebrow){font-size:15px}.authorCopy .cta{font-size:11px;padding-inline:15px}.lessonTitle h3{font-size:21px}}
 @media(max-width:767px){
   .page{padding-top:66px}
   .section{padding-block:52px;scroll-margin-top:80px}
@@ -172,10 +175,12 @@
   .lessonTitle>span{font-size:12px;margin-top:2px}
   .page .lessonDescription{width:calc(100% - 40px);max-width:540px;margin:auto;padding:18px 0 0;font-size:16px;line-height:1.6}
   .action{margin-top:30px}
-  .testimonialWall{width:calc(100% - 50px);columns:1;max-width:540px;margin-top:30px;padding-block:10px}
-  .testimonial{margin-bottom:12px!important;box-shadow:0 9px 24px #0005;transform:rotate(-1.2deg);border-radius:7px}
-  .testimonial:nth-child(even){transform:rotate(1.2deg);margin-left:7px!important;margin-top:-2px!important}
-  .testimonial:nth-child(3n){margin-right:7px!important;margin-top:-3px!important}
+  .testimonialWall{width:calc(100% - 40px);max-width:540px;margin-top:30px;padding-block:12px}
+  .testimonial{width:94%;box-shadow:0 12px 28px #0007;transform:rotate(-1.7deg);border-radius:7px}
+  .testimonial+.testimonial{margin-top:-4px!important}
+  .testimonial:nth-child(even){width:94%;transform:rotate(1.7deg)}
+  .testimonial:nth-child(3n){width:90%;transform:rotate(-.8deg)}
+  .testimonial:nth-child(5n){width:96%}
   .attention{font-size:14px;margin-bottom:20px!important;gap:10px}
   .page .practiceIntro{font-size:16px;line-height:1.75;margin:24px auto 27px}
   .practicePhoto{width:100%;border:0;border-radius:0;margin-bottom:24px}
@@ -223,6 +228,7 @@
   .page footer :global(.text-blue){color:#ec5703}
   .final h2{margin:19px auto 27px}
 }
-@media(min-width:600px) and (max-width:767px){.testimonialWall{columns:2}}
 @media(max-width:350px){.hero h1{font-size:36px}.eventDate{font-size:13px;gap:16px}.urgencyBar{gap:10px;padding-inline:10px}.urgencyLabel{font-size:9px}.timer{gap:5px}.timer>span{min-width:25px}.price{font-size:98px}}
 @media(prefers-reduced-motion:reduce){.page *,.page *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.inView{opacity:1;translate:none}}
+.nextLot{display:block;margin-top:13px;font-size:12px;color:#76584a}
+.nextLot strong{color:#ab4110}
