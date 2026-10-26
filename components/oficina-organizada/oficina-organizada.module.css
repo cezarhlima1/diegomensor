@@ -46,15 +46,7 @@
 .zoomPhoto img{display:block;width:100%;height:auto}
 .photoDialog p{font-size:13px;margin-top:14px}
 
-@media(max-width:640px){
-  .originalLogo{width:150px;height:58px;margin-bottom:18px}
-  .processPhotos{grid-template-columns:minmax(0,1fr);gap:24px}
-  .photoDialog{width:calc(100% - 16px);max-height:calc(100dvh - 16px);padding:12px}
-  .zoomPhoto img{width:auto;max-width:none;height:min(60dvh,600px)}
-  .originalTheme :global(.destrave-hero--with-cover)::after{background:linear-gradient(180deg,transparent 0 42%,#1c1b1a30 58%,#1c1b1ab8 86%,#1c1b1a 100%)}
-  .originalTheme :global(.destrave-mobile-cta){padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
-  .originalTheme{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
-}
+
 @media(prefers-reduced-motion:reduce){.originalTheme :global(.destrave-ticker__track){animation:none!important}.originalTheme :global(.btn){transition:none}}
 
 /* Center only the first fold; keep the original layout below it. */
@@ -71,14 +63,7 @@
 .heroCheckpoints li{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:16px;line-height:1.55;color:#f1ede8}
 .heroCheckIcon{width:24px;height:24px;flex:none;color:#ec5703;padding:3px;border:1px solid #ec570380;background:#ec570318;border-radius:50%}
 .heroAction{display:flex;justify-content:center}
-@media(max-width:640px){
-  .centeredHero h1{font-size:clamp(32px,9vw,42px);line-height:1.08}
-  .heroCheckpoints{padding-top:22px;margin-bottom:28px}
-  .heroCheckpoints>p{font-size:18px;margin-bottom:20px}
-  .heroCheckpoints ul{grid-template-columns:minmax(0,1fr);gap:20px}
-  .heroCheckpoints li{font-size:16px;line-height:1.5;gap:8px;max-width:34ch;margin-inline:auto}
-  .heroAction :global(.btn){min-height:58px}
-}
+
 
 /* Pain points use a warning treatment, distinct from the learning benefits. */
 .originalTheme .problemSection{background:#191616;border-block:1px solid #d9574930}
@@ -91,7 +76,7 @@
 .originalTheme .problemList li:hover{transform:none;border-color:#d9574940;box-shadow:none}
 .problemCallout{max-width:560px;margin-inline:auto;padding:20px 0 0;border-top:1px solid #d9574930;color:#e5c0ba;font-size:17px;line-height:1.65}
 .problemCallout strong{font-weight:650}
-@media(max-width:640px){.problemList li{padding:16px 14px;gap:12px}.problemCallout{font-size:16px}}
+
 
 /* Keep the board and its four practical benefits together. */
 .boardOverview{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);align-items:center;gap:32px;margin:40px auto 0;padding:24px;background:#1c1b1aeb;border:1px solid #ffffff25;border-radius:14px;text-align:left}
@@ -103,14 +88,14 @@
 .boardOverviewText h3{font-family:var(--font-display);font-size:18px;font-weight:800;line-height:1.3;color:#f6f1eb;margin:0 0 8px}
 .boardOverviewText p{font-size:15px;line-height:1.6;color:#d4cbc2;margin:0}
 @media(max-width:900px){.boardOverview{grid-template-columns:minmax(0,1fr);gap:24px;padding:20px}.boardOverviewText{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.boardOverviewText article{padding:0;border-bottom:0}}
-@media(max-width:640px){.boardOverview{margin-top:28px;padding:14px;gap:24px}.boardOverviewText{grid-template-columns:minmax(0,1fr);gap:0;padding:0 4px 4px}.boardOverviewText article{padding:18px 0;border-bottom:1px solid #ffffff20}.boardOverviewText p{font-size:16px}}
+
 
 .practiceNotice{max-width:760px;margin:28px auto 0;padding:24px;background:#b83b2910;border:1px solid #d9574945;border-radius:10px}
 .practiceNoticeLabel{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;font-family:var(--font-display);font-size:18px;font-weight:850;letter-spacing:.08em;color:#ef8174}
 .practiceNoticeLabel span{font-size:26px;line-height:1}
 .practiceNotice>p:last-child{margin:0;font-size:18px;line-height:1.7;color:#ded7cf}
 .practiceNotice strong{color:#f6f1eb;font-weight:750}
-@media(max-width:640px){.practiceNotice{padding:20px 16px}.practiceNotice>p:last-child{font-size:16px}}
+
 
 /* Shared rhythm for the additions to the original landing page. */
 .originalTheme>section:not([data-hero]):not(:global(.destrave-ticker)){padding-block:clamp(56px,7vw,96px)}
@@ -144,24 +129,7 @@
   .authorIntro{padding:28px 24px}
   .authorStory{padding:28px 24px 32px}
 }
-@media(max-width:700px){
-  .originalTheme .learningWrap{width:calc(100% - 40px)}
-  .lessonGrid{grid-template-columns:minmax(0,1fr);gap:24px;margin-block:28px}
-  .lessonCard{padding:18px}
-  .lessonCard h3,.lessonCard>p{min-height:0}
-  .lessonCard h3{font-size:20px}
-  .originalTheme :global(.section-title){font-size:clamp(28px,7.5vw,38px);line-height:1.12}
-  .boardOverview{padding:16px;gap:24px}
-  .boardOverviewText h3{font-size:18px}
-  .originalTheme :global(.btn){font-size:13px;padding:16px;max-width:100%;white-space:normal}
-  .authorPortrait{padding:18px 18px 0}
-  .authorIntro{padding:24px 20px}
-  .authorStory{padding:24px 20px 28px}
-  .authorAction :global(.btn){width:100%}
-  .practiceNotice{margin-top:24px}
-  .processPhotos{gap:24px;margin-block:28px}
-  .originalTheme :global(.destrave-event-info){line-height:1.5}
-}
+
 
 /* Emotional hierarchy: warning, clarity, control, and a considered decision. */
 .sectionEyebrow{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto 18px;font-family:var(--font-mono);font-size:11px;font-weight:600;line-height:1.5;letter-spacing:.16em;color:#f1ac80}
@@ -198,8 +166,97 @@
 .originalTheme :global(.destrave-offer-hero){border-top:3px solid #ec5703;background:radial-gradient(70% 60% at 50% 0%,#ec570317,transparent 75%),#f7f2eb}
 .originalTheme :global(.destrave-back-top){color:#f0ba97;border-color:#ab411080;background:#1c1b1a}
 @media(hover:hover) and (prefers-reduced-motion:no-preference){.lessonCard{transition:border-color .2s ease,box-shadow .2s ease}.lessonCard:hover{border-color:#ec570366;box-shadow:0 16px 38px #0003}}
-@media(max-width:640px){.sectionEyebrow{font-size:10px;letter-spacing:.13em;margin-bottom:16px}.authorStory blockquote{padding-left:16px}.boardOverviewText h3{font-size:17px}.practiceNoticeLabel{font-size:14px}}
+
 
 .heroPhoto{margin:32px auto;max-width:860px;padding:7px;border:1px solid #e899622b;border-radius:14px;background:#25211e;box-shadow:0 20px 55px #0003}
 .heroPhoto .photoButton{border:0;border-radius:8px}
-@media(max-width:640px){.heroPhoto{margin-block:26px;padding:4px;border-radius:10px}.heroPhoto .photoButton{border-radius:6px}}
+
+
+.heroFormat{font-size:.9em;opacity:.8}
+/* One mobile scale, instead of successive overrides for each section. */
+@media(max-width:767px){
+  .originalTheme{--color-line:#ffffff20;padding-bottom:0}
+  .originalTheme :global(.wrap),.originalTheme .learningWrap{width:calc(100% - 40px);max-width:440px;margin-inline:auto}
+  .originalTheme>section:not([data-hero]):not(:global(.destrave-ticker)){padding-block:48px}
+  .originalTheme>section.centeredHero{padding:26px 0 40px}
+  .centeredHero :global(.wrap){display:block;min-height:0}
+  .originalLogo{width:144px;height:64px;margin-bottom:14px}
+  .centeredHero :global(.hero-badge){display:flex;flex-wrap:wrap;width:fit-content;justify-content:center;gap:6px 8px;padding:0 10px;border:0;background:none;font-size:10px;line-height:1.6;letter-spacing:.07em;color:#f0b18b}
+  .heroFormat{flex-basis:100%;font-size:9px;letter-spacing:.13em;color:#d4cbc2}
+  .centeredHero h1{font-size:clamp(28px,7.8vw,35px);line-height:1.14;letter-spacing:-.035em;margin:22px auto 24px;max-width:21ch;text-shadow:none}
+  .heroPhoto{margin:0 auto 26px;padding:0;border-radius:10px;box-shadow:0 10px 28px #0002}
+  .heroPhoto .photoButton{border-radius:9px}
+  .heroCheckpoints{padding-top:22px;margin:0 auto 24px;border-top-color:#ffffff20}
+  .heroCheckpoints>p{font-size:18px;line-height:1.4;margin:0 0 18px}
+  .heroCheckpoints ul{grid-template-columns:minmax(0,1fr);gap:16px}
+  .heroCheckpoints li{display:flex;flex-direction:row;align-items:flex-start;text-align:left;gap:12px;font-size:15px;line-height:1.6;max-width:none;margin:0}
+  .heroCheckIcon{width:22px;height:22px;margin-top:2px;border-radius:6px}
+  .heroAction{width:100%}
+  .originalTheme :global(.btn),.originalTheme :global(.destrave-offer-cta){display:flex;justify-content:center;align-items:center;width:100%;min-height:54px;height:auto;padding:15px 16px;font-size:12px;line-height:1.45;letter-spacing:.01em;border-radius:10px;box-shadow:0 8px 20px -12px #ec570360;white-space:normal;text-wrap:balance}
+  .originalTheme :global(.section-title){font-size:clamp(26px,7.1vw,32px);line-height:1.15;letter-spacing:-.03em;max-width:22ch;text-wrap:balance}
+  .sectionEyebrow{font-size:9px;line-height:1.6;letter-spacing:.12em;margin-bottom:14px}
+  .originalTheme :global(.lead){font-size:16px;line-height:1.65}
+  .originalTheme :global(.destrave-ticker__group){font-size:9px;letter-spacing:.1em;padding-block:12px}
+  .problemList{margin-top:24px;gap:10px}
+  .problemList li{padding:15px 14px;gap:11px;font-size:15px;line-height:1.6}
+  .problemIcon{width:23px;height:23px;margin-top:2px}
+  .problemCallout{font-size:15px;line-height:1.65;margin-top:22px;margin-bottom:24px;padding-top:20px}
+  .lessonGrid{grid-template-columns:minmax(0,1fr);gap:20px;margin:26px 0}
+  .lessonCard{padding:16px;border-radius:12px;box-shadow:none}
+  .lessonCard h3{font-size:19px;line-height:1.35;min-height:0;margin:0 0 10px}
+  .lessonCard>p{min-height:0;font-size:15px;line-height:1.6;margin:0 0 18px}
+  .lessonCard h3>span{width:21px;height:21px;margin-right:3px;font-size:13px}
+  .photoButton{border-radius:8px}
+  .expandPhoto{right:7px;bottom:7px;min-height:32px;padding:6px 9px;gap:8px;font-size:10px;line-height:1.4}
+  .workshopPhoto figcaption{font-size:12px;line-height:1.6;margin-top:10px;text-align:left}
+  .controlSection .boardOverview{grid-template-columns:minmax(0,1fr);padding:0;gap:0;margin-top:26px;border-radius:12px;overflow:hidden;box-shadow:none}
+  .boardOverviewPhoto{padding:0}
+  .boardOverviewPhoto .photoButton{border:0;border-radius:0}
+  .boardOverviewText{grid-template-columns:minmax(0,1fr);gap:0;padding:4px 18px 8px}
+  .boardOverviewText article,.boardOverviewText article:first-child,.boardOverviewText article:last-child{padding:17px 0;border-bottom:1px solid #f0aa7220}
+  .boardOverviewText article:last-child{border-bottom:0}
+  .boardOverviewText h3{font-size:16px;line-height:1.4;margin-bottom:6px}
+  .boardOverviewText p{font-size:15px;line-height:1.6}
+  .practiceNotice{margin-top:24px;padding:20px 16px;border-radius:10px;text-align:left}
+  .practiceNoticeLabel{font-size:12px;letter-spacing:.1em;margin-bottom:14px}
+  .practiceNoticeLabel span{font-size:22px}
+  .practiceNotice>p:last-child{font-size:15px;line-height:1.75}
+  .processPhotos{grid-template-columns:minmax(0,1fr);gap:22px;margin-block:24px}
+  .originalTheme :global(.check-ic){width:22px;height:22px;flex:none;margin-top:1px;border-radius:6px}
+  .originalTheme :global(.destrave-block2--lp1) li{padding:15px 14px;font-size:15px;line-height:1.6;gap:11px;border-radius:10px}
+  .authorLayout{grid-template-columns:minmax(0,1fr);border-radius:12px}
+  .authorPortrait{padding:0}
+  .authorPortrait img{border-radius:0}
+  .authorIntro{padding:24px 20px}
+  .authorIntro :global(.tag){font-size:9px;padding:7px 10px;letter-spacing:.1em}
+  .authorIntro h3{font-size:29px;margin:16px 0}
+  .authorIntro p{font-size:15px;line-height:1.75;margin-bottom:14px}
+  .authorStory{padding:24px 20px 28px}
+  .authorStory blockquote{padding-left:14px;gap:16px}
+  .authorStory p{font-size:15px;line-height:1.75}
+  .authorStory .authorQuote{font-size:21px;line-height:1.35;margin:0}
+  .authorAction{margin-top:24px}
+  .yearSection :global(.lead){font-size:21px;line-height:1.45;margin-top:20px}
+  .yearSection :global(.text-muted),.yearSection :global(.text-offwhite){font-size:15px;line-height:1.7}
+  .originalTheme :global(.destrave-offer-hero){padding:44px 20px}
+  .originalTheme :global(.destrave-offer-eyebrow){font-size:10px;line-height:1.5;letter-spacing:.1em}
+  .originalTheme :global(.destrave-offer-title){font-size:34px;line-height:1.06;margin:20px auto}
+  .originalTheme :global(.destrave-event-info){gap:12px 18px;font-size:14px;line-height:1.5;margin:22px 0}
+  .originalTheme :global(.destrave-offer-price) strong{font-size:42px;line-height:1.2;margin-bottom:24px;letter-spacing:-.04em}
+  .originalTheme :global(.faq-q){padding:18px 16px;min-height:56px;font-size:15px;line-height:1.5;gap:16px;align-items:flex-start}
+  .originalTheme :global(.faq-ic){flex:none;margin-top:3px}
+  .originalTheme :global(.faq-answer) p{padding:0 16px 18px;font-size:15px;line-height:1.7;text-align:left}
+  .originalTheme :global(footer){padding-block:32px}
+  .originalTheme :global(footer) :global(.wrap){gap:24px}
+  .originalTheme :global(footer) :global(.brand){font-size:17px}
+  .originalTheme :global(footer) :global(.font-mono){font-size:11px;line-height:1.8;text-align:left;overflow-wrap:anywhere}
+  .originalTheme :global(.destrave-mobile-cta),.originalTheme :global(.destrave-back-top){display:none}
+  .photoDialog{width:calc(100% - 16px);max-height:calc(100dvh - 16px);padding:12px}
+  .zoomPhoto img{width:auto;max-width:none;height:min(60dvh,600px)}
+}
+@media(max-width:350px){.originalTheme :global(.wrap),.originalTheme .learningWrap{width:calc(100% - 32px)}.centeredHero h1{font-size:28px}.lessonCard{padding:14px}.authorIntro,.authorStory{padding-inline:16px}}
+
+.originalTheme :global(.faq-item){background:#24211f;border-color:#ffffff20}
+.originalTheme :global(.faq-ic){color:#ec5703;background:#ec570312;border-color:#ec570350}
+.originalTheme :global(.faq-answer) p{color:#d4cbc2}
+.yearSection :global(.text-muted){color:#c9c0b7}

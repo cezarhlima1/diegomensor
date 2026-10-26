@@ -52,7 +52,7 @@ export default function OficinaOrganizada() {
       <div className="wrap grid grid-cols-1 items-center lg:min-h-[540px] xl:min-h-[640px] lg:flex lg:items-center">
         <div>
           <Image className={styles.originalLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" priority />
-          <span className="hero-badge reveal"><Calendar className="w-[13px] h-[13px]" />25 de novembro • 19h • Online e ao vivo</span>
+          <span className="hero-badge reveal"><Calendar className="w-[13px] h-[13px]" /><span>25 de novembro • 19h</span><span className={styles.heroFormat}>Online e ao vivo</span></span>
           <h1 className="reveal d1 font-display font-black text-[clamp(36px,5vw,58px)] leading-[1.05] tracking-[-.03em] text-balance mt-7 mb-8 max-w-[24ch]">Em uma aula, aprenda como <span className="text-dest-accent">organizar a rotina do pátio</span> e ter mais controle da tua oficina.</h1>
           <div className={styles.heroPhoto}>
             <WorkshopPhoto number={1} alt="Diego Mensor mostrando o quadro de serviços dentro da própria oficina" caption="" priority sizes="(max-width: 900px) 90vw, 860px" />
