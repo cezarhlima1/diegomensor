@@ -92,11 +92,10 @@ export default function OficinaOrganizada() {
 
     <section className={`${styles.section} ${styles.about}`}><div className={styles.author}>
       <div className={styles.authorPhoto}><WorkshopPhoto number={5} alt="Diego Mensor em frente ao quadro da própria oficina" sizes="(max-width: 767px) 100vw, 520px" /></div>
-      <div className={styles.authorCopy}><p className={styles.eyebrow}>QUEM VAI TE ENSINAR</p><h2>DIEGO <em>MENSOR</em></h2>
-        <p>Diego trabalha há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos é dono da própria operação.</strong></p>
-        <p>Hoje, além de administrar sua oficina, ajuda outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
-        <p className={styles.authorQuote}>“Se eu quero te ensinar isso é porque eu vivi isso.”</p>
-        <p>Assim como você, já viveu uma oficina onde tudo dependia dele. Foi organizando a gestão e ajustando os processos na prática que as coisas começaram a mudar.</p>
+      <div className={styles.authorCopy}><p className={styles.eyebrow}>Eu vou te ensinar,</p><h2>Sou DIEGO <em>MENSOR</em></h2>
+        <p>Trabalho há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos sou dono dela.</strong></p>
+        <p>Hoje, além de administrar 2 oficinas, ajudo outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
+        <p>Assim como você, já vivi uma oficina onde tudo dependia de mim e sim eu estava sobrecarregado. Foi organizando a gestão e ajustando os processos na prática que as coisas mudaram completamente.</p>
         <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
       </div>
     </div></section>

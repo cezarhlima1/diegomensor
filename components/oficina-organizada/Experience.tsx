@@ -43,7 +43,6 @@ export function LotCountdown({ initialTime, variant = "banner" }: { initialTime:
     <p>{expired ? "O evento já começou." : finalLot ? "Último lote. Este é o preço final." : `${index === 0 ? "O lote zero" : index === 1 ? "O primeiro lote" : "O segundo lote"} vai virar.`}</p>
     <div className={styles.progressTrack} role="progressbar" aria-label={finalLot ? "Tempo decorrido até o evento" : "Tempo decorrido até a virada do lote"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span style={{width:`${progress}%`}} /></div>
     <span className={styles.progressCaption}>{finalLot ? "TEMPO PARA O EVENTO" : "TEMPO PARA A VIRADA DO LOTE"}</span>{timer}
-    {!finalLot && <small className={styles.nextLot}>Próximo lote: <strong>{formatPrice(lots[index + 1].price)}</strong></small>}
   </div>;
 }
 
