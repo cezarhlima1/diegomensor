@@ -41,12 +41,13 @@ export default function OficinaOrganizada() {
   return <div data-oficina-page className={`destrave-theme ${styles.page}`}>
     <LotCountdown initialTime={initialTime} />
     <section className={styles.hero}>
+      <ScrollOpening>
       <div className={styles.heroCopy} id="promessa">
         <h1><span className={styles.heroPrelude}>Em uma aula, aprenda como </span><em>organizar a rotina do pátio</em><span className={styles.heroOutcome}> e ter mais controle da tua oficina.</span></h1>
         <div className={styles.eventDate}><span><Calendar aria-hidden="true" />25 de novembro</span><span><Clock aria-hidden="true" />19h</span></div>
         <p className={styles.eventFormat}>QUARTA-FEIRA • ONLINE E AO VIVO</p>
       </div>
-      <ScrollOpening />
+      </ScrollOpening>
       <div className={styles.heroBenefits} id="conteudo-imersao"><h2>Durante a imersão você vai:</h2><CheckList items={heroCheckpoints} /><Cta>QUERO PARTICIPAR DA IMERSÃO</Cta></div>
     </section>
 

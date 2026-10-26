@@ -246,7 +246,7 @@
 /* The opening photograph fades to black with the visitor's own scroll. */
 .photoScene{--opening-height:min(56.25vw,78svh,860px);--opening-fade:0;--opening-scale:1;--opening-shift:0px;position:relative;background:#100f0e}
 .photoSticky{height:var(--opening-height);position:relative;overflow:hidden;background:#100f0e;isolation:isolate}
-.photoScene[data-enhanced=true]{height:calc(var(--opening-height) + 220px)}
+.photoScene[data-enhanced=true]{height:auto}
 .photoScene[data-enhanced=true] .photoSticky{position:sticky;top:64px}
 .openingPhoto{object-fit:contain;object-position:center;transform:translateY(var(--opening-shift)) scale(var(--opening-scale));transform-origin:center;will-change:transform}
 .openingGradient{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#00000005 0%,transparent 45%,#100f0e99 78%,#100f0e 100%)}
@@ -256,20 +256,23 @@
 .scrollCue strong{font-size:15px;line-height:1.5;font-weight:750}
 .scrollCue strong span{display:inline-block;margin-left:10px;color:#f2a776;font-size:23px}
 .scrollCue:focus-visible{outline:2px solid #ec5703;outline-offset:7px}
-.page .hero{background:linear-gradient(180deg,#100f0e,#1c1b1a 70%);padding-top:42px}
+.page .hero{background:linear-gradient(180deg,#100f0e,#1c1b1a 70%);padding-top:0}
 .heroCopy[id]{scroll-margin-top:90px}
 @media(max-width:767px){
   .photoScene{--opening-height:min(75vw,480px)}
-  .photoScene[data-enhanced=true]{height:calc(var(--opening-height) + 170px)}
+
   .photoScene[data-enhanced=true] .photoSticky{top:66px}
   .openingPhoto{object-fit:cover;object-position:55% center}
   .scrollCue{bottom:18px;gap:6px}
   .scrollCue>span{font-size:9px;letter-spacing:.12em}
   .scrollCue strong{font-size:14px}
-  .page .hero{padding-top:28px}
+  .page .hero{padding-top:0}
 }
 @media(prefers-reduced-motion:reduce){.photoScene[data-enhanced=true]{height:auto}.photoScene[data-enhanced=true] .photoSticky{position:relative;top:auto}.openingPhoto{transform:none;will-change:auto}.openingFade{opacity:0;will-change:auto}.scrollCue strong span{animation:none}}
 
 .openingLogo{position:absolute;z-index:3;top:24px;left:50%;translate:-50% 0;width:150px;height:64px;object-fit:contain;opacity:calc(1 - var(--opening-fade));filter:drop-shadow(0 3px 12px #0009)}
 .heroBenefits[id]{scroll-margin-top:90px}
 @media(max-width:767px){.openingLogo{top:18px;width:135px;height:58px}}
+
+.openingContent{position:relative;z-index:4;background:#100f0e;padding:34px 0 1px;isolation:isolate}
+@media(max-width:767px){.openingContent{padding-top:27px}}

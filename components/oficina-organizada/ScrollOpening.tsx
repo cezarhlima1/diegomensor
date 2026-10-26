@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import styles from "./oficina-organizada.module.css";
 
-export default function ScrollOpening() {
+export default function ScrollOpening({ children }: { children: ReactNode }) {
   const scene = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = scene.current;
@@ -23,7 +23,7 @@ export default function ScrollOpening() {
       root.dataset.enhanced = "true";
       const sticky = root.firstElementChild as HTMLElement;
       const top = parseFloat(getComputedStyle(sticky).top) || 0;
-      const distance = Math.max(1, root.offsetHeight - sticky.offsetHeight);
+      const distance = Math.max(1, sticky.offsetHeight);
       const progress = Math.max(0, Math.min(1, (top - root.getBoundingClientRect().top) / distance));
       root.style.setProperty("--opening-fade", String(progress));
       root.style.setProperty("--opening-scale", String(1 + progress * 0.045));
@@ -47,7 +47,8 @@ export default function ScrollOpening() {
       <div className={styles.openingGradient} aria-hidden="true" />
       <div className={styles.openingFade} aria-hidden="true" />
       <Image className={styles.openingLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="150px" />
-      <a className={styles.scrollCue} href="#conteudo-imersao"><span>DENTRO DE UMA OFICINA DE VERDADE</span><strong>Role para descobrir <span aria-hidden="true">↓</span></strong></a>
+      <a className={styles.scrollCue} href="#promessa"><span>DENTRO DE UMA OFICINA DE VERDADE</span><strong>Role para descobrir <span aria-hidden="true">↓</span></strong></a>
     </div>
+    <div className={styles.openingContent}>{children}</div>
   </div>;
 }
