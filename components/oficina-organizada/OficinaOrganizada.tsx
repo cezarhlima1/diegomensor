@@ -48,15 +48,15 @@ const faqs = [
 export default function OficinaOrganizada() {
   return <div className={`destrave-theme destrave-theme--lp1 ${styles.originalTheme}`}>
     <DestraveInteractions href="#ingresso" ctaLabel="Quero participar da imersão" />
-    <section data-hero className={`destrave-hero--with-cover relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20 lg:pt-28 lg:pb-28 xl:pt-36 xl:pb-32 ${styles.centeredHero}`}>
-      <div className={`hero-bg ${styles.heroBackdrop}`} aria-hidden="true">
-        <Image src="/oficina-organizada/fotoquadro1.webp" alt="" fill sizes="100vw" priority className={styles.heroBackgroundPhoto} />
-      </div>
+    <section data-hero className={`relative overflow-hidden pt-16 pb-16 md:pt-24 md:pb-20 lg:pt-28 lg:pb-28 xl:pt-36 xl:pb-32 ${styles.centeredHero}`}>
       <div className="wrap grid grid-cols-1 items-center lg:min-h-[540px] xl:min-h-[640px] lg:flex lg:items-center">
         <div>
           <Image className={styles.originalLogo} src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" priority />
           <span className="hero-badge reveal"><Calendar className="w-[13px] h-[13px]" />25 de novembro • 19h • Online e ao vivo</span>
           <h1 className="reveal d1 font-display font-black text-[clamp(36px,5vw,58px)] leading-[1.05] tracking-[-.03em] text-balance mt-7 mb-8 max-w-[24ch]">Em uma aula, aprenda como <span className="text-dest-accent">organizar a rotina do pátio</span> e ter mais controle da tua oficina.</h1>
+          <div className={styles.heroPhoto}>
+            <WorkshopPhoto number={1} alt="Diego Mensor mostrando o quadro de serviços dentro da própria oficina" caption="" priority sizes="(max-width: 900px) 90vw, 860px" />
+          </div>
           <div className={`reveal d2 ${styles.heroCheckpoints}`}>
             <p><strong>Durante a imersão você vai:</strong></p>
             <ul>{heroCheckpoints.map(text => <li key={text}><Check aria-hidden="true" className={styles.heroCheckIcon} /><span>{text}</span></li>)}</ul>
@@ -71,6 +71,7 @@ export default function OficinaOrganizada() {
 
     <section className={`destrave-block2--lp1 py-[72px] md:py-24 lg:py-28 xl:py-32 ${styles.problemSection}`}>
       <div className="wrap text-center max-w-[760px]">
+        <p className={`${styles.sectionEyebrow} ${styles.warningEyebrow}`}><span aria-hidden="true">△</span> SINAIS DE ALERTA</p>
         <h2 className="section-title reveal mx-auto">SUA OFICINA FUNCIONA <span className={styles.problemAccent}>ASSIM?</span></h2>
         <ul className={styles.problemList}>{[
           "Você precisa saber onde está cada carro.",
@@ -83,16 +84,18 @@ export default function OficinaOrganizada() {
       </div>
     </section>
 
-    <section className="py-[72px] md:py-24 lg:py-28 xl:py-32">
-      <div className="wrap text-center max-w-[820px]">
+    <section className={`py-[72px] md:py-24 lg:py-28 xl:py-32 ${styles.learningSection}`}>
+      <div className={`wrap text-center ${styles.learningWrap}`}>
+        <p className={styles.sectionEyebrow}>DA CONFUSÃO À CLAREZA</p>
         <h2 className="section-title reveal mx-auto">DURANTE A IMERSÃO VOCÊ VAI <span className="text-dest-accent">APRENDER:</span></h2>
-        <div className="grid gap-6 mt-10 mb-8 text-left">{lessons.map(([title,text,photo,alt]) => <article className="testi reveal" key={title}><h3 className="font-display font-bold text-xl mb-2"><span className="text-dest-accent">✓ </span>{title}</h3><p className="text-muted mb-5">{text}</p><WorkshopPhoto number={photo} alt={alt} caption="" sizes="(max-width: 900px) 90vw, 820px" /></article>)}</div>
+        <div className={styles.lessonGrid}>{lessons.map(([title,text,photo,alt]) => <article className={`testi reveal ${styles.lessonCard}`} key={title}><h3 className="font-display font-bold text-xl mb-2"><span className="text-dest-accent">✓ </span>{title}</h3><p className="text-muted mb-5">{text}</p><WorkshopPhoto number={photo} alt={alt} caption="" sizes="(max-width: 700px) 90vw, (max-width: 1200px) 44vw, 480px" /></article>)}</div>
         <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
       </div>
     </section>
 
-    <section className="destrave-block3--lp1 py-[72px] md:py-24 lg:py-28 xl:py-32">
+    <section className={`destrave-block3--lp1 py-[72px] md:py-24 lg:py-28 xl:py-32 ${styles.controlSection}`}>
       <div className="wrap text-center">
+        <p className={styles.sectionEyebrow}>CONTROLE DA OPERAÇÃO</p>
         <h2 className="section-title reveal mx-auto max-w-[26ch]">QUANDO OS SERVIÇOS ESTÃO ORGANIZADOS, VOCÊ SABE:</h2>
         <div className={styles.boardOverview}>
           <div className={styles.boardOverviewPhoto}><WorkshopPhoto number={6} alt="Quadro completo com etapas, responsáveis e motivos de parada" caption="" sizes="(max-width: 900px) 90vw, (max-width: 1300px) 58vw, 760px" /></div>
@@ -132,29 +135,32 @@ export default function OficinaOrganizada() {
 
     <section className="py-[72px] md:py-24 lg:py-28 xl:py-32">
       <div className="wrap">
-        <div className="author-card reveal grid grid-cols-1 xl:grid-cols-[.85fr_1.15fr]" data-dest-tilt>
-          <div className="author-photo dest-photo relative min-h-[280px] lg:min-h-[360px] xl:min-h-[420px] border-b xl:border-b-0 xl:border-r border-white/20 overflow-hidden"><Image src="/oficina-organizada/fotoquadro5.webp" alt="Diego Mensor em frente ao quadro de programação da própria oficina" fill sizes="(max-width: 1024px) 90vw, 480px" className="object-cover object-center" /></div>
-          <div className="self-center px-8 py-10 lg:px-11 lg:py-12 xl:px-[52px] xl:py-14">
-            <span className="tag">Quem vai te ensinar</span><h3 className="font-display font-black text-[clamp(28px,3.4vw,38px)] mt-4 mb-4">DIEGO MENSOR</h3>
-            <div className="grid gap-4 text-offwhite text-[clamp(15px,1.7vw,18px)] leading-[1.55] mb-6">
-              <p>Diego trabalha há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos é dono da própria operação.</strong></p>
-              <p>Hoje, além de administrar sua oficina, ajuda outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
-              <blockquote className="grid gap-4 m-0">
-                <p className="font-display font-bold text-xl text-dest-accent">“Se eu quero te ensinar isso é porque eu vivi isso.</p>
-                <p>Assim como você, eu também já vivi uma oficina onde tudo dependia de mim. Trabalhava o dia inteiro, resolvia um problema atrás do outro e, no fim do mês, sentia que o esforço não aparecia nos resultados.</p>
-                <p>Foi organizando a gestão da minha própria oficina, ajustando processos e aprendendo na prática que as coisas começaram a mudar.</p>
-                <p>É esse caminho que eu quero te mostrar na <strong>Operação: Oficina Organizada</strong>, para você adaptar o que funciona à realidade da sua oficina.”</p>
-              </blockquote>
-            </div>
-            <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
+        <div className={`author-card reveal ${styles.authorLayout}`}>
+          <div className={styles.authorPortrait}>
+            <Image src="/oficina-organizada/fotoquadro5.webp" alt="Diego Mensor em frente ao quadro de programação da própria oficina" width={1679} height={937} sizes="(max-width: 800px) 90vw, 520px" />
+          </div>
+          <div className={styles.authorIntro}>
+            <span className="tag">Quem vai te ensinar</span>
+            <h3>DIEGO MENSOR</h3>
+            <p>Diego trabalha há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos é dono da própria operação.</strong></p>
+            <p>Hoje, além de administrar sua oficina, ajuda outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
+          </div>
+          <div className={styles.authorStory}>
+            <blockquote>
+              <p className={styles.authorQuote}>“Se eu quero te ensinar isso é porque eu vivi isso.</p>
+              <p>Assim como você, eu também já vivi uma oficina onde tudo dependia de mim. Trabalhava o dia inteiro, resolvia um problema atrás do outro e, no fim do mês, sentia que o esforço não aparecia nos resultados.</p>
+              <p>Foi organizando a gestão da minha própria oficina, ajustando processos e aprendendo na prática que as coisas começaram a mudar.</p>
+              <p>É esse caminho que eu quero te mostrar na <strong>Operação: Oficina Organizada</strong>, para você adaptar o que funciona à realidade da sua oficina.”</p>
+            </blockquote>
+            <div className={styles.authorAction}><Cta>QUERO PARTICIPAR DA IMERSÃO</Cta></div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-[820px] mx-auto mt-10 items-start">{[1,2].map(n => <figure className="testi reveal !p-0 overflow-hidden" key={n}><img src={`/depoimentocaptura${n}.png`} alt={`Relato de participante dos treinamentos de Diego Mensor — ${n}`} loading="lazy" className="block w-full h-auto" /><figcaption className="px-4 py-3 text-xs text-muted">Relato de participante dos treinamentos</figcaption></figure>)}</div>
       </div>
     </section>
 
-    <section className="py-[72px] md:py-24 text-center">
-      <div className="wrap max-w-[820px]"><h2 className="section-title reveal mx-auto"><span className="text-dest-accent">2026</span> ESTÁ ACABANDO.</h2><p className="lead reveal mt-6 mb-6">Você vai entrar em 2027 com a mesma bagunça dentro da sua oficina?</p><p className="text-offwhite mb-4">Ainda dá tempo de começar a organizar.</p><p className="text-muted">E o primeiro passo é entender <strong>como os serviços precisam funcionar da entrada até a entrega.</strong></p></div>
+    <section className={`py-[72px] md:py-24 text-center ${styles.yearSection}`}>
+      <div className="wrap max-w-[820px]"><h2 className="section-title reveal mx-auto"><span className={styles.yearAccent}>2026</span> ESTÁ ACABANDO.</h2><p className="lead reveal mt-6 mb-6">Você vai entrar em 2027 com a mesma bagunça dentro da sua oficina?</p><p className="text-offwhite mb-4">Ainda dá tempo de começar a organizar.</p><p className="text-muted">E o primeiro passo é entender <strong>como os serviços precisam funcionar da entrada até a entrega.</strong></p></div>
     </section>
 
     <section className="destrave-offer-hero text-center" id="ingresso">

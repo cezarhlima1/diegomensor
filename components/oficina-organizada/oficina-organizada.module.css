@@ -58,16 +58,13 @@
 @media(prefers-reduced-motion:reduce){.originalTheme :global(.destrave-ticker__track){animation:none!important}.originalTheme :global(.btn){transition:none}}
 
 /* Center only the first fold; keep the original layout below it. */
-.centeredHero{text-align:center}
+.originalTheme>section.centeredHero{text-align:center;padding-block:clamp(40px,6vw,80px);background:radial-gradient(ellipse at 50% 20%,#ab411014,transparent 65%),#1c1b1a}
 .centeredHero :global(.wrap){position:relative;z-index:1;justify-content:center}
 .centeredHero :global(.wrap)>div:first-child{width:min(100%,860px);margin-inline:auto}
 .centeredHero .originalLogo{margin-inline:auto}
 .centeredHero h1{margin-inline:auto;max-width:26ch;text-shadow:0 2px 24px #0008}
 .centeredHero :global(.hero-badge){justify-content:center;max-width:100%;background:#0009;box-shadow:none}
-.centeredHero :global(.hero-bg){background:none;transform:none;inset:0}
 .centeredHero::after{display:none}
-.heroBackgroundPhoto{object-fit:cover;object-position:center 35%}
-.heroBackdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0009 0%,#000b 24%,#000d 62%,#1c1b1a 100%)}
 .heroCheckpoints{max-width:740px;margin:0 auto 32px;border-top:1px solid #ffffff30;padding-top:24px}
 .heroCheckpoints>p{font-size:20px;line-height:1.4;color:#fff;margin:0 0 24px}
 .heroCheckpoints ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 32px;margin:0;padding:0;list-style:none}
@@ -76,8 +73,6 @@
 .heroAction{display:flex;justify-content:center}
 @media(max-width:640px){
   .centeredHero h1{font-size:clamp(32px,9vw,42px);line-height:1.08}
-  .heroBackgroundPhoto{object-position:48% top}
-  .heroBackdrop::after{background:linear-gradient(180deg,#0009 0%,#000c 22%,#000e 65%,#1c1b1a 100%)}
   .heroCheckpoints{padding-top:22px;margin-bottom:28px}
   .heroCheckpoints>p{font-size:18px;margin-bottom:20px}
   .heroCheckpoints ul{grid-template-columns:minmax(0,1fr);gap:20px}
@@ -116,3 +111,95 @@
 .practiceNotice>p:last-child{margin:0;font-size:18px;line-height:1.7;color:#ded7cf}
 .practiceNotice strong{color:#f6f1eb;font-weight:750}
 @media(max-width:640px){.practiceNotice{padding:20px 16px}.practiceNotice>p:last-child{font-size:16px}}
+
+/* Shared rhythm for the additions to the original landing page. */
+.originalTheme>section:not([data-hero]):not(:global(.destrave-ticker)){padding-block:clamp(56px,7vw,96px)}
+.originalTheme :global(.section-title){max-width:26ch;margin-inline:auto;line-height:1.12;text-wrap:balance}
+.originalTheme :global(.wrap){min-width:0}
+.originalTheme :global(.wrap)>*{min-width:0}
+.originalTheme :global(.btn){min-height:56px;line-height:1.4;text-align:center;justify-content:center}
+.originalTheme :global(.testi){overflow:hidden}
+.originalTheme .learningWrap{width:min(calc(100% - 48px),1040px);max-width:1040px}
+.lessonGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin:36px 0;text-align:left}
+.lessonCard{display:flex;flex-direction:column;padding:24px;background:#24211f;border:1px solid #ffffff24;border-radius:14px;box-shadow:none}
+.lessonCard h3{font-size:21px;line-height:1.35;min-height:2.7em;margin:0 0 12px}
+.lessonCard>p{font-size:16px;line-height:1.6;min-height:3.2em;margin:0 0 22px;color:#d4cbc2}
+.lessonCard .workshopPhoto{margin-top:auto}
+.processPhotos{margin-top:32px;margin-bottom:32px}
+.authorLayout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;overflow:hidden;max-width:1040px;margin-inline:auto}
+.authorPortrait{min-width:0;padding:28px 0 28px 28px}
+.authorPortrait img{display:block;width:100%;height:auto;border-radius:8px}
+.authorIntro{min-width:0;padding:32px}
+.authorIntro h3{font-family:var(--font-display);font-size:clamp(28px,3vw,38px);font-weight:900;line-height:1.1;margin:20px 0}
+.authorIntro p{font-size:16px;line-height:1.7;color:#ded7cf;margin:0 0 16px}
+.authorIntro p:last-child{margin-bottom:0}
+.authorStory{grid-column:1/-1;border-top:1px solid #ffffff20;padding:32px 40px 40px}
+.authorStory blockquote{max-width:760px;margin:0 auto;display:grid;gap:18px}
+.authorStory p{font-size:16px;line-height:1.75;color:#ded7cf;margin:0}
+.authorStory .authorQuote{font-family:var(--font-display);font-size:clamp(21px,2.6vw,28px);line-height:1.3;font-weight:800;color:#f57b35;margin-bottom:4px}
+.authorAction{display:flex;justify-content:center;margin-top:30px}
+@media(max-width:800px){
+  .authorLayout{grid-template-columns:minmax(0,1fr)}
+  .authorPortrait{padding:24px 24px 0}
+  .authorIntro{padding:28px 24px}
+  .authorStory{padding:28px 24px 32px}
+}
+@media(max-width:700px){
+  .originalTheme .learningWrap{width:calc(100% - 40px)}
+  .lessonGrid{grid-template-columns:minmax(0,1fr);gap:24px;margin-block:28px}
+  .lessonCard{padding:18px}
+  .lessonCard h3,.lessonCard>p{min-height:0}
+  .lessonCard h3{font-size:20px}
+  .originalTheme :global(.section-title){font-size:clamp(28px,7.5vw,38px);line-height:1.12}
+  .boardOverview{padding:16px;gap:24px}
+  .boardOverviewText h3{font-size:18px}
+  .originalTheme :global(.btn){font-size:13px;padding:16px;max-width:100%;white-space:normal}
+  .authorPortrait{padding:18px 18px 0}
+  .authorIntro{padding:24px 20px}
+  .authorStory{padding:24px 20px 28px}
+  .authorAction :global(.btn){width:100%}
+  .practiceNotice{margin-top:24px}
+  .processPhotos{gap:24px;margin-block:28px}
+  .originalTheme :global(.destrave-event-info){line-height:1.5}
+}
+
+/* Emotional hierarchy: warning, clarity, control, and a considered decision. */
+.sectionEyebrow{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto 18px;font-family:var(--font-mono);font-size:11px;font-weight:600;line-height:1.5;letter-spacing:.16em;color:#f1ac80}
+.warningEyebrow{color:#ec8b80}
+.warningEyebrow>span{font-size:21px;line-height:1}
+.originalTheme .problemSection{background:linear-gradient(180deg,#171414,#211616 50%,#181515);border-top-color:#bb51452b;border-bottom-color:#bb51452b}
+.problemSection :global(.section-title){color:#eee3e0}
+.problemAccent{color:#ed7769}
+.problemList li{background:#241a19;border-color:#81403755;border-left-color:#bf5549;border-radius:8px;box-shadow:0 8px 24px #00000012}
+.problemList strong{font-weight:600}
+.problemIcon{border-radius:5px;background:#8c35221a;color:#ef8174}
+.problemCallout{max-width:540px;color:#dcb6b0}
+.originalTheme>section.learningSection{background:linear-gradient(180deg,#1c1b1a,#24211d 65%,#1c1b1a)}
+.originalTheme>section.learningSection::before{background:radial-gradient(50% 55% at 50% 30%,#ec57030b,transparent 75%)}
+.lessonCard{background:linear-gradient(145deg,#2b2723,#211f1d);border-color:#f4c3a222;box-shadow:0 12px 32px #00000018}
+.lessonCard h3{color:#faf3eb}
+.lessonCard h3>span{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;margin-right:5px;border:1px solid #ec570350;border-radius:6px;background:#ec570312;font-size:15px;vertical-align:middle}
+.originalTheme>section.controlSection{background:radial-gradient(80% 80% at 50% 100%,#ab411018,transparent 75%),#211f1c;border-block:1px solid #f0aa7225}
+.originalTheme>section.controlSection::before{background:none}
+.controlSection .boardOverview{background:linear-gradient(145deg,#2a2621,#1c1b1a);border:1px solid #e899622b;box-shadow:0 20px 60px #0003}
+.boardOverviewText h3{color:#f6b48b;letter-spacing:.015em;font-size:17px}
+.boardOverviewText article{border-bottom-color:#f0aa7220}
+.boardOverview .photoButton{border-color:#f0aa7230}
+.practiceNotice{background:linear-gradient(145deg,#3a221d55,#251d1b);border-color:#b35c4745;border-top:2px solid #c46650}
+.practiceNoticeLabel{font-size:15px;letter-spacing:.12em}
+.originalTheme :global(.author-card){border-color:#f4c3a222;box-shadow:0 18px 50px #0002}
+.authorStory{background:#ffffff02}
+.authorStory blockquote{border-left:2px solid #ab4110;padding-left:24px}
+.authorStory .authorQuote{color:#efae83}
+.originalTheme>section.yearSection{background:radial-gradient(ellipse at 50% 40%,#a33e2b13,transparent 65%),#191716;border-top:1px solid #b65e4830}
+.originalTheme>section.yearSection::before{background:none}
+.yearAccent{color:#df8271}
+.yearSection :global(.lead){color:#e5d5ce;max-width:650px;margin-inline:auto;font-size:clamp(21px,2.6vw,28px);line-height:1.45}
+.originalTheme :global(.destrave-offer-hero){border-top:3px solid #ec5703;background:radial-gradient(70% 60% at 50% 0%,#ec570317,transparent 75%),#f7f2eb}
+.originalTheme :global(.destrave-back-top){color:#f0ba97;border-color:#ab411080;background:#1c1b1a}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.lessonCard{transition:border-color .2s ease,box-shadow .2s ease}.lessonCard:hover{border-color:#ec570366;box-shadow:0 16px 38px #0003}}
+@media(max-width:640px){.sectionEyebrow{font-size:10px;letter-spacing:.13em;margin-bottom:16px}.authorStory blockquote{padding-left:16px}.boardOverviewText h3{font-size:17px}.practiceNoticeLabel{font-size:14px}}
+
+.heroPhoto{margin:32px auto;max-width:860px;padding:7px;border:1px solid #e899622b;border-radius:14px;background:#25211e;box-shadow:0 20px 55px #0003}
+.heroPhoto .photoButton{border:0;border-radius:8px}
+@media(max-width:640px){.heroPhoto{margin-block:26px;padding:4px;border-radius:10px}.heroPhoto .photoButton{border-radius:6px}}
