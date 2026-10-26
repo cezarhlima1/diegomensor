@@ -35,11 +35,11 @@ export default function WorkshopPhoto({ number, alt, caption, priority = false, 
       <Image src={src} alt={alt} width={dimensions[0]} height={dimensions[1]} sizes={sizes} priority={priority} />
       <span className={styles.expandPhoto}>Ampliar foto <span aria-hidden="true">↗</span></span>
     </button>
-    <figcaption>{caption}</figcaption>
+    {caption && <figcaption>{caption}</figcaption>}
     <dialog ref={dialog} className={styles.photoDialog} aria-label={alt} onClick={e => { if (e.target === e.currentTarget) dialog.current?.close(); }}>
       <div className={styles.dialogBar}><span>OFICINA ORGANIZADA</span><button type="button" onClick={() => dialog.current?.close()} aria-label="Fechar foto ampliada" autoFocus>Fechar <span aria-hidden="true">×</span></button></div>
       <div className={styles.zoomPhoto}><img src={src} alt={alt} width={dimensions[0]} height={dimensions[1]} loading="lazy" /></div>
-      <p>{caption}</p>
+      <p>{caption || alt}</p>
     </dialog>
   </figure>;
 }

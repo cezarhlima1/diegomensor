@@ -22,7 +22,7 @@
 .originalTheme :global(.destrave-offer-eyebrow),.originalTheme :global(.destrave-event-info) svg,.originalTheme :global(.destrave-offer-price) strong{color:#ec5703}
 .originalTheme :global(.destrave-offer-price) strong{font-size:clamp(38px,8vw,70px);line-height:1.1;text-shadow:none;margin-bottom:30px}
 .originalTheme :global(.btn):focus-visible,.originalTheme :global(.destrave-offer-cta):focus-visible{outline:3px solid #ec5703;outline-offset:5px}
-.originalLogo{display:block;width:180px;height:70px;object-fit:cover;margin-bottom:20px;max-width:100%}
+.originalLogo{display:block;width:180px;height:70px;object-fit:contain;margin-bottom:20px;max-width:100%}
 .originalTheme :global(.btn){max-width:100%;white-space:normal}
 .originalTheme :global(#ingresso){scroll-margin-top:20px}
 .workshopPhoto{min-width:0;width:100%}
@@ -56,3 +56,63 @@
   .originalTheme{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
 }
 @media(prefers-reduced-motion:reduce){.originalTheme :global(.destrave-ticker__track){animation:none!important}.originalTheme :global(.btn){transition:none}}
+
+/* Center only the first fold; keep the original layout below it. */
+.centeredHero{text-align:center}
+.centeredHero :global(.wrap){position:relative;z-index:1;justify-content:center}
+.centeredHero :global(.wrap)>div:first-child{width:min(100%,860px);margin-inline:auto}
+.centeredHero .originalLogo{margin-inline:auto}
+.centeredHero h1{margin-inline:auto;max-width:26ch;text-shadow:0 2px 24px #0008}
+.centeredHero :global(.hero-badge){justify-content:center;max-width:100%;background:#0009;box-shadow:none}
+.centeredHero :global(.hero-bg){background:none;transform:none;inset:0}
+.centeredHero::after{display:none}
+.heroBackgroundPhoto{object-fit:cover;object-position:center 35%}
+.heroBackdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0009 0%,#000b 24%,#000d 62%,#1c1b1a 100%)}
+.heroCheckpoints{max-width:740px;margin:0 auto 32px;border-top:1px solid #ffffff30;padding-top:24px}
+.heroCheckpoints>p{font-size:20px;line-height:1.4;color:#fff;margin:0 0 24px}
+.heroCheckpoints ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 32px;margin:0;padding:0;list-style:none}
+.heroCheckpoints li{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:16px;line-height:1.55;color:#f1ede8}
+.heroCheckIcon{width:24px;height:24px;flex:none;color:#ec5703;padding:3px;border:1px solid #ec570380;background:#ec570318;border-radius:50%}
+.heroAction{display:flex;justify-content:center}
+@media(max-width:640px){
+  .centeredHero h1{font-size:clamp(32px,9vw,42px);line-height:1.08}
+  .heroBackgroundPhoto{object-position:48% top}
+  .heroBackdrop::after{background:linear-gradient(180deg,#0009 0%,#000c 22%,#000e 65%,#1c1b1a 100%)}
+  .heroCheckpoints{padding-top:22px;margin-bottom:28px}
+  .heroCheckpoints>p{font-size:18px;margin-bottom:20px}
+  .heroCheckpoints ul{grid-template-columns:minmax(0,1fr);gap:20px}
+  .heroCheckpoints li{font-size:16px;line-height:1.5;gap:8px;max-width:34ch;margin-inline:auto}
+  .heroAction :global(.btn){min-height:58px}
+}
+
+/* Pain points use a warning treatment, distinct from the learning benefits. */
+.originalTheme .problemSection{background:#191616;border-block:1px solid #d9574930}
+.originalTheme>section.problemSection::before{background:radial-gradient(55% 65% at 50% 45%,#ba332516,transparent 75%)}
+.problemAccent{color:#ef8174}
+.problemList{display:grid;gap:12px;max-width:560px;margin:32px auto 0;padding:0;list-style:none;text-align:left}
+.problemList li{display:flex;align-items:flex-start;gap:14px;padding:19px 20px;background:linear-gradient(100deg,#b43d2412,#ffffff02);border:1px solid #d957492b;border-left:3px solid #bc5145;border-radius:6px;color:#e4d9d6;font-size:16px;line-height:1.55}
+.problemList strong{font-weight:650}
+.problemIcon{display:flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;margin-top:1px;color:#ef8174;background:#d9574918;border:1px solid #d9574940;border-radius:50%}
+.originalTheme .problemList li:hover{transform:none;border-color:#d9574940;box-shadow:none}
+.problemCallout{max-width:560px;margin-inline:auto;padding:20px 0 0;border-top:1px solid #d9574930;color:#e5c0ba;font-size:17px;line-height:1.65}
+.problemCallout strong{font-weight:650}
+@media(max-width:640px){.problemList li{padding:16px 14px;gap:12px}.problemCallout{font-size:16px}}
+
+/* Keep the board and its four practical benefits together. */
+.boardOverview{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);align-items:center;gap:32px;margin:40px auto 0;padding:24px;background:#1c1b1aeb;border:1px solid #ffffff25;border-radius:14px;text-align:left}
+.boardOverviewPhoto,.boardOverviewText{min-width:0}
+.boardOverviewText{display:grid;gap:0}
+.boardOverviewText article{padding:18px 0;border-bottom:1px solid #ffffff20}
+.boardOverviewText article:first-child{padding-top:0}
+.boardOverviewText article:last-child{border-bottom:0;padding-bottom:0}
+.boardOverviewText h3{font-family:var(--font-display);font-size:18px;font-weight:800;line-height:1.3;color:#f6f1eb;margin:0 0 8px}
+.boardOverviewText p{font-size:15px;line-height:1.6;color:#d4cbc2;margin:0}
+@media(max-width:900px){.boardOverview{grid-template-columns:minmax(0,1fr);gap:24px;padding:20px}.boardOverviewText{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.boardOverviewText article{padding:0;border-bottom:0}}
+@media(max-width:640px){.boardOverview{margin-top:28px;padding:14px;gap:24px}.boardOverviewText{grid-template-columns:minmax(0,1fr);gap:0;padding:0 4px 4px}.boardOverviewText article{padding:18px 0;border-bottom:1px solid #ffffff20}.boardOverviewText p{font-size:16px}}
+
+.practiceNotice{max-width:760px;margin:28px auto 0;padding:24px;background:#b83b2910;border:1px solid #d9574945;border-radius:10px}
+.practiceNoticeLabel{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px;font-family:var(--font-display);font-size:18px;font-weight:850;letter-spacing:.08em;color:#ef8174}
+.practiceNoticeLabel span{font-size:26px;line-height:1}
+.practiceNotice>p:last-child{margin:0;font-size:18px;line-height:1.7;color:#ded7cf}
+.practiceNotice strong{color:#f6f1eb;font-weight:750}
+@media(max-width:640px){.practiceNotice{padding:20px 16px}.practiceNotice>p:last-child{font-size:16px}}
