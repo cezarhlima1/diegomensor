@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
+import WorkshopPhoto from "./WorkshopPhoto";
 import styles from "./oficina-organizada.module.css";
 
 // Substituir pelos dados confirmados da nova imersão antes de abrir as vendas.
@@ -40,16 +42,14 @@ export default function OficinaOrganizada() {
 
     <section className={styles.hero}>
       <div className={styles.heroCopy}>
-        <p className={styles.eyebrow}><span className={styles.liveDot} /> UMA AULA. UMA NOVA FORMA DE ORGANIZAR.</p>
-        <h1><span>OPERAÇÃO:</span> OFICINA <em>ORGANIZADA</em></h1>
-        <p className={styles.lead}>Em uma aula, descubra como organizar os serviços e fazer sua oficina fluir.</p>
+        <Image className={styles.eventLogo} src="/logo-oficinaorganizada.png" alt="Operação: Oficina Organizada" width={2000} height={2000} sizes="180px" priority />
+        <h1 className={styles.heroHeadline}>Em uma aula, aprenda como <em>organizar a rotina do pátio</em> e ter mais controle da tua oficina.</h1>
         <p className={styles.schedule}>{event.date} <span>•</span> {event.time} <span>•</span> AO VIVO</p>
         <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
       </div>
-      <div className={styles.heroVisual}>
-        <img src="/diego.jpeg" alt="Diego Mensor, dono de oficina e professor da imersão" fetchPriority="high" />
-        <div className={styles.photoLabel}><span>DA OFICINA PARA A SUA OFICINA</span><strong>DIEGO MENSOR</strong></div>
-        <span className={styles.heroIndex} aria-hidden="true">01 / ORGANIZAR PARA FLUIR</span>
+      <div className={styles.heroWorkshop}>
+        <WorkshopPhoto number={1} alt="Diego Mensor mostrando as ordens de serviço no quadro de programação da oficina" caption="O quadro que o Diego usa na própria oficina." priority sizes="(max-width: 760px) calc(100vw - 40px), (max-width: 1440px) 52vw, 680px" />
+        <div className={styles.heroSignature}><span>DA OFICINA PARA A SUA OFICINA</span><strong>DIEGO MENSOR</strong></div>
       </div>
     </section>
     <div className={styles.strip} aria-hidden="true">ORGANIZE OS SERVIÇOS <span>↗</span> ACOMPANHE O PÁTIO <span>↗</span> FAÇA SUA OFICINA FLUIR</div>
@@ -70,17 +70,22 @@ export default function OficinaOrganizada() {
       <p className={styles.eyebrow}>02 / DA ENTRADA À ENTREGA</p>
       <h2>DURANTE A IMERSÃO<br />VOCÊ VAI <em>APRENDER:</em></h2>
       <div className={styles.lessons}>{lessons.map(([title, text], i) => <article key={title}><span className={styles.number}>0{i + 1}</span><div><h3><span aria-hidden="true">✓ </span>{title}</h3><p>{text}</p></div></article>)}</div>
+      <div className={styles.processPhotos}>
+        <WorkshopPhoto number={2} alt="Diego conferindo uma ordem de serviço na prancheta dentro da oficina" caption="A organização começa nas informações de cada serviço." />
+        <WorkshopPhoto number={3} alt="Diego explicando um fluxograma em frente ao quadro de programação" caption="Entenda o caminho do carro, da entrada até a entrega." />
+      </div>
       <Cta>QUERO PARTICIPAR DA IMERSÃO</Cta>
     </section>
 
     <section className={`${styles.section} ${styles.clarity}`}>
       <p className={styles.eyebrow}>03 / CLAREZA PARA FAZER ANDAR</p>
       <h2>QUANDO OS SERVIÇOS ESTÃO<br />ORGANIZADOS, <em>VOCÊ SABE:</em></h2>
+      <div className={styles.boardPhoto}><WorkshopPhoto number={6} alt="Quadro completo com etapas dos serviços e motivos de parada de produção" caption="Etapas, responsáveis e motivos de parada em um só lugar." sizes="(max-width: 760px) calc(100vw - 40px), (max-width: 1200px) calc(100vw - 48px), 1160px" /></div>
       <div className={styles.answers}>{answers.map(([title, text], i) => <article key={title}><span aria-hidden="true">0{i + 1} ↗</span><h3>{title}</h3><p>{text}</p></article>)}</div>
     </section>
 
     <section className={`${styles.section} ${styles.practice}`}>
-      <div className={styles.mediaPlaceholder}><span aria-hidden="true">↗</span><p>FOTO / VÍDEO DO DIEGO<br />COM O QUADRO</p><small>Espaço reservado para a demonstração real.</small></div>
+      <div className={styles.practicePhoto}><WorkshopPhoto number={4} alt="Diego apontando a coluna Em serviço no quadro de programação da oficina" caption="Diego mostrando como acompanhar os serviços na prática." /></div>
       <div><p className={styles.eyebrow}>04 / DENTRO DA OFICINA</p><h2>NÃO É TEORIA.<br />É O QUE <em>FUNCIONA</em> DENTRO DE UMA OFICINA DE VERDADE.</h2>
         <p>Diego vai mostrar o quadro que utiliza dentro da própria oficina para organizar os serviços e acompanhar o que acontece no pátio.</p>
         <p>Você vai ver <strong>como ele funciona na prática</strong> e como levar essa organização para a sua oficina.</p>
@@ -100,7 +105,7 @@ export default function OficinaOrganizada() {
     </section>
 
     <section className={`${styles.section} ${styles.teacher}`}>
-      <div className={styles.teacherPhoto}><img src="/diego.jpeg" alt="Diego Mensor" loading="lazy" /></div>
+      <div className={styles.teacherWorkshop}><WorkshopPhoto number={5} alt="Diego Mensor em frente ao quadro de programação da própria oficina" caption="Diego Mensor. Experiência de quem vive a rotina da oficina." /></div>
       <div><p className={styles.eyebrow}>06 / QUEM VAI TE ENSINAR</p><h2>DIEGO <em>MENSOR</em></h2>
         <p>Diego trabalha há mais de <strong>24 anos dentro de oficina</strong> e há <strong>14 anos é dono da própria operação.</strong></p>
         <p>Hoje, além de administrar sua oficina, ajuda outros donos de oficina a organizarem a gestão, os processos e a equipe.</p>
@@ -130,6 +135,7 @@ export default function OficinaOrganizada() {
     </section>
 
     <section className={`${styles.section} ${styles.final}`}><p className={styles.eyebrow}>OPERAÇÃO: OFICINA ORGANIZADA</p><h2>COMECE 2027 COM UMA<br />OFICINA MAIS <em>ORGANIZADA.</em></h2><Cta>QUERO PARTICIPAR</Cta></section>
+    <div className={styles.mobileAction}><a href="#ingresso" className={styles.cta}>QUERO PARTICIPAR <span aria-hidden="true">↗</span></a></div>
     <footer className={styles.footer}><a href="#topo" className={styles.brand}>MENSOR<span>TREINAMENTOS</span></a><p>MENSOR TREINAMENTOS LTDA<br />CNPJ: 66.021.375/0001-46<br />mensortreinamentos@gmail.com</p><small>© Mensor Treinamentos. Todos os direitos reservados.</small></footer>
   </div>;
 }

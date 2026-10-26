@@ -3,3 +3,93 @@
 @media(max-width:900px){.hero{min-height:570px;grid-template-columns:1.2fr 1fr}.heroCopy{padding-top:60px}.hero h1{font-size:55px}.hero .lead{font-size:17px}.hero .eyebrow{font-size:8px;letter-spacing:1px}.pain,.practice,.audience,.teacher,.offer,.faq{gap:35px}.section{padding-top:70px;padding-bottom:70px}.answers{grid-template-columns:1fr 1fr;gap:30px}.strip{gap:18px;font-size:9px;letter-spacing:1px}.ticket{padding:25px}.cta{font-size:10px;padding:18px;gap:15px}.lessons{gap:0 25px}.lessons h3{font-size:19px}}
 @media(max-width:640px){.header{padding-top:20px;padding-bottom:20px}.brand{font-size:23px}.headerLink{font-size:8px;max-width:130px;gap:10px}.hero{display:flex;flex-direction:column}.heroCopy{padding:45px 24px 35px}.hero h1{font-size:clamp(42px,10.5vw,65px)}.hero .eyebrow{font-size:8px}.hero .lead{font-size:18px;max-width:340px}.heroVisual{height:350px;margin-top:0}.heroVisual:after{background:linear-gradient(0deg,#1c1b1a,transparent 55%),linear-gradient(180deg,#1c1b1a,transparent 18%)}.heroVisual img{object-position:50% 25%}.photoLabel{bottom:30px;left:24px}.heroIndex{display:none}.strip{font-size:9px;gap:14px;flex-wrap:wrap;text-align:center;line-height:1.3}.strip span{font-size:14px}.section{padding-top:58px;padding-bottom:58px}.pain,.practice,.audience,.teacher,.offer,.faq{grid-template-columns:1fr;gap:30px}.page h2{font-size:34px}.page .eyebrow{font-size:9px;letter-spacing:1.5px;margin-bottom:20px}.checks li{font-size:15px}.cta{font-size:11px;max-width:100%;min-height:58px}.lessons{grid-template-columns:1fr;margin:30px 0 20px}.lessons article{padding:24px 0}.answers{gap:26px 20px;margin-top:30px}.answers h3{font-size:17px;margin-top:20px}.answers p{font-size:13px}.mediaPlaceholder{min-height:280px;order:2}.teacherPhoto{height:360px}.testimonials{grid-template-columns:1fr}.stats{gap:20px}.newYear h2{font-size:45px}.newYear h3{font-size:24px}.ticket h3{font-size:34px}.ticket dl div{flex-wrap:wrap}.final h2{font-size:32px}.footer p{text-align:left}.footer{align-items:start}.page .schedule{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.page *{transition:none!important;scroll-behavior:auto!important}}
+
+/* Photos keep their full frame so the service board stays visible. */
+.hero{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:center;min-height:620px}
+.heroCopy{min-width:0;padding-right:24px}
+.hero h1{font-size:clamp(42px,5.1vw,72px)}
+.heroWorkshop{min-width:0;padding:36px 24px 36px 0}
+.heroSignature{border-left:3px solid var(--orange);padding-left:16px;margin-top:24px;display:grid;gap:5px}
+.heroSignature span{font-size:10px;letter-spacing:1.6px;color:#ccc6bf}
+.heroSignature strong{font:850 25px/1.2 var(--font-archivo)}
+.workshopPhoto{min-width:0;width:100%}
+.photoButton{display:block;position:relative;width:100%;padding:0;border:1px solid #ffffff24;border-radius:4px;overflow:hidden;background:#24211f;cursor:zoom-in;text-align:left;color:#fff;touch-action:manipulation}
+.photoButton img{display:block;width:100%;height:auto}
+.photoButton:focus-visible{outline:3px solid var(--orange);outline-offset:5px}
+.expandPhoto{position:absolute;right:10px;bottom:10px;min-height:34px;display:flex;align-items:center;gap:12px;background:#1c1b1aeb;padding:7px 12px;border-radius:3px;font-size:12px;font-weight:700}
+.workshopPhoto figcaption{margin-top:12px;font-size:13px;line-height:1.6;color:#c6bcb1}
+.processPhotos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin:0 0 36px}
+.boardPhoto{margin-top:36px}
+.boardPhoto .workshopPhoto{max-width:1000px;margin:0 auto}
+.practicePhoto,.teacherWorkshop{min-width:0}
+.photoDialog{position:fixed;inset:0;width:calc(100% - 32px);max-width:1680px;max-height:calc(100dvh - 32px);margin:auto;padding:16px;border:1px solid #ffffff35;border-radius:6px;color:#f6f1eb;background:#1c1b1a;overflow:auto;overscroll-behavior:contain}
+.photoDialog::backdrop{background:#000e}
+.dialogBar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
+.dialogBar>span{font-size:10px;letter-spacing:1px}
+.dialogBar button{display:flex;align-items:center;justify-content:center;gap:12px;min-width:100px;min-height:48px;padding:10px 16px;background:#34302b;border:1px solid #ffffff35;border-radius:4px;color:#fff;font:700 14px var(--font-manrope);cursor:pointer}
+.dialogBar button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.dialogBar button span{font-size:22px}
+.zoomPhoto{overflow:auto;touch-action:pan-x pan-y pinch-zoom}
+.zoomPhoto img{display:block;width:100%;height:auto}
+.photoDialog p{font-size:13px;margin-top:14px}
+.mobileAction{display:none}
+.page .headerLink{min-height:44px;align-items:center}
+.page .cta{max-width:100%}
+.page .cta>span,.checks li>span,.liveDot{flex-shrink:0}
+.section>*,.lessons article>div,.answers article{min-width:0}
+@media(min-width:761px) and (max-width:1100px){.hero h1{font-size:clamp(36px,4.8vw,53px)}.heroCopy{padding-top:50px;padding-bottom:50px}.heroWorkshop{padding-right:24px}.hero .eyebrow{line-height:1.7}}
+@media(max-width:760px){
+  .header,.section,.footer{padding-left:20px;padding-right:20px}
+  .page{padding-bottom:calc(82px + env(safe-area-inset-bottom,0px))}
+  .hero{display:flex;flex-direction:column;min-height:0;align-items:stretch}
+  .heroCopy{padding:36px 20px 24px}
+  .hero h1{font-size:clamp(34px,9.5vw,65px);overflow-wrap:normal}
+  .hero .eyebrow{font-size:10px;letter-spacing:1px;line-height:1.7}
+  .hero .lead{font-size:18px;margin:22px 0;max-width:480px}
+  .hero .schedule{font-size:12px;letter-spacing:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .schedule span{padding:0}
+  .heroWorkshop{padding:0 20px 30px}
+  .heroSignature{margin-top:18px}
+  .heroSignature span{font-size:10px}
+  .heroSignature strong{font-size:22px}
+  .pain,.practice,.audience,.teacher,.offer,.faq{grid-template-columns:minmax(0,1fr);gap:28px}
+  .section{padding-top:52px;padding-bottom:52px;scroll-margin-top:16px}
+  .page h2{font-size:clamp(28px,7.6vw,40px);overflow-wrap:break-word}
+  .page .eyebrow{font-size:10px;letter-spacing:1.2px;line-height:1.7}
+  .page .cta{width:100%;font-size:12px;min-height:58px;padding:18px 20px;gap:12px}
+  .checks li,.lessons p,.answers p,.faq details p{font-size:16px}
+  .lessons{grid-template-columns:minmax(0,1fr);margin-top:30px}
+  .lessons h3{font-size:21px}
+  .processPhotos{grid-template-columns:minmax(0,1fr);gap:26px;margin-bottom:28px}
+  .boardPhoto{margin-top:28px}
+  .answers{grid-template-columns:minmax(0,1fr);margin-top:30px;gap:24px}
+  .answers h3{font-size:20px;margin:14px 0 8px}
+  .practicePhoto{order:0}
+  .practice>div:last-child{order:-1}
+  .teacherWorkshop{order:0}
+  .testimonials{grid-template-columns:minmax(0,1fr)}
+  .workshopPhoto figcaption{font-size:13px}
+  .ticket{padding:24px 20px}
+  .ticket h3{font-size:clamp(27px,7.5vw,36px)}
+  .ticket dl div{flex-wrap:wrap}
+  .ticket dd{font-size:14px}
+  .faq summary{min-height:60px;font-size:16px}
+  .faq summary span{flex-shrink:0}
+  .final h2{font-size:clamp(28px,7.6vw,40px)}
+  .footer p{font-size:13px;text-align:left;overflow-wrap:anywhere}
+  .footer small{font-size:12px}
+  .mobileAction{display:block;position:fixed;bottom:0;left:0;right:0;z-index:30;background:#1c1b1af5;border-top:1px solid #ffffff25;padding:10px 20px calc(10px + env(safe-area-inset-bottom,0px));backdrop-filter:blur(12px)}
+  .mobileAction .cta{min-height:52px;padding:14px 20px}
+  .photoDialog{width:calc(100% - 16px);max-height:calc(100dvh - 16px);padding:12px}
+  .zoomPhoto img{width:auto;max-width:none;height:min(60dvh,600px)}
+  .photoDialog p{font-size:14px}
+}
+
+/* Compact event mark above the main promise. */
+.eventLogo{display:block;width:180px;height:70px;object-fit:cover;margin:0 0 24px;max-width:100%}
+.hero h1.heroHeadline{font-size:clamp(32px,3.3vw,46px);line-height:1.13;letter-spacing:-.035em;font-weight:850;margin:0 0 28px;max-width:22ch}
+.hero h1.heroHeadline em{display:inline}
+@media(max-width:760px){
+  .eventLogo{width:160px;height:62px;margin-bottom:22px}
+  .hero h1.heroHeadline{font-size:clamp(30px,7.7vw,42px);line-height:1.15;max-width:24ch;margin-bottom:26px}
+}

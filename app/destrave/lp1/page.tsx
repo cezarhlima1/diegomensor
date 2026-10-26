@@ -6,7 +6,7 @@ import OficinaOrganizada from "@/components/oficina-organizada/OficinaOrganizada
 export const metadata: Metadata = {
   title: "Operação: Oficina Organizada — Diego Mensor",
   description:
-    "Em uma aula, descubra como organizar os serviços e fazer sua oficina fluir. Imersão online e ao vivo com Diego Mensor.",
+    "Em uma aula, aprenda como organizar a rotina do pátio e ter mais controle da tua oficina. Imersão online e ao vivo com Diego Mensor.",
 };
 
 export default function DestraveLp1Page() {
