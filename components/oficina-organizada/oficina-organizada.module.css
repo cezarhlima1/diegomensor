@@ -254,10 +254,11 @@
 .page .hero{background:linear-gradient(180deg,#100f0e,#1c1b1a 70%);padding-top:0}
 .heroCopy[id]{scroll-margin-top:90px}
 @media(max-width:767px){
-  .photoScene{--opening-height:min(78vw,500px)}
+  .photoScene{--opening-height:57.013847vw;width:100vw;max-width:none;margin-inline:calc(50% - 50vw)}
+  .photoSticky{width:100%;max-width:none}
 
   .photoScene[data-enhanced=true] .photoSticky{top:66px}
-  .openingPhoto{object-fit:cover;object-position:55% center}
+  .openingPhoto{object-fit:contain;object-position:center;max-width:none}
   .page .hero{padding-top:0}
 }
 @media(prefers-reduced-motion:reduce){.photoScene[data-enhanced=true]{height:auto}.photoScene[data-enhanced=true] .photoSticky{position:relative;top:auto}.openingPhoto{transform:none;will-change:auto}.openingFade{opacity:0;will-change:auto}}
