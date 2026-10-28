@@ -2,6 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/destrave/lp1",
+        destination: "/oficinaorganizada",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

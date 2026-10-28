@@ -9,9 +9,12 @@ export const metadata: Metadata = {
   title: "Operação: Oficina Organizada — Diego Mensor",
   description:
     "Em uma aula, aprenda como organizar a rotina do pátio e ter mais controle da tua oficina. Imersão online e ao vivo com Diego Mensor.",
+  alternates: {
+    canonical: "https://www.mensortreinamentos.com.br/oficinaorganizada",
+  },
 };
 
-export default function DestraveLp1Page() {
+export default function OficinaOrganizadaPage() {
   return (
     <>
       <FacebookPixel />
