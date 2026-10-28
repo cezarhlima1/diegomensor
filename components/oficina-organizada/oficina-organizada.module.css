@@ -244,11 +244,11 @@
 @media(max-width:767px){.authorCopy>p.authorIntroduction{font-size:19px;line-height:1.75;margin-bottom:22px}}
 
 /* The opening photograph fades to black with the visitor's own scroll. */
-.photoScene{--opening-height:min(56.25vw,78svh,860px);--opening-fade:0;--opening-scale:1;--opening-shift:0px;position:relative;background:#100f0e}
+.photoScene{--opening-height:min(42vw,58svh,640px);--opening-fade:0;--opening-scale:1;--opening-shift:0px;position:relative;background:#100f0e}
 .photoSticky{height:var(--opening-height);position:relative;overflow:hidden;background:#100f0e;isolation:isolate}
 .photoScene[data-enhanced=true]{height:auto}
 .photoScene[data-enhanced=true] .photoSticky{position:sticky;top:64px}
-.openingPhoto{object-fit:contain;object-position:center;transform:translateY(var(--opening-shift)) scale(var(--opening-scale));transform-origin:center;will-change:transform}
+.openingPhoto{object-fit:cover;object-position:center 28%;transform:translateY(var(--opening-shift)) scale(var(--opening-scale));transform-origin:center;will-change:transform}
 .openingGradient{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#00000005 0%,transparent 42%,#100f0e66 68%,#100f0ef2 88%,#100f0e 96%,#100f0e 100%)}
 .openingFade{position:absolute;inset:0;z-index:2;background:#100f0e;opacity:var(--opening-fade);pointer-events:none;will-change:opacity}
 .page .hero{background:linear-gradient(180deg,#100f0e,#1c1b1a 70%);padding-top:0}

@@ -10,8 +10,8 @@ export default function DestraveFaq({ scheduleAnswer, items = destraveFaqs }: { 
     <section className="py-[72px] md:py-24">
       <div className="wrap max-w-[820px]">
         <div className="text-center">
-          <span className="tag reveal">Perguntas frequentes</span>
-          <h2 className="section-title reveal d1 mt-[18px] mx-auto">
+          <span className="tag">Perguntas frequentes</span>
+          <h2 className="section-title mt-[18px] mx-auto">
             Ficou alguma <span className="text-dest-accent">dúvida?</span>
           </h2>
         </div>
@@ -21,7 +21,7 @@ export default function DestraveFaq({ scheduleAnswer, items = destraveFaqs }: { 
             const isOpen = open === i;
             const answer = i === 1 && scheduleAnswer ? scheduleAnswer : item.a;
             return (
-              <div key={i} className={`faq-item reveal d${Math.min(Math.floor(i / 2) + 1, 3)} ${isOpen ? "open" : ""}`}>
+              <div key={i} className={`faq-item ${isOpen ? "open" : ""}`}>
                 <button
                   type="button"
                   className="faq-q"
@@ -35,6 +35,7 @@ export default function DestraveFaq({ scheduleAnswer, items = destraveFaqs }: { 
                 <div
                   id={`destrave-faq-answer-${i}`}
                   className="faq-answer"
+                  aria-hidden={!isOpen}
                 >
                   <div className="overflow-hidden">
                     <p className="px-[22px] pb-[22px] text-muted text-[15.5px]">{answer}</p>
