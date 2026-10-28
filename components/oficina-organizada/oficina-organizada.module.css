@@ -270,3 +270,8 @@
 .openingContent{position:relative;z-index:4;background:#100f0e;padding:0 0 1px;isolation:isolate}
 .openingContent::before{content:"";position:absolute;left:0;right:0;top:-88px;height:90px;pointer-events:none;background:linear-gradient(180deg,#100f0e00 0%,#100f0e55 28%,#100f0ecc 65%,#100f0e 100%)}
 .openingContent>*{position:relative;z-index:1}
+
+@media(min-width:768px){
+  .openingGradient{background:linear-gradient(180deg,transparent 0%,transparent 64%,#100f0e18 78%,#100f0e70 90%,#100f0ed1 97%,#100f0e 100%)}
+  .openingContent::before{top:-56px;height:58px;background:linear-gradient(180deg,#100f0e00 0%,#100f0e20 35%,#100f0e99 78%,#100f0e 100%)}
+}
