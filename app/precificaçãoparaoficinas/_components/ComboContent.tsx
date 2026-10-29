@@ -133,14 +133,24 @@ export default function ComboContent() {
       <section id="combo-offer" aria-labelledby="combo-price" data-tone="dark">
         <div className="wrap">
           <div className={styles.priceCard}>
+            <span className={styles.comboOfferBadge}>OS DOIS JUNTOS, POR MENOS</span>
             <h2 id="combo-price">Garanta o <span>combo completo</span></h2>
             <p className={styles.offerDescription}>Treinamento + 12 meses de calculadora</p>
+            <dl className={styles.valueBreakdown}>
+              <div><dt>Treinamento de precificação para oficinas</dt><dd>R$ 197,00</dd></div>
+              <div><dt>Ferramenta de orçamento<small>12 meses de acesso à calculadora</small></dt><dd>R$ 497,00</dd></div>
+              <div className={styles.separateTotal}><dt>Total dos itens separados</dt><dd><s>R$ 694,00</s></dd></div>
+            </dl>
+            <div className={styles.comboSavings}><Check aria-hidden="true" /><span>Você economiza <strong>R$ 97,00</strong> levando o combo!</span></div>
             <div className={styles.paymentOffer}>
-              <div className={styles.price} aria-label="12 parcelas de 61 reais e 38 centavos">
-                <span className={styles.installments}>12x de</span>
-                <span className={styles.priceAmount}><span className={styles.currency}>R$</span>61,38</span>
+              <p className={styles.comboPriceLabel}>COMBO COMPLETO POR</p>
+              <div className={styles.price} aria-label="Até 10 parcelas de 59 reais e 70 centavos sem juros">
+                <span className={styles.installments}>até 10x de</span>
+                <span className={styles.priceAmount}><span className={styles.currency}>R$</span>59,70</span>
               </div>
+              <span className={styles.interestFree}>SEM JUROS</span>
               <p className={styles.cashPrice}>ou à vista <strong>R$ 597,00</strong></p>
+              <p className={styles.paymentNote}>O mesmo valor total à vista ou em até 10 parcelas.</p>
             </div>
             <Action>QUERO O COMBO COMPLETO</Action>
             {!COMBO_CHECKOUT_URL && <p className={styles.checkoutNote}>Fale com a equipe pelo WhatsApp para adquirir o combo.</p>}

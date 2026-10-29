@@ -80,5 +80,5 @@ export const faqs = [
   { q: "Consigo enviar o orçamento pelo WhatsApp?", a: "Sim. Depois de montar o orçamento, você pode copiá-lo pronto para enviar ao cliente pelo WhatsApp." },
   { q: "Os orçamentos ficam salvos?", a: "Sim. Eles ficam no histórico e você pode acompanhar quais foram aprovados, não aprovados ou ainda estão aguardando aprovação, além de editar e adicionar observações quando precisar." },
   { q: "Por quanto tempo tenho acesso?", a: "Você terá 12 meses de acesso à Calculadora de Precificação." },
-  { q: "Quanto custa?", a: "Separadamente, a Calculadora custa R$497 e o Precificação para Oficinas custa R$197, totalizando R$694. Nesta oferta, você recebe o combo por R$597." },
+  { q: "Quanto custa?", a: "Separadamente, a Calculadora custa R$497 e o Precificação para Oficinas custa R$197, totalizando R$694. No combo, você leva os dois por R$597 à vista ou em até 10x de R$59,70 sem juros. São R$97 de economia, inclusive no parcelamento em até 10 vezes." },
 ];

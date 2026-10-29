@@ -1,2 +1,2 @@
-export const COMBO_CHECKOUT_URL: string | null = "https://payfast.greenn.com.br/157546/offer/6N2jry?b_id_1=183150&b_offer_1=KaGpUB&b_id_2=161724&b_offer_2=A3ccG2&b_id_3=183133&b_offer_3=TR6Iaq";
+export const COMBO_CHECKOUT_URL: string | null = "https://payfast.greenn.com.br/157546/offer/bal5xF?b_id_1=183133&b_offer_1=TR6Iaq&b_id_2=183150&b_offer_2=KaGpUB&b_id_3=161724&b_offer_3=A3ccG2";
 export const COMBO_WHATSAPP_URL = `https://wa.me/554792709538?text=${encodeURIComponent("Olá! Vim pela página Precificação para Oficinas e quero saber mais sobre o combo de R$597, com treinamento e 12 meses da Calculadora de Precificação.")}`;
