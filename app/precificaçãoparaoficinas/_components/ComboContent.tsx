@@ -133,14 +133,23 @@ export default function ComboContent() {
       <section id="combo-offer" aria-labelledby="combo-price" data-tone="dark">
         <div className="wrap">
           <div className={styles.priceCard}>
+            <span className={styles.comboOfferBadge}>CONDIÇÃO ESPECIAL DO COMBO</span>
             <h2 id="combo-price">Garanta o <span>combo completo</span></h2>
             <p className={styles.offerDescription}>Treinamento + 12 meses de calculadora</p>
+            <dl className={styles.valueBreakdown}>
+              <div><dt>Treinamento de precificação para oficinas</dt><dd>R$ 197,00</dd></div>
+              <div><dt>Ferramenta de orçamento<small>12 meses de acesso à calculadora</small></dt><dd>R$ 497,00</dd></div>
+              <div className={styles.separateTotal}><dt>Total dos itens separados</dt><dd><s>R$ 694,00</s></dd></div>
+            </dl>
             <div className={styles.paymentOffer}>
+              <p className={styles.comboPriceLabel}>COMBO COMPLETO POR</p>
               <div className={styles.price} aria-label="12 parcelas de 61 reais e 38 centavos">
                 <span className={styles.installments}>12x de</span>
                 <span className={styles.priceAmount}><span className={styles.currency}>R$</span>61,38</span>
               </div>
               <p className={styles.cashPrice}>ou à vista <strong>R$ 597,00</strong></p>
+              <span className={styles.comboSavings}><Check aria-hidden="true" />Economize R$ 97,00 no pagamento à vista</span>
+              <p className={styles.installmentTotal}>Total parcelado: R$ 736,56</p>
             </div>
             <Action>QUERO O COMBO COMPLETO</Action>
             {!COMBO_CHECKOUT_URL && <p className={styles.checkoutNote}>Fale com a equipe pelo WhatsApp para adquirir o combo.</p>}
