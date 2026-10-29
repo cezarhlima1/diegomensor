@@ -181,25 +181,3 @@
 @media (max-width: 767px) {
   .situationEmphasis { margin-top: 32px; padding: 24px 20px; font-size: 20px; line-height: 1.65; }
 }
-
-/* Show the value of the individual products before presenting the combo. */
-.priceCard{position:relative;border-top:4px solid #078bd4;background:linear-gradient(180deg,#f1f9fe 0%,#fff 24%);box-shadow:0 24px 60px -30px #078bd450}
-.comboOfferBadge{display:inline-block;padding:7px 13px;margin:0 0 22px;border:1px solid #b6dbef;border-radius:30px;background:#e8f5fd;color:#076ca7;font-size:10px;font-weight:800;letter-spacing:.08em;line-height:1.5}
-.valueBreakdown{margin:28px 0 0;padding:18px 20px;border:1px solid #d8e7f0;border-radius:14px;background:#f7fafc;text-align:left}
-.valueBreakdown>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;padding:13px 0;border-bottom:1px solid #dce8ef}
-.valueBreakdown>div:first-child{padding-top:0}
-.valueBreakdown dt{font-size:14px;font-weight:650;line-height:1.55;color:#294c63}
-.valueBreakdown dt small{display:block;margin-top:4px;font-size:11px;font-weight:450;color:#657e8e;line-height:1.5}
-.valueBreakdown dd{margin:0;font-size:15px;font-weight:800;line-height:1.55;color:#173b54;white-space:nowrap;font-variant-numeric:tabular-nums}
-.valueBreakdown>.separateTotal{border-bottom:0;padding:16px 0 0;align-items:center}
-.separateTotal dt{font-size:12px;font-weight:650;color:#657e8e}
-.separateTotal dd{font-size:18px;color:#718391}
-.separateTotal s{text-decoration-color:#b76461;text-decoration-thickness:1.5px}
-.priceCard .paymentOffer{margin-top:24px;padding-block:24px 0;border:0}
-.priceCard .comboPriceLabel{margin:0 0 16px;color:#076ca7;font-size:12px;font-weight:850;letter-spacing:.13em;line-height:1.5}
-.priceCard .cashPrice{font-size:18px}
-.cashPrice strong{font-size:24px;font-weight:850;color:#076ca7}
-.comboSavings{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:10px 12px;border:1px solid #badfcd;border-radius:9px;background:#edf8f1;color:#216c4a;font-size:12px;font-weight:750;line-height:1.5}
-.comboSavings svg{width:18px;height:18px;flex:none}
-.priceCard .installmentTotal{margin-top:12px;font-size:12px;line-height:1.6;color:#718391}
-@media(max-width:767px){.valueBreakdown{padding:16px 14px;margin-top:24px}.valueBreakdown>div{gap:12px}.valueBreakdown dt{font-size:13px}.valueBreakdown dd{font-size:14px}.separateTotal dt{font-size:11px}.separateTotal dd{font-size:16px}.comboOfferBadge{font-size:9px;margin-bottom:18px}.comboSavings{font-size:11px}.cashPrice strong{font-size:23px}}
