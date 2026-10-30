@@ -5,11 +5,12 @@ import { ArrowRight, Calendar, Check, Clock } from "@/components/icons";
 import DestraveFaq from "@/components/destrave/DestraveFaq";
 import WorkshopPhoto from "./WorkshopPhoto";
 import ScrollOpening from "./ScrollOpening";
+import TrackedCheckout from "./TrackedCheckout";
+import type { Tracking } from "./checkout";
 import { LotCountdown, LotPricing, PageMotion } from "./Experience";
 import testimonials from "./testimonials.json";
 import styles from "./oficina-organizada.module.css";
 
-const CHECKOUT_URL = "https://payfast.greenn.com.br/redirect/300783";
 const heroCheckpoints = [
   "Aprender, na prática, como funciona o quadro de serviços.",
   "Entender o passo a passo que cada serviço deve seguir, da entrada até a finalização.",
@@ -29,14 +30,14 @@ const faqs = [
   {q:"Vai ficar gravada?",a:"[DEFINIR]"},
   {q:"Quando será?",a:"Quarta-feira, 25 de novembro de 2026, às 19h."},
 ];
-function Cta({children,checkout = false}:{children:ReactNode;checkout?:boolean}) {
-  return <a className={styles.cta} href={checkout ? CHECKOUT_URL : "#ingresso"}>{children}<ArrowRight aria-hidden="true" className={styles.ctaArrow} /></a>;
+function Cta({children}:{children:ReactNode}) {
+  return <a className={styles.cta} href="#ingresso">{children}<ArrowRight aria-hidden="true" className={styles.ctaArrow} /></a>;
 }
 function CheckList({items}:{items:string[]}) {
   return <ul className={styles.checkList}>{items.map(text => <li key={text}><Check aria-hidden="true" /><span>{text}</span></li>)}</ul>;
 }
 
-export default function OficinaOrganizada() {
+export default function OficinaOrganizada({ initialTracking = {} }: { initialTracking?: Tracking }) {
   const initialTime = Date.now();
   return <div data-oficina-page className={`destrave-theme ${styles.page}`}>
     <LotCountdown initialTime={initialTime} />
@@ -122,7 +123,7 @@ export default function OficinaOrganizada() {
       <LotPricing initialTime={initialTime} />
       <LotCountdown variant="offer" initialTime={initialTime} />
       <CheckList items={["Acesso ao treinamento","Material de apoio","Bônus para quem estiver até o final"]} />
-      <Cta checkout>QUERO GARANTIR MEU INGRESSO</Cta>
+      <TrackedCheckout initialTime={initialTime} initialTracking={initialTracking}>QUERO GARANTIR MEU INGRESSO</TrackedCheckout>
     </div></section>
     <div className={styles.faq}><DestraveFaq items={faqs} /></div>
     <section className={`${styles.section} ${styles.final}`}><div className={styles.container}><p className={styles.eyebrow}>OPERAÇÃO: OFICINA ORGANIZADA</p><h2>COMECE 2027 COM UMA OFICINA MAIS <em>ORGANIZADA.</em></h2><Cta>QUERO PARTICIPAR</Cta></div></section>

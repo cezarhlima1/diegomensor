@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { lots, getLotIndex, formatPrice } from "./event-config";
 import styles from "./oficina-organizada.module.css";
 
-function useClock(initialTime: number) {
+export function useClock(initialTime: number) {
   const [now, setNow] = useState(initialTime);
   useEffect(() => {
     const update = () => setNow(Date.now());

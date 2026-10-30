@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import FacebookPixel from "@/components/FacebookPixel";
 import ClarityScript from "@/components/ClarityScript";
 import OficinaOrganizada from "@/components/oficina-organizada/OficinaOrganizada";
+import { extractTracking } from "@/components/oficina-organizada/checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function OficinaOrganizadaPage() {
+export default async function OficinaOrganizadaPage({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const initialTracking = extractTracking({ get: key => {
+    const value = params[key];
+    return Array.isArray(value) ? value[0] ?? null : value ?? null;
+  } });
   return (
     <>
       <FacebookPixel />
       <ClarityScript projectId="xthz0xw8o1" />
       <main>
-        <OficinaOrganizada />
+        <OficinaOrganizada initialTracking={initialTracking} />
       </main>
     </>
   );
