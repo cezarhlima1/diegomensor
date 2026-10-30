@@ -11,24 +11,24 @@ export const ATTRIBUTION_STORAGE_KEY = "oficina-organizada:attribution:v1";
 // append parameters: spelling, capitalization and encoding are intentional.
 export const checkoutLinks: Record<string, readonly [string, string, string]> = {
   instagram: [
-    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Storie",
-    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Stories",
-    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Storie",
+    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Storie&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Stories&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Storie&b_id_1=201423&b_offer_1=DQqf2S&b_id_2=201377&b_offer_2=ezTzvW&b_id_3=201432&b_offer_3=BlsB7I",
   ],
   manychat: [
-    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Manychat",
-    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Manychat",
-    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Manychat",
+    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Manychat&b_id_1=201423&b_offer_1=DQqf2S&b_id_2=201377&b_offer_2=ezTzvW&b_id_3=201432&b_offer_3=BlsB7I",
   ],
   meta: [
-    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Campanha+de+tr%C3%A1fego",
-    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Campanha+de+tr%C3%A1fego",
-    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Campanha+de+tr%C3%A1fego",
+    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
   ],
   whatsapp: [
-    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+WhatsApp",
-    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Whatsapp",
-    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Whatsapp",
+    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+WhatsApp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
   ],
 };
 
