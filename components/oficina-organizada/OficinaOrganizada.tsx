@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Footer from "@/components/Footer";
-import { ArrowRight, Calendar, Check, Clock } from "@/components/icons";
+import { Calendar, Check, Clock } from "@/components/icons";
 import DestraveFaq from "@/components/destrave/DestraveFaq";
 import WorkshopPhoto from "./WorkshopPhoto";
 import ScrollOpening from "./ScrollOpening";
@@ -30,17 +30,17 @@ const faqs = [
   {q:"Vai ficar gravada?",a:"[DEFINIR]"},
   {q:"Quando será?",a:"Quarta-feira, 25 de novembro de 2026, às 19h."},
 ];
-function Cta({children}:{children:ReactNode}) {
-  return <a className={styles.cta} href="#ingresso">{children}<ArrowRight aria-hidden="true" className={styles.ctaArrow} /></a>;
-}
 function CheckList({items}:{items:string[]}) {
   return <ul className={styles.checkList}>{items.map(text => <li key={text}><Check aria-hidden="true" /><span>{text}</span></li>)}</ul>;
 }
 
 export default function OficinaOrganizada({ initialTracking = {} }: { initialTracking?: Tracking }) {
   const initialTime = Date.now();
+  function Cta({ children }: { children: ReactNode }) {
+    return <TrackedCheckout initialTime={initialTime} initialTracking={initialTracking}>{children}</TrackedCheckout>;
+  }
   return <div data-oficina-page className={`destrave-theme ${styles.page}`}>
-    <LotCountdown initialTime={initialTime} />
+    <LotCountdown initialTime={initialTime} initialTracking={initialTracking} />
     <section className={styles.hero}>
       <ScrollOpening>
       <div className={styles.heroCopy} id="promessa">

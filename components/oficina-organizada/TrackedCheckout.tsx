@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { ArrowRight } from "@/components/icons";
-import { useClock } from "./Experience";
+import { useClock } from "./useClock";
 import { ATTRIBUTION_STORAGE_KEY, extractTracking, getCheckoutUrl, mergeAttribution, type Tracking } from "./checkout";
 import styles from "./oficina-organizada.module.css";
 
@@ -22,8 +22,8 @@ function readBrowserTracking(fallback: Tracking): Tracking {
   return tracking;
 }
 
-export default function TrackedCheckout({ initialTime, initialTracking, children }: {
-  initialTime: number; initialTracking: Tracking; children: ReactNode;
+export default function TrackedCheckout({ initialTime, initialTracking, children, className = styles.cta, showArrow = true }: {
+  initialTime: number; initialTracking: Tracking; children: ReactNode; className?: string; showArrow?: boolean;
 }) {
   const now = useClock(initialTime);
   const [tracking, setTracking] = useState(initialTracking);
@@ -34,7 +34,7 @@ export default function TrackedCheckout({ initialTime, initialTracking, children
     const latestTracking = readBrowserTracking(tracking);
     event.currentTarget.href = getCheckoutUrl(Date.now(), latestTracking);
   };
-  return <a className={styles.cta} href={getCheckoutUrl(now, tracking)} onClick={refreshDestination} onAuxClick={refreshDestination}>
-    {children}<ArrowRight aria-hidden="true" className={styles.ctaArrow} />
+  return <a className={className} data-checkout href={getCheckoutUrl(now, tracking)} onClick={refreshDestination} onAuxClick={refreshDestination}>
+    {children}{showArrow && <ArrowRight aria-hidden="true" className={styles.ctaArrow} />}
   </a>;
 }

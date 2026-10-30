@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useClock } from "./useClock";
+import TrackedCheckout from "./TrackedCheckout";
+import type { Tracking } from "./checkout";
 import { lots, getLotIndex, formatPrice } from "./event-config";
 import styles from "./oficina-organizada.module.css";
 
-export function useClock(initialTime: number) {
-  const [now, setNow] = useState(initialTime);
-  useEffect(() => {
-    const update = () => setNow(Date.now());
-    update();
-    const interval = window.setInterval(update, 1000);
-    document.addEventListener("visibilitychange", update);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", update); };
-  }, []);
-  return now;
-}
 
 export function LotPricing({ initialTime }: { initialTime: number }) {
   const now = useClock(initialTime);
@@ -23,7 +15,7 @@ export function LotPricing({ initialTime }: { initialTime: number }) {
   return <><div className={styles.lotBadge}>{lot.label}</div><div className={styles.price} aria-label={formatPrice(lot.price)}><span>R$</span>{whole}<small>,{cents}</small></div></>;
 }
 
-export function LotCountdown({ initialTime, variant = "banner" }: { initialTime: number; variant?: "banner" | "offer" }) {
+export function LotCountdown({ initialTime, initialTracking = {}, variant = "banner" }: { initialTime: number; initialTracking?: Tracking; variant?: "banner" | "offer" }) {
   const now = useClock(initialTime);
   const index = getLotIndex(now);
   const lot = lots[index];
@@ -37,7 +29,7 @@ export function LotCountdown({ initialTime, variant = "banner" }: { initialTime:
   const timer = <div className={styles.timer} role="timer" aria-live="off" aria-label={`${units[0][0]} dias, ${units[1][0]} horas, ${units[2][0]} minutos e ${units[3][0]} segundos ${finalLot ? "para o evento" : "para a virada do lote"}`}>
     {units.map(([value,label]) => <span key={label}><b>{String(value).padStart(2,"0")}</b><small>{label}</small></span>)}
   </div>;
-  if (variant === "banner") return <a className={styles.urgencyBar} href="#ingresso"><span className={styles.urgencyLabel}><i aria-hidden="true" />{expired ? "A IMERSÃO JÁ COMEÇOU" : finalLot ? "ÚLTIMO LOTE!" : "O LOTE VAI VIRAR!"}</span>{timer}</a>;
+  if (variant === "banner") return <TrackedCheckout initialTime={initialTime} initialTracking={initialTracking} className={styles.urgencyBar} showArrow={false}><span className={styles.urgencyLabel}><i aria-hidden="true" />{expired ? "A IMERSÃO JÁ COMEÇOU" : finalLot ? "ÚLTIMO LOTE!" : "O LOTE VAI VIRAR!"}</span>{timer}</TrackedCheckout>;
   const progress = Math.min(100,Math.max(0,((now - start) / (end - start)) * 100));
   return <div className={styles.lotProgress}>
     <p>{expired ? "O evento já começou." : finalLot ? "Último lote. Este é o preço final." : `${index === 0 ? "O lote zero" : index === 1 ? "O primeiro lote" : "O segundo lote"} vai virar.`}</p>
