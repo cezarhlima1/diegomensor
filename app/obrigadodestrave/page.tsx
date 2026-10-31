@@ -1,24 +1,12 @@
-import type { Metadata } from "next";
-import FacebookPixel from "@/components/FacebookPixel";
-import Footer from "@/components/Footer";
-import ObrigadoDestrave from "@/components/ObrigadoDestrave";
-import ClientEffects from "@/components/ClientEffects";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Cadastro quase concluído — Imersão DESTRAVE",
-  description: "Responda à pesquisa rápida e entre no grupo oficial da Imersão DESTRAVE.",
-  robots: { index: false, follow: false },
-};
-
-export default function ObrigadoDestravePage() {
-  return (
-    <>
-      <FacebookPixel conversion="CompleteRegistration" />
-      <main>
-        <ObrigadoDestrave />
-      </main>
-      <Footer />
-      <ClientEffects />
-    </>
-  );
+export default async function ObrigadoDestravePage({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (Array.isArray(value)) value.forEach(item => params.append(key, item));
+    else if (value !== undefined) params.append(key, value);
+  }
+  redirect(`/obrigadolac${params.size ? `?${params}` : ""}`);
 }

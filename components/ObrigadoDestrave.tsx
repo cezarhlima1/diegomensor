@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Check, WhatsApp } from "./icons";
 import { DESTRAVE_WHATSAPP_GROUP_URL } from "@/lib/links";
@@ -154,6 +155,7 @@ export default function ObrigadoDestrave() {
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[920px]">
         <div className="cta-reveal text-center destrave-obrigado__header">
+          <Image src="/logo-oficinaorganizada.png" alt="Operação: Oficina Organizada" width={2000} height={2000} sizes="180px" className="lac-logo" priority />
           <div className="destrave-progress-shell max-w-[680px] mx-auto mb-9">
             <div className="flex items-center justify-between font-mono text-xs uppercase tracking-[.12em] mb-2">
               <span className="text-muted">Cadastro</span>
@@ -171,9 +173,9 @@ export default function ObrigadoDestrave() {
 
           <span className="tag tag--red">2 passos para concluir sua inscrição</span>
           <h1 className="destrave-obrigado__title font-display font-black mt-7 mx-auto max-w-[800px] leading-[1.04] tracking-[-.035em]">
-            <span className="destrave-title-line destrave-title-line--1 block text-[clamp(27px,4.4vw,44px)]">🚨 Seu cadastro para a</span>
+            <span className="destrave-title-line destrave-title-line--1 block text-[clamp(27px,4.4vw,44px)]">Seu cadastro para a</span>
             <span className="destrave-title-line destrave-title-line--2 block text-blue text-[clamp(34px,5.8vw,58px)] my-2">
-              Imersão DESTRAVE sua oficina
+              Operação: Oficina Organizada
             </span>
             <span className="destrave-title-line destrave-title-line--3 block text-[clamp(27px,4.4vw,44px)]">está quase concluído!</span>
           </h1>
@@ -258,7 +260,7 @@ export default function ObrigadoDestrave() {
 
           {currentQuestion === 8 && <>
             <FieldTitle number={8}>Qual solução faria você terminar essa aula pensando: “Só isso já valeu a pena participar”?</FieldTitle>
-            <Hint>Quando você sair da aula do dia 08/08, se tiver a informação que resolve AQUELE problema, já vai ter valido a pena. Qual é esse problema?</Hint>
+            <Hint>Quando você sair da aula, se tiver a informação que resolve AQUELE problema, já vai ter valido a pena. Qual é esse problema?</Hint>
             <textarea className={textAreaClass} value={form.solucaoEsperada} onFocus={(e) => keepFieldVisible(e.currentTarget)} onChange={(e) => update("solucaoEsperada", e.target.value)} />
           </>}
 
@@ -311,7 +313,7 @@ export default function ObrigadoDestrave() {
 
               <p className="text-muted mb-4">É por lá que vamos enviar:</p>
               <div className="grid sm:grid-cols-2 gap-3 mb-8 text-left max-w-[650px] mx-auto">
-                {["Informações importantes sobre o evento", "Materiais de apoio", "Horários e orientações", "Avisos exclusivos", "Conteúdos de preparação para você chegar no sábado aproveitando o máximo da experiência."].map((item) => (
+                {["Informações importantes sobre o evento", "Materiais de apoio", "Horários e orientações", "Avisos exclusivos", "Conteúdos de preparação para você chegar à aula aproveitando o máximo da experiência."].map((item) => (
                   <div
                     key={item}
                     className="flex items-start gap-3 text-offwhite bg-white/[.035] border border-line rounded-xl p-3.5 last:sm:col-span-2"

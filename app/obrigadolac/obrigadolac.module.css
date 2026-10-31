@@ -1,0 +1,72 @@
+.page {
+  --color-bg: #171615;
+  --color-bg-deep: #11100f;
+  --color-card: #23201e;
+  --color-card-2: #2b2521;
+  --color-line: #ffffff20;
+  --color-blue: #ec5703;
+  --color-blue-deep: #ab4110;
+  --color-blue-soft: #f3ac7f;
+  --color-muted: #d1c7be;
+  --color-offwhite: #faf5ef;
+  background: #171615;
+  color: #faf5ef;
+  font-family: var(--font-manrope), sans-serif;
+  isolation: isolate;
+}
+.page :global(.destrave-obrigado) {
+  background: radial-gradient(ellipse at 50% 0%, #ab41101f, transparent 65%), #1c1b1a;
+}
+.page :global(.hero-bg),
+.page :global(.destrave-obrigado)::before,
+.page :global(.price-card)::before,
+.page :global(.price-card)::after,
+.page :global(.pointer-glow) { display: none; }
+.page :global(.lac-logo) {
+  display: block;
+  width: 180px;
+  height: 100px;
+  object-fit: contain;
+  margin: 0 auto 32px;
+}
+.page :global(.tag) {
+  color: #edaa7e;
+  background: #ffffff04;
+  border-color: #ffffff20;
+}
+.page :global(.tag)::before { background: #ec5703; box-shadow: 0 0 10px #ec570350; }
+.page :global(.destrave-progress-fill):not(:global(.is-complete)) { box-shadow: 0 0 16px #ec570335; }
+.page :global(.destrave-obrigado__title) { text-shadow: none; }
+.page :global(.destrave-title-line--2) {
+  background: none;
+  color: #ec5703;
+  animation: none;
+  opacity: 1;
+  clip-path: none;
+  transform: none;
+}
+.page :global(.destrave-survey) { border-color: #ffffff15; }
+.page :global(.price-card) {
+  background: #24211e;
+  border: 1px solid #f4c3a222;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px #0002;
+}
+.page :global(.quiz-input) { background: #171615; border-color: #ffffff25; }
+.page :global(.quiz-input):focus { border-color: #ec5703; box-shadow: 0 0 0 3px #ec57031f; }
+.page label:has(input:checked) { border-color: #ec5703b3; background: #ec57031a; }
+.page :global(.btn) {
+  color: #18120e;
+  background: linear-gradient(135deg, #ec5703, #f49a55);
+  border: 1px solid #ffb07a55;
+  border-radius: 10px;
+  box-shadow: 0 12px 35px -15px #ec570380;
+}
+.page :global(.btn):hover { box-shadow: 0 16px 36px -12px #ec570390; }
+.page :global(.btn--ghost) { background: #ffffff06; color: #faf5ef; border-color: #ffffff20; box-shadow: none; }
+.page :global(.bg-blue\/60) { box-shadow: 0 0 14px #ec570350; }
+.page footer { background: #151312; }
+@media (max-width: 767px) {
+  .page :global(.lac-logo) { width: 150px; height: 82px; margin-bottom: 24px; }
+  .page :global(.btn--wide) { font-size: 14px; }
+}
