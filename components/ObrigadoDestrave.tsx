@@ -155,7 +155,7 @@ export default function ObrigadoDestrave() {
       <div className="hero-bg" aria-hidden="true" />
       <div className="wrap max-w-[920px]">
         <div className="cta-reveal text-center destrave-obrigado__header">
-          <Image src="/logo-oficinaorganizada.png" alt="Operação: Oficina Organizada" width={2000} height={2000} sizes="180px" className="lac-logo" priority />
+          <Image src="/logooo.branca.png" alt="Operação: Oficina Organizada" width={1774} height={887} sizes="180px" className="lac-logo" priority />
           <div className="destrave-progress-shell max-w-[680px] mx-auto mb-9">
             <div className="flex items-center justify-between font-mono text-xs uppercase tracking-[.12em] mb-2">
               <span className="text-muted">Cadastro</span>
