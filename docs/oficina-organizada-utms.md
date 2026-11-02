@@ -18,9 +18,9 @@
 
 ## Calendário
 
-- Lote 01: 28/10 a 03/11 de 2026, até 23h59, por R$37 — oferta `uEHm9j`.
-- Lote 02: 04/11 a 12/11 de 2026, até 23h59, por R$47 — oferta `fTygOH`.
-- Lote 03: a partir de 13/11 de 2026, por R$57 — oferta `7CnUfU`.
+- Lote 01: 02/11 a 08/11 de 2026, até 23h59, por R$37 — oferta `uEHm9j`.
+- Lote 02: 09/11 a 16/11 de 2026, até 23h59, por R$47 — oferta `fTygOH`.
+- Lote 03: 17/11 até 25/11 de 2026, às 19h, por R$57 — oferta `7CnUfU`.
 - Fuso: America/Sao_Paulo (UTC−03:00).
 
 ## Regras de atribuição

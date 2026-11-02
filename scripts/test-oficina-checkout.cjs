@@ -22,7 +22,7 @@ const fixtures = [
   { source: 'meta', medium: 'paid_social', expected: ['PV - Campanha de tráfego', 'PV - Campanha de tráfego', 'PV - Campanha de tráfego'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I'] },
   { source: 'whatsapp', medium: 'mensagem', expected: ['PV - WhatsApp', 'PV - Whatsapp', 'PV - Whatsapp'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+WhatsApp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I'] },
 ];
-const dates = ['2026-10-30T12:00:00-03:00', '2026-11-05T12:00:00-03:00', '2026-11-14T12:00:00-03:00'];
+const dates = ['2026-11-02T12:00:00-03:00', '2026-11-10T12:00:00-03:00', '2026-11-18T12:00:00-03:00'];
 const offers = ['uEHm9j', 'fTygOH', '7CnUfU'];
 for (const fixture of fixtures) {
   for (let i = 0; i < dates.length; i++) {
@@ -42,14 +42,21 @@ for (const fixture of fixtures) {
 }
 console.log('12 URLs idênticos aos enviados pelo usuário, sem nenhum parâmetro extra: OK');
 for (const [date, offer, price] of [
-  ['2026-11-03T23:59:59-03:00', 'uEHm9j', 37],
-  ['2026-11-04T00:00:00-03:00', 'fTygOH', 47],
-  ['2026-11-12T23:59:59-03:00', 'fTygOH', 47],
-  ['2026-11-13T00:00:00-03:00', '7CnUfU', 57],
+  ['2026-11-02T00:00:00-03:00', 'uEHm9j', 37],
+  ['2026-11-04T00:00:00-03:00', 'uEHm9j', 37],
+  ['2026-11-13T00:00:00-03:00', 'fTygOH', 47],
+  ['2026-11-25T18:59:59-03:00', '7CnUfU', 57],
+  ['2026-11-08T23:59:59-03:00', 'uEHm9j', 37],
+  ['2026-11-09T00:00:00-03:00', 'fTygOH', 47],
+  ['2026-11-16T23:59:59-03:00', 'fTygOH', 47],
+  ['2026-11-17T00:00:00-03:00', '7CnUfU', 57],
 ]) {
   const now = Date.parse(date);
   assert.equal(new URL(getCheckoutUrl(now, {})).pathname, `/200537/offer/${offer}`);
   assert.equal(lots[getLotIndex(now)].price, price);
+  for (const fixture of fixtures) {
+    assert.equal(getCheckoutUrl(now, { utm_source: fixture.source }), fixture.urls[offers.indexOf(offer)], `Virada por origem: ${fixture.source}, ${date}`);
+  }
 }
 const previous = { utm_source: 'manychat', utm_medium: 'automacao', utm_campaign: 'oficina_organizada' };
 assert.deepEqual({ ...mergeAttribution({}, previous) }, previous);
