@@ -21,6 +21,7 @@ const fixtures = [
   { source: 'manychat', medium: 'automacao', expected: ['PV - Manychat', 'PV - Manychat', 'PV - Manychat'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Manychat&b_id_1=201423&b_offer_1=DQqf2S&b_id_2=201377&b_offer_2=ezTzvW&b_id_3=201432&b_offer_3=BlsB7I'] },
   { source: 'meta', medium: 'paid_social', expected: ['PV - Campanha de tráfego', 'PV - Campanha de tráfego', 'PV - Campanha de tráfego'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Campanha+de+tr%C3%A1fego&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I'] },
   { source: 'whatsapp', medium: 'mensagem', expected: ['PV - WhatsApp', 'PV - Whatsapp', 'PV - Whatsapp'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+WhatsApp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=PV+-+Whatsapp&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I'] },
+  { source: 'direct', medium: 'Direct', expected: ['Direct', 'Direct', 'Direct'], urls: ['https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I', 'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I'] },
 ];
 const dates = ['2026-11-02T12:00:00-03:00', '2026-11-10T12:00:00-03:00', '2026-11-18T12:00:00-03:00'];
 const offers = ['uEHm9j', 'fTygOH', '7CnUfU'];
@@ -40,7 +41,7 @@ for (const fixture of fixtures) {
     assert.equal(getLotIndex(Date.parse(dates[i])), i + 1);
   }
 }
-console.log('12 URLs idênticos aos enviados pelo usuário, sem nenhum parâmetro extra: OK');
+console.log('15 URLs idênticos aos enviados pelo usuário, sem nenhum parâmetro extra: OK');
 for (const [date, offer, price] of [
   ['2026-11-02T00:00:00-03:00', 'uEHm9j', 37],
   ['2026-11-04T00:00:00-03:00', 'uEHm9j', 37],
@@ -75,6 +76,20 @@ for (const [date,index] of [['2026-11-08T23:59:59-03:00',0],['2026-11-09T00:00:0
   assert.equal(getCheckoutUrl(Date.parse(date),{utm_source:'instagram',utm_medium:'Biografia'}),biographyUrls[index]);
 }
 console.log('Biografia: URLs literais dos três lotes, aliases bio/Biografia, viradas, retorno e troca para story: OK');
+const directUrls = fixtures.find(fixture => fixture.source === 'direct').urls;
+for (const medium of ['Direct', 'direct', ' DIRECT ']) {
+  for (let i=0;i<dates.length;i++) {
+    const tracking = extractTracking(new URLSearchParams({utm_source:'instagram',utm_medium:medium,utm_campaign:'oficina_organizada',fbclid:'click-123'}));
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),tracking),directUrls[i],`Instagram Direct: ${medium}, lote ${i+1}`);
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),mergeAttribution({},tracking)),directUrls[i],'Retorno preserva Direct');
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),mergeAttribution({utm_source:'instagram',utm_medium:'Biografia'},tracking)),biographyUrls[i],'Biografia substitui Direct');
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),mergeAttribution(tracking,{utm_source:'instagram',utm_medium:'story'})),directUrls[i],'Direct substitui Story');
+  }
+}
+for (const [date,index] of [['2026-11-08T23:59:59-03:00',0],['2026-11-09T00:00:00-03:00',1],['2026-11-16T23:59:59-03:00',1],['2026-11-17T00:00:00-03:00',2]]) {
+  assert.equal(getCheckoutUrl(Date.parse(date),{utm_source:'instagram',utm_medium:'Direct'}),directUrls[index]);
+}
+console.log('Direct: URLs literais, três lotes, viradas, retorno e troca de origem: OK');
 const previous = { utm_source: 'manychat', utm_medium: 'automacao', utm_campaign: 'oficina_organizada' };
 assert.deepEqual({ ...mergeAttribution({}, previous) }, previous);
 assert.deepEqual({ ...mergeAttribution({ fbclid: 'new-click' }, previous) }, { ...previous, fbclid: 'new-click' });

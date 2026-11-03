@@ -20,6 +20,11 @@ export const checkoutLinks: Record<string, readonly [string, string, string]> = 
     "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=Biografia&b_id_1=201432&b_offer_1=BlsB7I&b_id_2=201377&b_offer_2=ezTzvW&b_id_3=201423&b_offer_3=DQqf2S",
     "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=Biografia&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
   ],
+  direct: [
+    "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=Direct&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+  ],
   manychat: [
     "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
     "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Manychat&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
@@ -58,7 +63,9 @@ export function getCheckoutUrl(now: number, tracking: Tracking): string {
   const index = getLotIndex(now);
   const source = tracking.utm_source?.trim().toLowerCase();
   const medium = tracking.utm_medium?.trim().toLowerCase();
-  const origin = source === 'instagram' && (medium === 'bio' || medium === 'biografia') ? 'biografia' : source;
+  const origin = source === 'instagram' && medium === 'direct'
+    ? 'direct'
+    : source === 'instagram' && (medium === 'bio' || medium === 'biografia') ? 'biografia' : source;
   const links = origin && Object.hasOwn(checkoutLinks, origin) ? checkoutLinks[origin] : undefined;
   if (links && index >= 1) return links[index - 1];
   const url = new URL(lots[index].checkoutUrl);
