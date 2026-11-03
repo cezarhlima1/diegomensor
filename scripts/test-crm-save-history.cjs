@@ -18,7 +18,10 @@ const db = {query:async(sql,args)=>{
  return {rows:[]};
 }};
 const helpers = load('lib/crm-leads.ts', {'server-only':{}});
+const auth = load('lib/crm-auth.ts', {'@/lib/supabase/server':{createSupabaseServerClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'admin',email:'susanesamt@gmail.com'}}})}})}});
 const route = load('app/api/crm/route.ts', {
+ '@/lib/crm-auth': auth,
+ '@/lib/crm-monitoring': {auditLeadChange:()=>null},
  'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},
  '@/lib/crm-db':{withCrmTransaction:async fn=>fn(db)},
  '@/lib/crm-leads':helpers,

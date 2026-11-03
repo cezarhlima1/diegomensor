@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { PoolClient } from "pg";
 import { crmPool, withCrmTransaction } from "@/lib/crm-db";
 import { saveJourneyHistory, assertValidSourceForNewLead, supportsFollowUpAt, supportsMeetingOutcome, supportsMeetingScheduledFor, upsertLeadRecord } from "@/lib/crm-leads";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { authorized } from "@/lib/crm-auth";
+import { auditLeadChange } from "@/lib/crm-monitoring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,31 +18,6 @@ type Snapshot = {
   stages?: string[];
 };
 
-async function authorized() {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) return { ok: false, reason: "session-missing" } as const;
-    const allowedEmails = `${process.env.CRM_ALLOWED_EMAIL || ""},susanesamt@gmail.com`
-      .replace(/["']/g, "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean);
-    if (allowedEmails.includes(user.email.trim().toLowerCase())) return { ok: true, isAdmin: true, permissions: ["geral", "comercial", "trafego", "campanhas", "pipeline", "contatos", "financeiro", "mensagens"] } as const;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_super_admin, crm_access, crm_is_admin, crm_permissions")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.is_super_admin) return { ok: true, isAdmin: true, permissions: ["geral", "comercial", "trafego", "campanhas", "pipeline", "contatos", "financeiro", "mensagens"] } as const;
-    if (profile?.crm_access) return { ok: true, isAdmin: Boolean(profile.crm_is_admin), permissions: Array.isArray(profile.crm_permissions) ? profile.crm_permissions : [] } as const;
-
-    return { ok: false, reason: "email-not-allowed", account: user.email } as const;
-  } catch {
-    return { ok: false, reason: "auth-unavailable" } as const;
-  }
-}
 
 function can(auth: { isAdmin: boolean; permissions: readonly string[] }, ...permissions: string[]) {
   return auth.isAdmin || permissions.some((permission) => auth.permissions.includes(permission));
@@ -218,6 +194,7 @@ export async function PATCH(request: Request) {
     const lead = body.record;
     try {
       const saved = await withCrmTransaction(async (db) => {
+        const before = await db.query("select to_jsonb(l) as snapshot from public.crm_leads l where id=$1 for update", [lead.id]);
         const columns = await purchaseColumns(db);
         const meetingScheduledSupported = await supportsMeetingScheduledFor(db);
         const meetingOutcomeSupported = await supportsMeetingOutcome(db);
@@ -240,6 +217,9 @@ export async function PATCH(request: Request) {
           await upsertPurchase(db, lead, purchase, columns);
         }
         await saveJourneyHistory(db, lead);
+        const after = await db.query("select to_jsonb(l) as snapshot from public.crm_leads l where id=$1", [lead.id]);
+        const activity = auditLeadChange(before.rows[0]?.snapshot, after.rows[0]?.snapshot, auth.userId);
+        if (activity) await saveJourneyHistory(db, { id: lead.id, journeyHistory: [activity] }, true);
         const verification = await db.query(`select stage,product,tags,contact_checkpoints,journey_history,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         return verification.rows[0];
       });

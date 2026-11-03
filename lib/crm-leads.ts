@@ -49,10 +49,10 @@ export async function upsertLeadRecord(db: PoolClient, lead: Record<string, unkn
 }
 
 // Merge by event ID so retries and older snapshots cannot erase past occurrences.
-export async function saveJourneyHistory(db: PoolClient, lead: Record<string, unknown>) {
+export async function saveJourneyHistory(db: PoolClient, lead: Record<string, unknown>, trustedActivity = false) {
   if (!Array.isArray(lead.journeyHistory) || !lead.journeyHistory.length) return;
   await db.query(`update public.crm_leads set journey_history=(
     select coalesce(jsonb_agg(event order by event->>'at', event->>'id'), '[]'::jsonb)
     from (select distinct on (event->>'id') event from jsonb_array_elements(journey_history || $2::jsonb) event order by event->>'id') merged
-  ) where id=$1`, [lead.id, JSON.stringify(lead.journeyHistory)]);
+  ) where id=$1`, [lead.id, JSON.stringify(lead.journeyHistory.filter((event) => trustedActivity || event?.kind !== "activity"))]);
 }

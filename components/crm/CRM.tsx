@@ -7,11 +7,12 @@ import { compareNewLeadEntries, type EntryAudit } from "@/lib/crm-entry-order";
 import ContactSummary from './ContactSummary';
 import { contactDay, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
+import Monitoring from "./Monitoring";
 import CommercialActions from "./CommercialActions";
 import { allQuestions } from "@/components/formulario-mentoria/questions";
 
 type Stage = string;
-type View = CrmModule | "acoes" | "admin";
+type View = CrmModule | "acoes" | "admin" | "monitoramento";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
@@ -952,9 +953,10 @@ export default function CRM() {
     ["contatos", "Leads", "◇"],
     ["financeiro", "Financeiro", "$"],
     ["mensagens", "Detalhes", "⚙"],
+    ["monitoramento", "Monitoramento", "◷"],
     ["admin", "ADM", "♙"],
   ];
-  const navigation = allNavigation.filter(([id]) => id === "admin" ? access.isAdmin : id === "acoes" ? access.isAdmin || access.permissions.includes("campanhas") : access.isAdmin || access.permissions.includes(id as CrmModule));
+  const navigation = allNavigation.filter(([id]) => (id === "admin" || id === "monitoramento") ? access.isAdmin : id === "acoes" ? access.isAdmin || access.permissions.includes("campanhas") : access.isAdmin || access.permissions.includes(id as CrmModule));
   useEffect(() => {
     if (!navigation.length || navigation.some(([id]) => id === view)) return;
     setView(navigation[0][0]);
@@ -1022,6 +1024,7 @@ export default function CRM() {
         )}
         {view === "financeiro" && <FinanceDashboard leads={leads} traffic={traffic} expenses={expenses} closers={closers} month={selectedMonth} setMonth={setSelectedMonth} saveExpense={saveExpense} removeExpense={removeExpense} updateLead={updateLead} saveCloserGoal={saveCloserGoal} />}
         {view === "mensagens" && <Details products={catalogProducts} sources={catalogSources} saveProducts={saveProducts} saveSources={saveSources} renameProduct={renameProduct} renameSource={renameSource} deleteRecord={deleteRecord} />}
+        {view === "monitoramento" && access.isAdmin && <Monitoring />}
         {view === "admin" && access.isAdmin && <CRMAdmin />}
       </section>
       {adding && <LeadModal existing={leads} products={catalogProducts} sources={catalogSources} close={() => setAdding(false)} duplicate={(lead) => { setAdding(false); setSelected(lead); }} save={addLead} />}
@@ -2275,7 +2278,7 @@ function LeadDrawer({
         </section>
         <section className={styles.leadDatesSection}>
           <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
-            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'reentry' ? `Nova entrada por ${item.funnel || item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'activity' ? (item.actions || []).join(' · ') : item.kind === 'reentry' ? `Nova entrada por ${item.funnel || item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
             {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
           </details>
         </section>
