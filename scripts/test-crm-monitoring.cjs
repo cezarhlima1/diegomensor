@@ -29,8 +29,8 @@ assert.equal(helpers.auditLeadChange(undefined,after,'closer').actions[0],'Lead 
 const closers = [{id:'one', name:'Ana'}, {id:'two', name:'Ana'}];
 assert.equal(helpers.closerSelection([closers[0]], 'closers'), 'one');
 assert.equal(helpers.closerSelection(closers, 'one'), 'one');
-assert.equal(helpers.closerSelection(closers, 'removed'), 'closers');
-assert.equal(helpers.closerSelection([], 'one'), 'closers');
+assert.equal(helpers.closerSelection(closers, 'removed'), 'one');
+assert.equal(helpers.closerSelection([], 'one'), '');
 const teamEvents = [{leadId:'a',event:{actorId:'one'}},{leadId:'a',event:{actorId:'one'}},{leadId:'b',event:{actorId:'admin'}}];
 const teamSales = [{actorId:'one',gross:100},{actorId:'admin',gross:900},{gross:500}];
 const performance = helpers.closerPerformance(closers, teamEvents, teamSales, 'closers');
@@ -51,7 +51,7 @@ const metrics = helpers.activityMetrics([
 assert.equal(metrics.contacts,1); assert.equal(metrics.proposals,1);
 assert.equal(metrics.meetings,1); assert.equal(metrics.stages,2);
 assert.equal(metrics.noShows,1); assert.equal(metrics.returns,1);
-let auth = {ok:true,isAdmin:false}; let queries = 0; let queriedClosers = false;
+let auth = {ok:true,isAdmin:false}; let queries = 0; let queriedClosers = false; let expectedCloser = 'one';
 const route = load('app/api/crm/monitoring/route.ts',{
  'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},
  '@/lib/crm-auth':{authorized:async()=>auth},
@@ -65,7 +65,7 @@ const route = load('app/api/crm/monitoring/route.ts',{
    };
    return query;
  }})},
- '@/lib/crm-db':{crmPool:()=>({query:async(sql,args)=>{queries++; assert.ok(!sql.includes('public.profiles'), 'Profiles belong to Supabase, not the CRM database'); return {rows:[]};}})},
+ '@/lib/crm-db':{crmPool:()=>({query:async(sql,args)=>{queries++; assert.equal(args[2], expectedCloser); assert.ok(sql.includes(sql.includes('crm_purchases') ? 'p.closer_user_id::text=$3' : "e.event->>'actorId'=$3")); assert.ok(!sql.includes('public.profiles'), 'Profiles belong to Supabase, not the CRM database'); return {rows:[]};}})},
  '@/lib/crm-monitoring':helpers,
 });
 (async()=>{
@@ -73,7 +73,8 @@ const route = load('app/api/crm/monitoring/route.ts',{
  assert.equal((await route.GET(request)).status,403); assert.equal(queries,0);
  auth={ok:false}; assert.equal((await route.GET(request)).status,401); assert.equal(queries,0);
  auth={ok:true,isAdmin:true}; assert.equal((await route.GET({url:'http://localhost/api/crm/monitoring?date=no'})).status,400);
- const result=await route.GET(request); assert.equal(result.status,200); assert.equal(queries,2); assert.ok(queriedClosers); assert.equal(result.body.closers.length,2);
+ const result=await route.GET(request); assert.equal(result.status,200); assert.equal(queries,2); assert.ok(queriedClosers); assert.equal(result.body.closers.length,2); assert.equal(result.body.selectedCloserId,'one');
+ expectedCloser = 'two'; const filtered = await route.GET({url:request.url+'&closerId=two'}); assert.equal(filtered.body.selectedCloserId,'two');
  let saved=[];
  const leads=load('lib/crm-leads.ts',{'server-only':{}});
  const db={query:async(sql,args)=>{saved=JSON.parse(args[1]);}};

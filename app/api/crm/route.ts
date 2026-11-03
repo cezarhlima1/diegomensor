@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { crmPool, withCrmTransaction } from "@/lib/crm-db";
 import { saveJourneyHistory, assertValidSourceForNewLead, supportsFollowUpAt, supportsMeetingOutcome, supportsMeetingScheduledFor, upsertLeadRecord } from "@/lib/crm-leads";
 import { authorized } from "@/lib/crm-auth";
+import { purchaseCommission } from "@/lib/crm-commission-store";
 import { auditLeadChange } from "@/lib/crm-monitoring";
 
 export const runtime = "nodejs";
@@ -40,7 +41,7 @@ async function purchaseColumns(db: PoolClient) {
 async function upsertPurchase(db: PoolClient, lead: Record<string, unknown>, purchase: Record<string, unknown>, columns: { origin: boolean; source: boolean }) {
   const campaign = purchase.origin === "campaign" || (purchase.origin == null && !String(purchase.id || "").startsWith("ascension-") && Boolean(purchase.externalSaleCode || purchase.campaignId));
   const base = [purchase.id, lead.id, purchase.product, Number(purchase.value) || 0, Number(purchase.netValue) || 0, purchase.closedAt, Boolean(purchase.repurchase)];
-  const commission = [purchase.closerUserId || null, purchase.closerName || null, Math.max(0, Math.min(100, Number(purchase.commissionRate) || 0)), "received"];
+  const commission = [purchase.closerUserId || null, purchase.closerName || null, await purchaseCommission(db, purchase), "received"];
   if (columns.origin && columns.source) {
     await db.query("insert into public.crm_purchases(id,lead_id,product,gross_value,net_value,closed_at,is_repurchase,purchase_origin,purchase_source,external_sale_code,traffic_campaign_id,payment_method,payment_provider,payment_notes,closer_user_id,closer_name,commission_rate,commission_basis) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) on conflict(id) do update set lead_id=excluded.lead_id,product=excluded.product,gross_value=excluded.gross_value,net_value=excluded.net_value,closed_at=excluded.closed_at,is_repurchase=excluded.is_repurchase,purchase_origin=excluded.purchase_origin,purchase_source=excluded.purchase_source,external_sale_code=excluded.external_sale_code,traffic_campaign_id=excluded.traffic_campaign_id,payment_method=excluded.payment_method,payment_provider=excluded.payment_provider,payment_notes=excluded.payment_notes,closer_user_id=excluded.closer_user_id,closer_name=excluded.closer_name,commission_rate=excluded.commission_rate,commission_basis=excluded.commission_basis", [...base, campaign ? "campaign" : "pipeline", campaign ? "Tráfego" : purchase.source || lead.source || "Cadastro", purchase.externalSaleCode || null, purchase.campaignId || null, purchase.paymentMethod || null, purchase.paymentProvider || null, purchase.paymentNotes || "", ...commission]);
   } else if (columns.origin) {
@@ -221,9 +222,10 @@ export async function PATCH(request: Request) {
         const activity = auditLeadChange(before.rows[0]?.snapshot, after.rows[0]?.snapshot, auth.userId);
         if (activity) await saveJourneyHistory(db, { id: lead.id, journeyHistory: [activity] }, true);
         const verification = await db.query(`select stage,product,tags,contact_checkpoints,journey_history,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
-        return verification.rows[0];
+        const commissions = await db.query('select id,commission_rate from public.crm_purchases where lead_id=$1', [lead.id]);
+        return { ...verification.rows[0], purchaseCommissions: commissions.rows.map(row => ({ id: row.id, commissionRate: Number(row.commission_rate) })) };
       });
-      return NextResponse.json({ ok: true, saved: { stage: saved.stage, product: saved.product, tags: saved.tags || [], contactCheckpoints: saved.contact_checkpoints || [], journeyHistory: saved.journey_history || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
+      return NextResponse.json({ ok: true, saved: { purchaseCommissions: saved.purchaseCommissions, stage: saved.stage, product: saved.product, tags: saved.tags || [], contactCheckpoints: saved.contact_checkpoints || [], journeyHistory: saved.journey_history || [], createdAt: saved.created_at, conversationAt: saved.conversation_at, meetingAt: saved.meeting_at, meetingScheduledFor: saved.meeting_scheduled_for, meetingOutcome: saved.meeting_outcome, followUpAt: saved.follow_up_at, proposalAt: saved.proposal_at, closedAt: saved.closed_at, updatedAt: saved.updated_at } });
     } catch (error) {
       console.error("CRM lead PATCH failed", error);
       const message = error instanceof Error ? error.message : "";

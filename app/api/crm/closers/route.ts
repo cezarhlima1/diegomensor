@@ -3,6 +3,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { crmPool } from "@/lib/crm-db";
 
+import { commissionPolicies } from "@/lib/crm-commission-store";
+import { defaultCommissionPolicy } from "@/lib/crm-commissions";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,9 @@ export async function GET(request: Request) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("profiles").select("id, nome, email, crm_commission_rate").eq("crm_access", true).eq("crm_is_closer", true).order("nome");
   if (error) return NextResponse.json({ error: "database-unavailable" }, { status: 503 });
+  let policies: Awaited<ReturnType<typeof commissionPolicies>>;
+  try { policies = await commissionPolicies(); }
+  catch { return NextResponse.json({ error: "commission-policies-unavailable" }, { status: 503 }); }
   let goals = new Map<string, number>();
   if (/^\d{4}-\d{2}$/.test(month)) {
     try {
@@ -32,7 +38,7 @@ export async function GET(request: Request) {
       console.error("CRM closer goals GET failed", reason);
     }
   }
-  return NextResponse.json({ closers: (data || []).map((profile) => ({ id: profile.id, name: profile.nome || profile.email, email: profile.email, commissionRate: Number(profile.crm_commission_rate) || 0, goal: goals.get(profile.id) || 0 })) });
+  return NextResponse.json({ closers: (data || []).map((profile) => ({ id: profile.id, name: profile.nome || profile.email, email: profile.email, commissionRate: Number(profile.crm_commission_rate) || 0, commissionPolicy: policies.get(profile.id) || defaultCommissionPolicy(), goal: goals.get(profile.id) || 0 })) });
 }
 
 export async function PATCH(request: Request) {

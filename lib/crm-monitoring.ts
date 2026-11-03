@@ -31,7 +31,7 @@ export function monitoringRange(period: string, date: string) {
 export type MonitoringCloser = { id: string; name: string };
 export function closerSelection(closers: MonitoringCloser[], selected: string) {
   if (closers.some(closer => closer.id === selected)) return selected;
-  return closers.length === 1 ? closers[0].id : 'closers';
+  return closers[0]?.id || '';
 }
 export function closerPerformance(
   closers: MonitoringCloser[],

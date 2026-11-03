@@ -4,14 +4,14 @@ import { closerSelection, closerPerformance, activityMetrics, type Activity, typ
 import styles from './monitoring.module.css';
 type Event = { leadId: string; leadName: string; event: Activity };
 type Sale = { id: string; leadId: string; leadName: string; actorId?: string; closerName?: string; gross: number; net: number; received: number };
-type Data = { range: { start: string; end: string }; closers: MonitoringCloser[]; events: Event[]; sales: Sale[] };
+type Data = { range: { start: string; end: string }; closers: MonitoringCloser[]; selectedCloserId: string; events: Event[]; sales: Sale[] };
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 const dateLabel = (date: string) => date.split('-').reverse().join('/');
 export default function Monitoring() {
   const [period, setPeriod] = useState('week');
   const [date, setDate] = useState(today);
-  const [actor, setActor] = useState('closers');
+  const [actor, setActor] = useState('');
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -26,24 +26,25 @@ export default function Monitoring() {
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    const rangeKey = `${period}:${date}`;
+    const rangeKey = `${period}:${date}:${actor}`;
     setLoading(loadedRange.current !== rangeKey); setError('');
-    fetch(`/api/crm/monitoring?${new URLSearchParams({ period, date })}`, { cache: 'no-store', signal: controller.signal })
+    fetch(`/api/crm/monitoring?${new URLSearchParams({ period, date, closerId: actor })}`, { cache: 'no-store', signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok) throw Error(body.error || 'Falha ao carregar.'); return body as Data; })
       .then(body => {
         if (controller.signal.aborted) return;
         setData(body);
-        loadedRange.current = rangeKey;
+        loadedRange.current = `${period}:${date}:${body.selectedCloserId}`;
+        setActor(body.selectedCloserId);
         setUpdatedAt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date()));
-        setActor(selected => closerSelection(body.closers, selected));
       }).catch(reason => { if (!controller.signal.aborted) setError(reason.message || 'Falha de conexão.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [period, date, revision]);
+  }, [period, date, actor, revision]);
+  const selectedCloserId = closerSelection(data?.closers || [], actor);
   const report = useMemo(() => {
     if (!data) return null;
     const closerIds = new Set(data.closers.map(user => user.id));
-    const matches = (id?: string) => !!id && closerIds.has(id) && (actor === 'closers' || id === actor);
+    const matches = (id?: string) => !!id && closerIds.has(id) && id === selectedCloserId;
     const events = data.events.filter(row => matches(row.event.actorId));
     const sales = data.sales.filter(row => matches(row.actorId));
     const actions = new Map<string, number>();
@@ -53,9 +54,9 @@ export default function Monitoring() {
       if (row.event.actions.includes('Mudança de etapa')) stages.set(row.event.stage || 'Sem etapa', (stages.get(row.event.stage || 'Sem etapa') || 0) + 1);
     }
     return { metrics: activityMetrics(events), events, sales, actions: [...actions], stages: [...stages], leads: new Set(events.map(row => row.leadId)).size, gross: sales.reduce((sum, row) => sum + Number(row.gross), 0), net: sales.reduce((sum, row) => sum + Number(row.net), 0), received: sales.reduce((sum, row) => sum + Number(row.received), 0) };
-  }, [data, actor]);
+  }, [data, selectedCloserId]);
   const name = (id?: string) => data?.closers.find(user => user.id === id)?.name || 'Usuário não disponível';
-  const ranking = data && report ? closerPerformance(data.closers, report.events, report.sales, actor) : [];
+  const ranking = data && report ? closerPerformance(data.closers, report.events, report.sales, selectedCloserId) : [];
   const actionTotal = report?.actions.reduce((sum, [, count]) => sum + count, 0) || 0;
   let angle = 0;
   const slices = (report?.actions || []).map(([label, count], index) => {
@@ -64,13 +65,13 @@ export default function Monitoring() {
   });
   return <div className={styles.monitoring}>
     <header className={styles.intro}>
-      <div><span className={styles.eyebrow}>PAINEL DE PERFORMANCE</span><h2>{data?.closers.find(closer => closer.id === actor)?.name || 'Performance das closers'}</h2><p>Atividades vinculadas à conta de cada closer cadastrada no CRM.</p></div>
+      <div><span className={styles.eyebrow}>PAINEL DE PERFORMANCE</span><h2>{data?.closers.find(closer => closer.id === selectedCloserId)?.name || 'Performance das closers'}</h2><p>Atividades vinculadas à conta de cada closer cadastrada no CRM.</p></div>
       <button className={styles.refresh} onClick={() => setRevision(value => value + 1)} disabled={loading}><Icon kind="refresh" />Atualizar dados</button>
     </header>
     <div className={styles.toolbar}>
       <div className={styles.segments} role="group" aria-label="Período">{[['day', 'Dia'], ['week', 'Semana'], ['month', 'Mês']].map(([value, label]) => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{label}</button>)}</div>
       <label><span>Referência</span><input aria-label="Data de referência" type="date" value={date} onChange={event => { if (event.target.value) setDate(event.target.value); }} /></label>
-      <label className={styles.personFilter}><span>Closer</span><select aria-label="Closer" value={actor} onChange={event => setActor(event.target.value)}><option value="closers">Todas as closers</option>{data?.closers.map(closer => <option key={closer.id} value={closer.id}>{closer.name}</option>)}</select></label>
+      <label className={styles.personFilter}><span>Closer</span><select aria-label="Closer" value={selectedCloserId} disabled={loading || !data?.closers.length} onChange={event => setActor(event.target.value)}><option value="" disabled hidden>{loading ? 'Carregando closers…' : 'Nenhuma closer cadastrada'}</option>{data?.closers.map(closer => <option key={closer.id} value={closer.id}>{closer.name}</option>)}</select></label>
       <span className={styles.range}>{data && !loading ? `${dateLabel(data.range.start)} — ${dateLabel(data.range.end)}` : 'Consultando período…'}</span>
     </div>
     {loading ? <div className={styles.loading} role="status"><div /><span>Carregando os números da equipe…</span></div> : error ? <div className={styles.empty} role="alert"><Icon kind="activity" /><h3>Não foi possível carregar os dados</h3><p>{error}</p><button onClick={() => setRevision(value => value + 1)}>Tentar novamente</button></div> : data && report && <>
