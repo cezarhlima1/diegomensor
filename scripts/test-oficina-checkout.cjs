@@ -58,6 +58,23 @@ for (const [date, offer, price] of [
     assert.equal(getCheckoutUrl(now, { utm_source: fixture.source }), fixture.urls[offers.indexOf(offer)], `Virada por origem: ${fixture.source}, ${date}`);
   }
 }
+const biographyUrls = [
+  'https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=Biografia&b_id_1=201423&b_offer_1=DQqf2S&b_id_2=201432&b_offer_2=BlsB7I&b_id_3=201377&b_offer_3=ezTzvW',
+  'https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=Biografia&b_id_1=201432&b_offer_1=BlsB7I&b_id_2=201377&b_offer_2=ezTzvW&b_id_3=201423&b_offer_3=DQqf2S',
+  'https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=Biografia&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I',
+];
+for (const medium of ['bio', 'Biografia', 'biografia', ' BIO ']) {
+  for (let i=0;i<dates.length;i++) {
+    const tracking = extractTracking(new URLSearchParams({utm_source:'instagram',utm_medium:medium,utm_campaign:'oficina_organizada'}));
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),tracking),biographyUrls[i],`Biografia: ${medium}, lote ${i+1}`);
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),mergeAttribution({},tracking)),biographyUrls[i],'Retorno preserva Biografia');
+    assert.equal(getCheckoutUrl(Date.parse(dates[i]),mergeAttribution({utm_source:'instagram',utm_medium:'story'},tracking)),fixtures[0].urls[i],'Nova visita de story substitui Biografia');
+  }
+}
+for (const [date,index] of [['2026-11-08T23:59:59-03:00',0],['2026-11-09T00:00:00-03:00',1],['2026-11-16T23:59:59-03:00',1],['2026-11-17T00:00:00-03:00',2]]) {
+  assert.equal(getCheckoutUrl(Date.parse(date),{utm_source:'instagram',utm_medium:'Biografia'}),biographyUrls[index]);
+}
+console.log('Biografia: URLs literais dos três lotes, aliases bio/Biografia, viradas, retorno e troca para story: OK');
 const previous = { utm_source: 'manychat', utm_medium: 'automacao', utm_campaign: 'oficina_organizada' };
 assert.deepEqual({ ...mergeAttribution({}, previous) }, previous);
 assert.deepEqual({ ...mergeAttribution({ fbclid: 'new-click' }, previous) }, { ...previous, fbclid: 'new-click' });
