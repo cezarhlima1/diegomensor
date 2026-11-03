@@ -45,3 +45,16 @@ export function closerPerformance(
     return { id: closer.id, name: closer.name, leads: new Set(activity.map(row => row.leadId)).size, movements: activity.length, sales: closings.length, gross: closings.reduce((sum, row) => sum + Number(row.gross), 0) };
   }).sort((a, b) => b.movements - a.movements || b.gross - a.gross || a.name.localeCompare(b.name, 'pt-BR'));
 }
+
+export function activityMetrics(events: { event: { actions: string[]; stage?: string } }[]) {
+  const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const stageIs = (event: { actions: string[]; stage?: string }, stage: string) => event.actions.includes('Mudança de etapa') && normalize(event.stage || '').includes(stage);
+  return {
+    contacts: events.filter(({ event }) => event.actions.includes('Contato registrado')).length,
+    stages: events.filter(({ event }) => event.actions.includes('Mudança de etapa')).length,
+    meetings: events.filter(({ event }) => stageIs(event, 'reuniao agendada') || event.actions.includes('Agendamento atualizado')).length,
+    proposals: events.filter(({ event }) => stageIs(event, 'proposta')).length,
+    returns: events.filter(({ event }) => event.actions.some(action => action.startsWith('Retorno '))).length,
+    noShows: events.filter(({ event }) => event.actions.includes('Reunião: No-show')).length,
+  };
+}

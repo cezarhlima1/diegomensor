@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useId, useMemo, useState } from 'react';
-import { closerSelection, closerPerformance, type Activity, type MonitoringCloser } from '@/lib/crm-monitoring';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { closerSelection, closerPerformance, activityMetrics, type Activity, type MonitoringCloser } from '@/lib/crm-monitoring';
 import styles from './monitoring.module.css';
 type Event = { leadId: string; leadName: string; event: Activity };
 type Sale = { id: string; leadId: string; leadName: string; actorId?: string; closerName?: string; gross: number; net: number; received: number };
@@ -16,14 +16,25 @@ export default function Monitoring() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const loadedRange = useRef('');
+  const [updatedAt, setUpdatedAt] = useState('');
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') setRevision(value => value + 1); };
+    const interval = window.setInterval(refresh, 15_000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true); setError('');
+    const rangeKey = `${period}:${date}`;
+    setLoading(loadedRange.current !== rangeKey); setError('');
     fetch(`/api/crm/monitoring?${new URLSearchParams({ period, date })}`, { cache: 'no-store', signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok) throw Error(body.error || 'Falha ao carregar.'); return body as Data; })
       .then(body => {
         if (controller.signal.aborted) return;
         setData(body);
+        loadedRange.current = rangeKey;
+        setUpdatedAt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date()));
         setActor(selected => closerSelection(body.closers, selected));
       }).catch(reason => { if (!controller.signal.aborted) setError(reason.message || 'Falha de conexão.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -41,7 +52,7 @@ export default function Monitoring() {
       for (const action of row.event.actions) actions.set(action, (actions.get(action) || 0) + 1);
       if (row.event.actions.includes('Mudança de etapa')) stages.set(row.event.stage || 'Sem etapa', (stages.get(row.event.stage || 'Sem etapa') || 0) + 1);
     }
-    return { events, sales, actions: [...actions], stages: [...stages], leads: new Set(events.map(row => row.leadId)).size, gross: sales.reduce((sum, row) => sum + Number(row.gross), 0), net: sales.reduce((sum, row) => sum + Number(row.net), 0), received: sales.reduce((sum, row) => sum + Number(row.received), 0) };
+    return { metrics: activityMetrics(events), events, sales, actions: [...actions], stages: [...stages], leads: new Set(events.map(row => row.leadId)).size, gross: sales.reduce((sum, row) => sum + Number(row.gross), 0), net: sales.reduce((sum, row) => sum + Number(row.net), 0), received: sales.reduce((sum, row) => sum + Number(row.received), 0) };
   }, [data, actor]);
   const name = (id?: string) => data?.closers.find(user => user.id === id)?.name || 'Usuário não disponível';
   const ranking = data && report ? closerPerformance(data.closers, report.events, report.sales, actor) : [];
@@ -69,6 +80,17 @@ export default function Monitoring() {
         { label: 'Vendas fechadas', value: report.sales.length.toLocaleString('pt-BR'), hint: 'Fechamentos atribuídos', icon: 'sale', accent: 'green' },
         { label: 'Faturamento bruto', value: money.format(report.gross), hint: 'Gerado nos fechamentos do período', icon: 'money', accent: 'gold' },
       ].map(card => <article className={styles.kpi} data-accent={card.accent} key={card.label}><div className={styles.kpiTop}><span>{card.label}</span><i><Icon kind={card.icon} /></i></div><strong>{card.value}</strong><small>{card.hint}</small></article>)}</div>
+      <section className={styles.operations} aria-label="Indicadores de atividade da closer">
+        <div className={styles.operationsHeading}><div><span className={styles.eyebrow}>ATIVIDADE DA CLOSER</span><h3>O que foi movimentado no período</h3></div><span className={styles.live}><i />Atualiza a cada 15s{updatedAt && ` · ${updatedAt}`}</span></div>
+        <div className={styles.operationGrid}>{[
+          ['Contatos registrados', report.metrics.contacts, 'Marcações de contato realizadas', 'people'],
+          ['Mudanças de etapa', report.metrics.stages, 'Movimentos entre etapas do pipeline', 'activity'],
+          ['Agendamentos', report.metrics.meetings, 'Entradas em reunião agendada ou ajustes de agenda', 'sale'],
+          ['Propostas', report.metrics.proposals, 'Movimentos para a etapa de proposta', 'money'],
+          ['Retornos trabalhados', report.metrics.returns, 'Agendados, concluídos ou removidos', 'refresh'],
+          ['No-shows registrados', report.metrics.noShows, 'Reuniões marcadas como não comparecimento', 'sale'],
+        ].map(([label, count, hint, icon]) => <article key={label}><Icon kind={String(icon)} /><strong>{Number(count).toLocaleString('pt-BR')}</strong><span>{label}</span><small>{hint}</small></article>)}</div>
+      </section>
       <div className={styles.mainGrid}>
         <section className={styles.panel}><PanelHeading label="VOLUME DE TRABALHO" title="Ritmo de movimentação"><span className={styles.legend}><i />Movimentações</span></PanelHeading><ActivityChart events={report.events} start={data.range.start} end={data.range.end} hourly={period === 'day'} /><div className={styles.chartFooter}><span><b>{report.events.length}</b> movimentações no período</span><span><b>{report.leads}</b> leads únicos trabalhados</span></div></section>
         <section className={styles.panel}><PanelHeading label="DISTRIBUIÇÃO" title="O que a equipe fez" /><div className={styles.donutWrap}><div className={styles.donut} role="img" aria-label={`${actionTotal} ações registradas por tipo`} style={{ background: slices.length ? `conic-gradient(${slices.join(',')})` : 'var(--monitor-line)' }}><div><strong>{actionTotal}</strong><span>ações registradas</span></div></div></div><div className={styles.actionLegend}>{report.actions.length ? report.actions.map(([label, count], index) => <div key={label}><i style={{ background: colors[index % colors.length] }} /><span>{label}</span><b>{count}</b><small>{Math.round(count / actionTotal * 100)}%</small></div>) : <p className={styles.noData}>As atividades aparecerão aqui assim que forem registradas.</p>}</div></section>
