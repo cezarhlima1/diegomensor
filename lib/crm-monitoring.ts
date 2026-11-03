@@ -27,3 +27,21 @@ export function monitoringRange(period: string, date: string) {
   else if (period !== 'day') return null;
   return { start: day.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
+
+export type MonitoringCloser = { id: string; name: string };
+export function closerSelection(closers: MonitoringCloser[], selected: string) {
+  if (closers.some(closer => closer.id === selected)) return selected;
+  return closers.length === 1 ? closers[0].id : 'closers';
+}
+export function closerPerformance(
+  closers: MonitoringCloser[],
+  events: { leadId: string; event: { actorId: string } }[],
+  sales: { actorId?: string; gross: number }[],
+  selected: string,
+) {
+  return closers.filter(closer => selected === 'closers' || closer.id === selected).map(closer => {
+    const activity = events.filter(row => row.event.actorId === closer.id);
+    const closings = sales.filter(row => row.actorId === closer.id);
+    return { id: closer.id, name: closer.name, leads: new Set(activity.map(row => row.leadId)).size, movements: activity.length, sales: closings.length, gross: closings.reduce((sum, row) => sum + Number(row.gross), 0) };
+  }).sort((a, b) => b.movements - a.movements || b.gross - a.gross || a.name.localeCompare(b.name, 'pt-BR'));
+}

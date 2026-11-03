@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useId, useMemo, useState } from 'react';
-import type { Activity } from '@/lib/crm-monitoring';
+import { closerSelection, closerPerformance, type Activity, type MonitoringCloser } from '@/lib/crm-monitoring';
 import styles from './monitoring.module.css';
-type User = { id: string; name: string; isCloser: boolean };
 type Event = { leadId: string; leadName: string; event: Activity };
 type Sale = { id: string; leadId: string; leadName: string; actorId?: string; closerName?: string; gross: number; net: number; received: number };
-type Data = { range: { start: string; end: string }; users: User[]; events: Event[]; sales: Sale[] };
+type Data = { range: { start: string; end: string }; closers: MonitoringCloser[]; events: Event[]; sales: Sale[] };
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 const dateLabel = (date: string) => date.split('-').reverse().join('/');
@@ -22,14 +21,18 @@ export default function Monitoring() {
     setLoading(true); setError('');
     fetch(`/api/crm/monitoring?${new URLSearchParams({ period, date })}`, { cache: 'no-store', signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok) throw Error(body.error || 'Falha ao carregar.'); return body as Data; })
-      .then(setData).catch(reason => { if (!controller.signal.aborted) setError(reason.message || 'Falha de conexão.'); })
+      .then(body => {
+        if (controller.signal.aborted) return;
+        setData(body);
+        setActor(selected => closerSelection(body.closers, selected));
+      }).catch(reason => { if (!controller.signal.aborted) setError(reason.message || 'Falha de conexão.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [period, date, revision]);
   const report = useMemo(() => {
     if (!data) return null;
-    const closerIds = new Set(data.users.filter(user => user.isCloser).map(user => user.id));
-    const matches = (id?: string) => actor === 'all' || (actor === 'closers' ? !!id && closerIds.has(id) : actor === 'unassigned' ? !id : id === actor);
+    const closerIds = new Set(data.closers.map(user => user.id));
+    const matches = (id?: string) => !!id && closerIds.has(id) && (actor === 'closers' || id === actor);
     const events = data.events.filter(row => matches(row.event.actorId));
     const sales = data.sales.filter(row => matches(row.actorId));
     const actions = new Map<string, number>();
@@ -37,16 +40,11 @@ export default function Monitoring() {
     for (const row of events) {
       for (const action of row.event.actions) actions.set(action, (actions.get(action) || 0) + 1);
       if (row.event.actions.includes('Mudança de etapa')) stages.set(row.event.stage || 'Sem etapa', (stages.get(row.event.stage || 'Sem etapa') || 0) + 1);
-
     }
     return { events, sales, actions: [...actions], stages: [...stages], leads: new Set(events.map(row => row.leadId)).size, gross: sales.reduce((sum, row) => sum + Number(row.gross), 0), net: sales.reduce((sum, row) => sum + Number(row.net), 0), received: sales.reduce((sum, row) => sum + Number(row.received), 0) };
   }, [data, actor]);
-  const name = (id?: string) => data?.users.find(user => user.id === id)?.name || 'Usuário não disponível';
-  const ranking = report ? [...new Set([...report.events.map(row => row.event.actorId), ...report.sales.map(row => row.actorId || '')])].map(id => {
-    const events = report.events.filter(row => row.event.actorId === id);
-    const sales = report.sales.filter(row => (row.actorId || '') === id);
-    return { id, name: id ? name(id) : 'Sem responsável', leads: new Set(events.map(row => row.leadId)).size, movements: events.length, sales: sales.length, gross: sales.reduce((sum, row) => sum + Number(row.gross), 0) };
-  }).sort((a, b) => b.movements - a.movements || b.gross - a.gross) : [];
+  const name = (id?: string) => data?.closers.find(user => user.id === id)?.name || 'Usuário não disponível';
+  const ranking = data && report ? closerPerformance(data.closers, report.events, report.sales, actor) : [];
   const actionTotal = report?.actions.reduce((sum, [, count]) => sum + count, 0) || 0;
   let angle = 0;
   const slices = (report?.actions || []).map(([label, count], index) => {
@@ -55,13 +53,13 @@ export default function Monitoring() {
   });
   return <div className={styles.monitoring}>
     <header className={styles.intro}>
-      <div><span className={styles.eyebrow}>PAINEL DE PERFORMANCE</span><h2>Performance da equipe</h2><p>Acompanhe o ritmo da equipe e o que ela gera para o negócio.</p></div>
+      <div><span className={styles.eyebrow}>PAINEL DE PERFORMANCE</span><h2>{data?.closers.find(closer => closer.id === actor)?.name || 'Performance das closers'}</h2><p>Atividades vinculadas à conta de cada closer cadastrada no CRM.</p></div>
       <button className={styles.refresh} onClick={() => setRevision(value => value + 1)} disabled={loading}><Icon kind="refresh" />Atualizar dados</button>
     </header>
     <div className={styles.toolbar}>
       <div className={styles.segments} role="group" aria-label="Período">{[['day', 'Dia'], ['week', 'Semana'], ['month', 'Mês']].map(([value, label]) => <button key={value} aria-pressed={period === value} onClick={() => setPeriod(value)}>{label}</button>)}</div>
       <label><span>Referência</span><input aria-label="Data de referência" type="date" value={date} onChange={event => { if (event.target.value) setDate(event.target.value); }} /></label>
-      <label className={styles.personFilter}><span>Responsável</span><select aria-label="Responsável" value={actor} onChange={event => setActor(event.target.value)}><option value="closers">Todas as closers</option><option value="all">Toda a equipe</option>{data?.users.map(user => <option key={user.id} value={user.id}>{user.name || 'Sem nome'}{user.isCloser ? ' · Closer' : ''}</option>)}<option value="unassigned">Vendas sem responsável</option></select></label>
+      <label className={styles.personFilter}><span>Closer</span><select aria-label="Closer" value={actor} onChange={event => setActor(event.target.value)}><option value="closers">Todas as closers</option>{data?.closers.map(closer => <option key={closer.id} value={closer.id}>{closer.name}</option>)}</select></label>
       <span className={styles.range}>{data && !loading ? `${dateLabel(data.range.start)} — ${dateLabel(data.range.end)}` : 'Consultando período…'}</span>
     </div>
     {loading ? <div className={styles.loading} role="status"><div /><span>Carregando os números da equipe…</span></div> : error ? <div className={styles.empty} role="alert"><Icon kind="activity" /><h3>Não foi possível carregar os dados</h3><p>{error}</p><button onClick={() => setRevision(value => value + 1)}>Tentar novamente</button></div> : data && report && <>
@@ -77,11 +75,11 @@ export default function Monitoring() {
       </div>
       <div className={styles.bottomGrid}>
         <section className={styles.panel}><PanelHeading label="PIPELINE" title="Movimentações por etapa"><span className={styles.badge}>{report.stages.reduce((sum, [, count]) => sum + count, 0)} mudanças</span></PanelHeading><div className={styles.stageBars}>{report.stages.length ? [...report.stages].sort((a, b) => b[1] - a[1]).map(([stage, count], index) => <div key={stage}><div><span>{stage}</span><b>{count}</b></div><div className={styles.track}><i style={{ width: `${count / Math.max(...report.stages.map(([, value]) => value)) * 100}%`, background: colors[index % colors.length] }} /></div></div>) : <div className={styles.emptyChart}><Icon kind="activity" /><b>Nenhuma mudança de etapa</b><p>Os movimentos do pipeline aparecerão neste gráfico.</p></div>}</div><small className={styles.caption}>Contagem de mudanças por etapa de destino, incluindo retornos.</small></section>
-        <section className={styles.panel}><PanelHeading label="EQUIPE" title="Desempenho por responsável"><span className={styles.badge}>Por atividade</span></PanelHeading><div className={styles.ranking}>{ranking.length ? ranking.map((row, index) => <article key={row.id}><span className={styles.rankNumber}>{String(index + 1).padStart(2, '0')}</span><span className={styles.avatar} style={{ color: colors[index % colors.length] }}>{row.name.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('')}</span><div className={styles.rankPerson}><b>{row.name}</b><span>{row.leads} leads · {row.movements} movimentações</span><div className={styles.rankTrack}><i style={{ width: `${row.movements / Math.max(1, ...ranking.map(item => item.movements)) * 100}%`, background: colors[index % colors.length] }} /></div></div><div className={styles.rankResult}><b>{money.format(row.gross)}</b><span>{row.sales} vendas</span></div></article>) : <div className={styles.emptyChart}><Icon kind="people" /><b>Aguardando os primeiros resultados</b><p>Selecione outra responsável ou outro período para consultar.</p></div>}</div></section>
+        <section className={styles.panel}><PanelHeading label="EQUIPE" title="Desempenho por closer"><span className={styles.badge}>Por atividade</span></PanelHeading><div className={styles.ranking}>{ranking.length ? ranking.map((row, index) => <article key={row.id}><span className={styles.rankNumber}>{String(index + 1).padStart(2, '0')}</span><span className={styles.avatar} style={{ color: colors[index % colors.length] }}>{row.name.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('')}</span><div className={styles.rankPerson}><b>{row.name}</b><span>{row.leads} leads · {row.movements} movimentações</span><div className={styles.rankTrack}><i style={{ width: `${row.movements / Math.max(1, ...ranking.map(item => item.movements)) * 100}%`, background: colors[index % colors.length] }} /></div></div><div className={styles.rankResult}><b>{money.format(row.gross)}</b><span>{row.sales} vendas</span></div></article>) : <div className={styles.emptyChart}><Icon kind="people" /><b>Aguardando os primeiros resultados</b><p>Cadastre uma usuária como closer na aba ADM para acompanhar seu desempenho.</p></div>}</div></section>
       </div>
       <section className={styles.financial}><div><span className={styles.eyebrow}>RESULTADO FINANCEIRO</span><h3>Resultados do período</h3><p>Valores das vendas fechadas no período selecionado.</p></div><div><span>Ticket médio bruto</span><strong>{money.format(report.sales.length ? report.gross / report.sales.length : 0)}</strong><small>Faturamento ÷ vendas</small></div><div><span>Valor líquido</span><strong>{money.format(report.net)}</strong><small>Dos fechamentos do período</small></div><div><span>Já recebido</span><strong>{money.format(report.received)}</strong><small>Recebimentos dessas vendas, em qualquer data</small></div></section>
       <details className={styles.details}><summary><span>Explorar os registros</span><small>Movimentações e fechamentos do período</small><b>+</b></summary><div className={styles.table}><h3>Últimas movimentações</h3><table><thead><tr><th>Quando</th><th>Responsável</th><th>Lead</th><th>Atividade</th><th>Etapa</th></tr></thead><tbody>{report.events.slice(0, 100).map(row => <tr key={row.event.id}><td>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(row.event.at))}</td><td>{name(row.event.actorId)}</td><td>{row.leadName}</td><td>{row.event.actions.join(' · ')}</td><td>{row.event.stage}</td></tr>)}</tbody></table>{!report.events.length && <p>Nenhuma movimentação registrada.</p>}<small>Até 100 registros recentes. Os indicadores incluem todo o período.</small><h3>Fechamentos</h3><table><thead><tr><th>Lead</th><th>Closer</th><th>Bruto</th><th>Líquido</th></tr></thead><tbody>{report.sales.map(sale => <tr key={sale.id}><td>{sale.leadName}</td><td>{sale.closerName || (sale.actorId ? name(sale.actorId) : 'Sem responsável')}</td><td>{money.format(Number(sale.gross))}</td><td>{money.format(Number(sale.net))}</td></tr>)}</tbody></table>{!report.sales.length && <p>Nenhum fechamento no período.</p>}</div></details>
-      <p className={styles.footnote}>Atividades por usuário disponíveis a partir da implantação do monitoramento. Uma movimentação pode conter várias ações. Vendas atribuídas à responsável indicada no fechamento.</p>
+      <p className={styles.footnote}>Movimentações vinculadas ao ID da conta que realizou a atividade, disponíveis a partir da implantação do monitoramento. Uma movimentação pode conter várias ações. Vendas atribuídas à responsável indicada no fechamento.</p>
     </>}
   </div>;
 }

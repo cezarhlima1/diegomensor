@@ -25,11 +25,28 @@ assert.equal(activity.stage,'Proposta');
 assert.equal(activity.actions.length,2);
 assert.equal(helpers.auditLeadChange(after,after,'closer'),null);
 assert.equal(helpers.auditLeadChange(undefined,after,'closer').actions[0],'Lead cadastrado');
-let auth = {ok:true,isAdmin:false}; let queries = 0;
+// A registered closer must appear with zeros and IDs keep namesakes separate.
+const closers = [{id:'one', name:'Ana'}, {id:'two', name:'Ana'}];
+assert.equal(helpers.closerSelection([closers[0]], 'closers'), 'one');
+assert.equal(helpers.closerSelection(closers, 'one'), 'one');
+assert.equal(helpers.closerSelection(closers, 'removed'), 'closers');
+assert.equal(helpers.closerSelection([], 'one'), 'closers');
+const teamEvents = [{leadId:'a',event:{actorId:'one'}},{leadId:'a',event:{actorId:'one'}},{leadId:'b',event:{actorId:'admin'}}];
+const teamSales = [{actorId:'one',gross:100},{actorId:'admin',gross:900},{gross:500}];
+const performance = helpers.closerPerformance(closers, teamEvents, teamSales, 'closers');
+assert.equal(performance.length, 2);
+assert.equal(performance[0].movements, 2);
+assert.equal(performance[0].leads, 1);
+assert.equal(performance[0].gross, 100);
+assert.equal(performance[1].movements, 0);
+assert.equal(performance[1].sales, 0);
+assert.equal(helpers.closerPerformance(closers, teamEvents, teamSales, 'two').length, 1);
+assert.equal(helpers.closerPerformance(closers, teamEvents, teamSales, 'two')[0].gross, 0);
+let auth = {ok:true,isAdmin:false}; let queries = 0; let queriedClosers = false;
 const route = load('app/api/crm/monitoring/route.ts',{
  'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},
  '@/lib/crm-auth':{authorized:async()=>auth},
- '@/lib/crm-db':{crmPool:()=>({query:async(sql,args)=>{queries++;return {rows:[]};}})},
+ '@/lib/crm-db':{crmPool:()=>({query:async(sql,args)=>{queries++; if(sql.includes('public.profiles')) { assert.ok(sql.includes('crm_access=true and crm_is_closer=true')); queriedClosers=true; return {rows:closers}; } return {rows:[]};}})},
  '@/lib/crm-monitoring':helpers,
 });
 (async()=>{
@@ -37,12 +54,12 @@ const route = load('app/api/crm/monitoring/route.ts',{
  assert.equal((await route.GET(request)).status,403); assert.equal(queries,0);
  auth={ok:false}; assert.equal((await route.GET(request)).status,401); assert.equal(queries,0);
  auth={ok:true,isAdmin:true}; assert.equal((await route.GET({url:'http://localhost/api/crm/monitoring?date=no'})).status,400);
- const result=await route.GET(request); assert.equal(result.status,200); assert.equal(queries,3);
+ const result=await route.GET(request); assert.equal(result.status,200); assert.equal(queries,3); assert.ok(queriedClosers); assert.equal(result.body.closers.length,2);
  let saved=[];
  const leads=load('lib/crm-leads.ts',{'server-only':{}});
  const db={query:async(sql,args)=>{saved=JSON.parse(args[1]);}};
  await leads.saveJourneyHistory(db,{id:'lead',journeyHistory:[activity,{id:'stage',kind:'stage'}]});
  assert.equal(saved.length,1);assert.equal(saved[0].kind,'stage');
  await leads.saveJourneyHistory(db,{id:'lead',journeyHistory:[activity]},true);assert.equal(saved[0].actorId,'closer');
- console.log('PASS: calendar boundaries, persisted change attribution, retry deduplication, admin-only API and forged activity rejection.');
+ console.log('PASS: calendar boundaries, persisted change attribution, retry deduplication, admin-only API, registered closer selection, zero-activity closers, ID-based attribution and forged activity rejection.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
