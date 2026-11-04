@@ -554,6 +554,36 @@ export default function CRM() {
     try { await syncQueue.current; return true; }
     catch (error) { console.error(`Falha ao excluir ${entity}`, error); return false; }
   };
+  const savePipelineStages = async (next: Stage[]) => {
+    const added = next.find(stage => !pipelineStages.includes(stage));
+    if (!added) { setPipelineStages(next); return; }
+    setDatabaseStatus('saving');
+    try {
+      const response = await fetch('/api/crm', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity: 'stage', record: { name: added } }) });
+      if (!response.ok) { await registerDatabaseFailure(response); throw Error('Não foi possível criar a etapa.'); }
+      const result = await response.json();
+      setPipelineStages(result.stages); setDatabaseStatus('connected'); setDatabaseIssue('');
+    } catch (error) { await registerDatabaseFailure(); throw error; }
+  };
+  const deletePipelineStage = async (name: string) => {
+    flushAllLeadSaves();
+    const persist = async () => {
+      setDatabaseStatus('saving');
+      const response = await fetch('/api/crm', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity: 'stage', id: name }) });
+      if (!response.ok) {
+        if (response.status === 409) {
+          setDatabaseStatus('connected');
+          throw Error('Só é possível excluir uma etapa zerada, sem nenhum lead vinculado.');
+        }
+        await registerDatabaseFailure(response); throw Error('Não foi possível excluir a etapa. Tente novamente.');
+      }
+      const result = await response.json();
+      setPipelineStages(result.stages);
+      setDatabaseStatus('connected'); setDatabaseIssue(''); setLastSavedAt(new Date());
+    };
+    syncQueue.current = syncQueue.current.catch(() => undefined).then(persist);
+    await syncQueue.current;
+  };
   const saveExpense = async (record: Expense) => {
     setDatabaseStatus("saving"); setDatabaseIssue("");
     const response = await fetch("/api/crm", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "expense", record }) });
@@ -1031,7 +1061,7 @@ export default function CRM() {
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
-          <Pipeline leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={setPipelineStages} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
+          <Pipeline allLeads={leads} leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={savePipelineStages} removeStage={deletePipelineStage} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} stages={pipelineStages} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -1472,11 +1502,13 @@ function FilterMenu({ label, options, selected, toggle, clear }: { label: string
 }
 
 function Pipeline({
+  allLeads,
   leads,
   products,
   sources,
   stages,
   setStages,
+  removeStage,
   moveLead,
   toggleContactToday,
   completeSummaryContact,
@@ -1487,7 +1519,9 @@ function Pipeline({
   products: ProductDefinition[];
   sources: string[];
   stages: Stage[];
-  setStages: (stages: Stage[]) => void;
+  allLeads: Lead[];
+  setStages: (stages: Stage[]) => Promise<void>;
+  removeStage: (name: Stage) => Promise<void>;
   moveLead: (id: string, stage: Stage) => void;
   toggleContactToday: (id: string) => void;
   completeSummaryContact: (id: string, mode: 'followups' | 'returns') => Promise<void>;
@@ -1495,6 +1529,16 @@ function Pipeline({
   search: string;
 }) {
   const [summary, setSummary] = useState<Stage | null>(null);
+  const [removingStage, setRemovingStage] = useState(false);
+  const [stageError, setStageError] = useState('');
+  const requestStageRemoval = async (stage: Stage) => {
+    setStageError('');
+    if (allLeads.some(lead => lead.stage === stage)) { setStageError('Só é possível excluir uma etapa zerada, sem nenhum lead vinculado.'); return; }
+    setRemovingStage(true);
+    try { await removeStage(stage); if (summary === stage) setSummary(null); }
+    catch (error) { setStageError(error instanceof Error ? error.message : 'Não foi possível excluir a etapa.'); }
+    finally { setRemovingStage(false); }
+  };
   const [today, setToday] = useState(() => contactDay(new Date().toISOString()));
   useEffect(() => { const timer = window.setInterval(() => setToday(contactDay(new Date().toISOString())), 60000); return () => window.clearInterval(timer); }, []);
   const [range, setRange] = useState({ start: "", end: "" });
@@ -1573,8 +1617,8 @@ function Pipeline({
     const done = Number((a.contactCheckpoints || []).some(value => contactDay(value) === today)) - Number((b.contactCheckpoints || []).some(value => contactDay(value) === today));
     return done || (Date.parse(a.followUpAt || '') || Infinity) - (Date.parse(b.followUpAt || '') || Infinity) || a.name.localeCompare(b.name, 'pt-BR');
   }) : [];
-  const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; setStages(next); };
-  const addStage = (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStages([...stages, name]); setNewStage(""); };
+  const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; void setStages(next).catch(() => setStageError('Não foi possível reordenar as etapas.')); };
+  const addStage = async (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStageError(''); try { await setStages([...stages, name]); setNewStage(''); } catch { setStageError('Não foi possível criar a etapa.'); } };
   const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -1622,6 +1666,7 @@ function Pipeline({
         </div>
         </>}
       </div>
+      {stageError && <p className={styles.stageError} role="alert">{stageError}</p>}
       <div className={styles.pipelineScroller}><div className={styles.pipeline} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(245px, 1fr))`, minWidth: `${stages.length * 255}px` }}>
         {stages.map((stage) => {
           const items = stageItems.get(stage) || [];
@@ -1645,7 +1690,7 @@ function Pipeline({
                   <button type="button" className={styles.stageSummaryButton} onClick={() => setSummary(stage)} aria-haspopup="dialog" title={`Abrir lista de contatos de ${stage}`}>{stage} ↗</button>
                   <span>{items.length}</span>
                 </div>
-                <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button></div>
+                <div className={styles.stageActions}><button type="button" className={styles.stageSelectAll} aria-pressed={allStageLeadsSelected} onClick={toggleStageSelection} disabled={!items.length}>{allStageLeadsSelected ? "✓ Todos" : "Selecionar todos"}</button><button type="button" aria-label={`Mover etapa ${stage} para a esquerda`} onClick={() => moveStage(stageIndex,-1)} disabled={!stageIndex}>←</button><button type="button" aria-label={`Mover etapa ${stage} para a direita`} onClick={() => moveStage(stageIndex,1)} disabled={stageIndex === stages.length - 1}>→</button><button type="button" className={styles.stageRemove} aria-label={`Excluir etapa ${stage}`} title={stage === 'Novo lead' ? 'Etapa de entrada dos novos contatos' : allLeads.some(lead => lead.stage === stage) ? 'Só é possível excluir etapas zeradas' : `Excluir ${stage}`} disabled={removingStage || stages.length <= 1 || stage === 'Novo lead' || allLeads.some(lead => lead.stage === stage)} onClick={() => requestStageRemoval(stage)}>×</button></div>
               </header>
               <div className={styles.cards}>
                 {items.map((lead) => {

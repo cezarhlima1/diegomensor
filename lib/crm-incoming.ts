@@ -86,17 +86,15 @@ export async function updateIncomingLead(id: string, incoming: IncomingApplicati
     let tags: string[] = lead.tags || [];
     if (newEntry && !tags.includes("Segunda aplicação")) tags = [...tags, "Segunda aplicação"];
     if (newEntry && tags.some(tag => tag.trim().toLowerCase() === "desqualificado")) tags = [...tags.filter(tag => tag.trim().toLowerCase() !== "desqualificado"), "Já desqualificado"];
-    const needsReview = lead.stage === "Novo lead" && (application.entryAudit as { status?: string } | undefined)?.status === "review";
-    const reviewStage = needsReview && (await db.query("select name from public.crm_pipeline_stages where name='Revisar entrada' limit 1")).rows[0];
     // Source, original dates, sales, notes, scheduling and previous journey stay intact.
     await db.query(`update public.crm_leads set
       name=coalesce(nullif($2,''),name),phone=coalesce(nullif($3,''),phone),
       company=coalesce(nullif($4,''),company),email=coalesce(nullif($5,''),email),
       application=$6::jsonb,tags=$7,journey_history=$8::jsonb,
-      stage=case when $9 then 'Novo lead' when $11 then 'Revisar entrada' else stage end,
+      stage=case when $9 then 'Novo lead' else stage end,
       display_date=case when $9 then to_char($10::timestamptz at time zone 'America/Sao_Paulo','DD/MM/YYYY') else display_date end,
       updated_at=now() where id=$1`,
-    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), newEntry, at, Boolean(reviewStage)]);
+    [id, contact.name || "", contact.phone || "", contact.company || "", contact.email || "", JSON.stringify(application), [...new Set(tags)], JSON.stringify(history), newEntry, at]);
     return { repeated: newEntry };
   };
   return client ? update(client) : withCrmTransaction(update);

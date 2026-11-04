@@ -56,8 +56,7 @@ export async function POST(request: Request) {
       const tags = contact.funnel ? [contact.funnel] : [];
       const verifiedAt = entryAt || (applicationId && body.baseline !== true ? receivedAt : null);
       const recordedApplication = { ...application, entryAudit: verifiedAt ? { status: "confirmed", entryAt: verifiedAt } : { status: "review", entryAt: null, reasons: ["Sem data comprovada de aplicação"] } };
-      const reviewStage = !verifiedAt && (await db.query("select name from public.crm_pipeline_stages where name='Revisar entrada' limit 1")).rows[0];
-      await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,$9,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,$8)", [id, contact.name, contact.company, contact.phone, source, JSON.stringify(recordedApplication), sheetProduct(contact.funnel), tags, reviewStage ? "Revisar entrada" : "Novo lead"]);
+      await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,$9,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,$8)", [id, contact.name, contact.company, contact.phone, source, JSON.stringify(recordedApplication), sheetProduct(contact.funnel), tags, "Novo lead"]);
       return { id, created: true };
     });
     if (result.conflict) return NextResponse.json({ ok: false, error: "duplicate-phone-conflict" }, { status: 409 });

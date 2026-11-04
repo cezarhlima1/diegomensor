@@ -4,6 +4,7 @@ import { crmPool, withCrmTransaction } from "@/lib/crm-db";
 import { saveJourneyHistory, assertValidSourceForNewLead, supportsFollowUpAt, supportsMeetingOutcome, supportsMeetingScheduledFor, upsertLeadRecord } from "@/lib/crm-leads";
 import { authorized } from "@/lib/crm-auth";
 import { purchaseCommission } from "@/lib/crm-commission-store";
+import { addPipelineStage, removePipelineStage } from "@/lib/crm-pipeline-stages";
 import { auditLeadChange } from "@/lib/crm-monitoring";
 
 export const runtime = "nodejs";
@@ -158,8 +159,18 @@ export async function PATCH(request: Request) {
   if (!auth.ok) return NextResponse.json({ error: auth.reason, ...("account" in auth ? { account: auth.account } : {}) }, { status: 401 });
   let body: { entity?: string; record?: Record<string, unknown>; oldId?: string; newId?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid-json" }, { status: 400 }); }
-  const patchPermissions: Record<string, string[]> = { lead: ["comercial", "pipeline", "contatos", "financeiro"], expense: ["financeiro"], traffic: ["campanhas"], "tag-rename": ["contatos"], "tag-delete": ["contatos"], "product-rename": ["mensagens"], "source-rename": ["mensagens"] };
+  const patchPermissions: Record<string, string[]> = { stage: ["pipeline"], lead: ["comercial", "pipeline", "contatos", "financeiro"], expense: ["financeiro"], traffic: ["campanhas"], "tag-rename": ["contatos"], "tag-delete": ["contatos"], "product-rename": ["mensagens"], "source-rename": ["mensagens"] };
   if (body.entity && patchPermissions[body.entity] && !can(auth, ...patchPermissions[body.entity])) return forbidden();
+  if (body.entity === 'stage') {
+    try {
+      const name = String(body.record?.name || '').trim();
+      const stages = await withCrmTransaction(db => addPipelineStage(db, name));
+      return NextResponse.json({ ok: true, stages });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'invalid-stage') return NextResponse.json({ error: error.message }, { status: 400 });
+      return databaseError(error, 'database-write-failed');
+    }
+  }
   if ((body.entity === "tag-rename" || body.entity === "tag-delete") && body.oldId) {
     try {
       const db = crmPool();
@@ -267,6 +278,15 @@ export async function DELETE(request: Request) {
   if (!body.entity || !body.id) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
   const deletePermissions: Record<string, string[]> = { lead: ["comercial", "pipeline", "contatos"], purchase: ["financeiro"], expense: ["financeiro"], traffic: ["campanhas"], product: ["mensagens"], source: ["mensagens"], message: ["mensagens"], stage: ["pipeline"] };
   if (!deletePermissions[body.entity] || !can(auth, ...deletePermissions[body.entity])) return forbidden();
+  if (body.entity === 'stage') {
+    try {
+      const result = await withCrmTransaction(db => removePipelineStage(db, body.id!));
+      return NextResponse.json({ ok: true, ...result });
+    } catch (error) {
+      if (error instanceof Error && ['protected-stage', 'last-stage', 'stage-not-empty'].includes(error.message)) return NextResponse.json({ error: error.message }, { status: 409 });
+      return databaseError(error, 'database-write-failed');
+    }
+  }
   try {
     const db = crmPool();
     const operations: Record<string, { query: string; value: string }> = {
@@ -277,7 +297,6 @@ export async function DELETE(request: Request) {
       product: { query: "update public.crm_products set active=false,updated_at=now() where name=$1", value: body.id },
       source: { query: "delete from public.crm_lead_sources where name=$1", value: body.id },
       message: { query: "delete from public.crm_message_templates where id=$1", value: body.id },
-      stage: { query: "delete from public.crm_pipeline_stages where name=$1", value: body.id },
     };
     const operation = operations[body.entity];
     if (!operation) return NextResponse.json({ error: "invalid-payload" }, { status: 400 });
@@ -322,7 +341,8 @@ export async function PUT(request: Request) {
       // atrasado de outra aba nunca pode apagar uma campanha recém-criada.
       for (const message of messages) await db.query("insert into public.crm_message_templates(id,title,body,updated_at) values($1,$2,$3,now()) on conflict(id) do update set title=excluded.title,body=excluded.body,updated_at=now()", [message.id, message.title, message.text]);
       for (const [month, amount] of Object.entries(goals)) await db.query("insert into public.crm_monthly_goals(month,amount,updated_at) values($1,$2,now()) on conflict(month) do update set amount=excluded.amount,updated_at=now()", [month, Number(amount) || 0]);
-      for (const [position, stage] of stages.entries()) await db.query("insert into public.crm_pipeline_stages(name,position) values($1,$2) on conflict(name) do update set position=excluded.position", [stage, position]);
+      if (stages.length) await db.query("select pg_advisory_xact_lock(hashtext('crm-pipeline-stages'))");
+      for (const [position, stage] of stages.entries()) await db.query("insert into public.crm_pipeline_stages(name,position) select $1,$2 where $1<>'Revisar entrada' and not exists(select 1 from public.crm_state where key='deleted_pipeline_stage:'||$1) on conflict(name) do update set position=excluded.position", [stage, position]);
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
