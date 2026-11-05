@@ -38,7 +38,7 @@ test('preserves previously completed answers and attribution on reimport', () =>
 
 function endpoint(rows = [], reactivated = false) {
   const calls = [];
-  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: (sql.startsWith('select id,') || sql.startsWith('select *')) ? rows : sql.includes('returning id') && reactivated ? [{ id: rows[0].id }] : [] }; } };
+  const db = { query: async (sql, params) => { calls.push({ sql, params }); return { rows: (sql.startsWith('select id') || sql.startsWith('select *')) ? rows : sql.includes('returning id') && reactivated ? [{ id: rows[0].id }] : [] }; } };
   const incoming = load('lib/crm-incoming.ts', { './crm-db': { withCrmTransaction: async callback => callback(db) } });
   const route = load('app/api/crm/sheets-sync/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } },
@@ -76,13 +76,11 @@ test('creates lead with sheet contact data and answers', async () => {
   assert.equal(insert.params[4], 'Forms - Manychat');
 });
 
-test('matches existing phone and avoids resetting commercial fields; conflicts are rejected', async () => {
+test('existing contacts are acknowledged without touching their data; ambiguous matches stay pending', async () => {
   const { send, calls } = endpoint([{ id: 'existing', application: {} }]);
-  assert.equal((await (await send({ celular: '12974038745' })).json()).id, 'existing');
-  assert.equal(calls.some(c => c.sql.startsWith('insert into public.crm_leads(')), false);
-  const update = calls.find(c => c.sql.startsWith('update public.crm_leads'));
-  assert.equal(/source=|gross_value=|product=|notes=|created_at=/.test(update.sql), false);
-  assert.match(update.sql, /stage=case/);
+  const result = await (await send({ celular: '12974038745' })).json();
+  assert.equal(result.id, 'existing'); assert.equal(result.created, false); assert.equal(result.skipped, true);
+  assert.equal(calls.some(c => /^(insert into|update|delete from) public\.crm_leads/.test(c.sql)), false);
   assert.equal((await endpoint([{ id: 'a' }, { id: 'b' }]).send({ celular: '12974038745' })).status, 409);
 });
 
@@ -135,16 +133,18 @@ test('timer scan retries failed rows, skips acknowledged rows and detects later 
   assert.equal(payloads[4].baseline,false);
 });
 
-test('reentry reuses the existing contact and reports reactivation without creating another lead', async () => {
-  const { send, calls } = endpoint([{ id: 'archived', application: {} }], true);
-  const response = await send({ celular: '12974038745', applicationId: 'new-application' });
-  const result = await response.json();
-  assert.equal(result.id, 'archived');
-  assert.equal(result.created, false);
-  assert.equal(result.reactivated, true);
-  assert.equal(calls.some(c => c.sql.startsWith('insert into public.crm_leads(')), false);
-  const reentry = calls.find(c => c.sql.startsWith('update public.crm_leads'));
-  assert.equal(reentry.params[0], 'archived');
+test('new applications and edited rows from known contacts never reactivate or modify the lead', async () => {
+  for (const stage of ['Novo lead','Primeiro contato','Follow up','Fechado','Desqualificado']) {
+    for (const baseline of [true,false]) {
+      const existing={id:'existing',stage,notes:'Anotação da closer',company:'Oficina original',application:{syncRecordId:'sheet:original'}};
+      const snapshot=JSON.stringify(existing);
+      const { send, calls } = endpoint([existing], true);
+      const result=await (await send({celular:'12974038745',oficina:'Outra oficina',pessoas:'10',applicationId:'new-application',baseline})).json();
+      assert.equal(result.skipped,true);assert.equal(result.created,false);
+      assert.equal(calls.some(c=>/^(insert into|update|delete from) public\.crm_leads/.test(c.sql)),false);
+      assert.equal(JSON.stringify(existing),snapshot);
+    }
+  }
 });
 
 test('reactivation is conditional and retains notes, purchases and journey history', async () => {
@@ -273,18 +273,18 @@ test('initial spreadsheet baseline leaves contacts in all other stages untouched
     const result = await response.json();
     assert.equal(response.status,200);
     assert.equal(result.skipped,true);
-    assert.equal(calls.some(c => c.sql.startsWith('update') || c.sql.startsWith('insert')),false);
+    assert.equal(calls.some(c => /^(insert into|update|delete from) public\.crm_leads/.test(c.sql)),false);
   }
 });
-test('initial baseline in Novo lead does not add a false second application or reentry', async () => {
-  const {send,calls}=endpoint([{id:'existing',stage:'Novo lead',source:'Direct',application:{}}]);
-  const result=await (await send({applicationId:'initial-id',baseline:true,celular:'12974038745',funil:'Mentoria'})).json();
-  assert.equal(result.reactivated,false);
-  const update=calls.find(c=>c.sql.startsWith('update'));
-  assert.equal(update.params[8],false);
-  assert.equal(update.params[6].includes('Segunda aplicação'),false);
-  assert.equal(JSON.parse(update.params[7]).length,0);
-  assert.equal(JSON.parse(update.params[5]).history.length,0);
+test('known application IDs are checked in current data and history, even if the row phone changes', async () => {
+  const {send,calls}=endpoint([{id:'existing'}]);
+  const result=await (await send({applicationId:'initial-id',spreadsheetId:'sheet',celular:'11988887777'})).json();
+  assert.equal(result.skipped,true);
+  const lookup=calls.find(c=>c.sql.startsWith('select id'));
+  assert.equal(lookup.params[3],'sheet:initial-id');
+  assert.match(lookup.sql,/application->>'syncRecordId'/);
+  assert.match(lookup.sql,/application->'history'/);
+  assert.equal(calls.some(c=>/^(insert into|update|delete from) public\.crm_leads/.test(c.sql)),false);
 });
 
 test('first setup appends IDs after DATA without overwriting existing columns', () => {
@@ -316,11 +316,44 @@ test('DATA preserves the application date instead of the synchronization clock',
   assert.equal(mapping.sheetEntryDate(''),null);
   assert.equal(mapping.sheetEntryDate('2026-02-31 10:00:00'),null);
 });
-test('a legacy sheet without application ID cannot silently reopen an existing lead', async () => {
+test('a legacy sheet without application ID also leaves an existing lead completely untouched', async () => {
   const {send,calls}=endpoint([{id:'existing',stage:'Follow up',source:'Direct',application:{}}]);
   const result=await (await send({celular:'12974038745',funil:'Mentoria'})).json();
-  assert.equal(result.reactivated,false);
-  const update=calls.find(c=>c.sql.startsWith('update'));
-  assert.equal(update.params[8],false);
-  assert.equal(JSON.parse(update.params[5]).entryAudit.status,'review');
+  assert.equal(result.skipped,true);
+  assert.equal(calls.some(c=>/^(insert into|update|delete from) public\.crm_leads/.test(c.sql)),false);
+});
+
+test('repeated full imports add only missing contacts and never move the existing ones', async () => {
+  const leads = [{id:'active',name:'Maria',company:'Oficina original',phone:'11993864504',stage:'Follow up',notes:'Em negociação',application:{syncRecordId:'sheet:old'},tags:['Cliente']}];
+  const original = JSON.stringify(leads[0]);
+  const writes=[]; const identities=new Map();
+  const db={query:async(sql,params)=>{
+    if(sql.startsWith('select id')) {
+      const [phone,name,company,syncId,syncKey]=params;
+      return {rows:leads.filter(lead=>(phone && lead.phone===phone)||(syncId && (lead.application?.syncRecordId===syncId || identities.get(syncKey)===lead.id)))};
+    }
+    if(sql.startsWith('insert into public.crm_state')) identities.set(params[0],params[1]);
+    if(sql.startsWith('insert into public.crm_leads(')) {
+      writes.push(sql);
+      leads.push({id:params[0],name:params[1],company:params[2],phone:params[3],stage:params[8],application:JSON.parse(params[5])});
+    }
+    if(/^(update|delete)/.test(sql))throw Error('Existing contacts must never be written');
+    return {rows:[]};
+  }};
+  const route=load('app/api/crm/sheets-sync/route.ts',{
+    'next/server':{NextResponse:{json:(body,options)=>Response.json(body,options)}},
+    '@/lib/crm-db':{withCrmTransaction:async callback=>callback(db)},'@/lib/crm-sheets':mapping,
+  },{process:{env:{SHEETS_TO_CRM_SECRET:'test-only-secret'}}});
+  const rows=[{username:'Maria',oficina:'Tentativa de edição',celular:'+55 (11) 99386-4504',applicationId:'another-application',spreadsheetId:'sheet'},
+    {username:'Novo',celular:'11977776666',applicationId:'new-application',spreadsheetId:'sheet'}];
+  for(let run=0;run<3;run++)for(const row of rows){const response=await route.POST(new Request('https://example.test/api/crm/sheets-sync',{method:'POST',headers:{authorization:'Bearer test-only-secret'},body:JSON.stringify(row)}));assert.equal(response.status,200);}
+  assert.equal(leads.length,2);assert.equal(writes.length,1);
+  assert.equal(JSON.stringify(leads[0]),original);assert.equal(leads[1].stage,'Novo lead');
+  const changedPhone={...rows[1],celular:'11966665555'};
+  const response=await route.POST(new Request('https://example.test/api/crm/sheets-sync',{method:'POST',headers:{authorization:'Bearer test-only-secret'},body:JSON.stringify(changedPhone)}));
+  assert.equal((await response.json()).skipped,true);assert.equal(leads.length,2);assert.equal(leads[1].phone,'11977776666');
+  const editedExisting={...rows[0],celular:'11955554444'};
+  const repeated=await route.POST(new Request('https://example.test/api/crm/sheets-sync',{method:'POST',headers:{authorization:'Bearer test-only-secret'},body:JSON.stringify(editedExisting)}));
+  assert.equal((await repeated.json()).skipped,true);assert.equal(leads.length,2);assert.equal(JSON.stringify(leads[0]),original);
+
 });

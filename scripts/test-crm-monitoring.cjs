@@ -78,7 +78,7 @@ const route = load('app/api/crm/monitoring/route.ts',{
  let saved=[];
  const leads=load('lib/crm-leads.ts',{'server-only':{}});
  const db={query:async(sql,args)=>{saved=JSON.parse(args[1]);}};
- await leads.saveJourneyHistory(db,{id:'lead',journeyHistory:[activity,{id:'stage',kind:'stage'}]});
+ await leads.saveJourneyHistory(db,{id:'lead',journeyHistory:[activity,{id:'forged-interaction',kind:'interaction',at:'2099-01-01T00:00:00Z'},{id:'stage',kind:'stage'}]});
  assert.equal(saved.length,1);assert.equal(saved[0].kind,'stage');
  await leads.saveJourneyHistory(db,{id:'lead',journeyHistory:[activity]},true);assert.equal(saved[0].actorId,'closer');
  console.log('PASS: calendar boundaries, persisted change attribution, retry deduplication, admin-only API, registered closer selection, zero-activity closers, ID-based attribution and forged activity rejection.');

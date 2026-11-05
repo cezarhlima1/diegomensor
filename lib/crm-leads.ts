@@ -54,5 +54,5 @@ export async function saveJourneyHistory(db: PoolClient, lead: Record<string, un
   await db.query(`update public.crm_leads set journey_history=(
     select coalesce(jsonb_agg(event order by event->>'at', event->>'id'), '[]'::jsonb)
     from (select distinct on (event->>'id') event from jsonb_array_elements(journey_history || $2::jsonb) event order by event->>'id') merged
-  ) where id=$1`, [lead.id, JSON.stringify(lead.journeyHistory.filter((event) => trustedActivity || event?.kind !== "activity"))]);
+  ) where id=$1`, [lead.id, JSON.stringify(lead.journeyHistory.filter((event) => trustedActivity || !["activity", "interaction"].includes(event?.kind)))]);
 }

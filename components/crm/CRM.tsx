@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import styles from "./crm.module.css";
-import { recordJourney, completeReturn, type JourneyEvent } from '@/lib/crm-journey';
-import { compareNewLeadEntries, type EntryAudit } from "@/lib/crm-entry-order";
+import { recordJourney, completeReturn, touchLead, type JourneyEvent } from '@/lib/crm-journey';
+import { compareLeadActivity, type EntryAudit } from "@/lib/crm-entry-order";
 import ContactSummary from './ContactSummary';
 import { contactDay, isReturnStage } from '@/lib/crm-contact-summary';
 import CRMAdmin, { type CrmModule } from "./CRMAdmin";
@@ -48,6 +48,7 @@ type Lead = {
   nextAction: string;
   date: string;
   createdAt?: string;
+  lastActivityAt?: string;
   conversationAt?: string;
   meetingAt?: string;
   meetingScheduledFor?: string | null;
@@ -498,7 +499,7 @@ export default function CRM() {
     const today = brazilDateKey(new Date());
     const checkpoints = lead.contactCheckpoints || [];
     const doneToday = checkpoints.some((checkpoint) => brazilDateKey(checkpoint) === today);
-    const updated = { ...lead, contactCheckpoints: doneToday ? checkpoints.filter((checkpoint) => brazilDateKey(checkpoint) !== today) : [...checkpoints, new Date().toISOString()] };
+    const updated = touchLead({ ...lead, contactCheckpoints: doneToday ? checkpoints.filter((checkpoint) => brazilDateKey(checkpoint) !== today) : [...checkpoints, new Date().toISOString()] });
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next;
     localDataRevision.current += 1;
@@ -513,7 +514,7 @@ export default function CRM() {
     if (timer) { window.clearTimeout(timer); leadSaveTimers.current.delete(id); }
     const today = brazilDateKey(new Date()), checkpoints = lead.contactCheckpoints || [];
     const done = checkpoints.some(value => brazilDateKey(value) === today);
-    const updated: Lead = { ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? completeReturn(lead) : {}) };
+    const updated: Lead = touchLead({ ...lead, contactCheckpoints: mode === 'followups' && done ? checkpoints.filter(value => brazilDateKey(value) !== today) : done ? checkpoints : [...checkpoints, new Date().toISOString()], ...(mode === 'returns' ? completeReturn(lead) : {}) });
     await saveLead(updated);
     const next = leadsRef.current.map(item => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1; setLeads(next);
@@ -790,7 +791,7 @@ export default function CRM() {
       const meetingIndex = pipelineStages.findIndex((item) => item.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase() === "reuniao agendada");
       if (meetingIndex >= 0 && pipelineStages.indexOf(lead.stage) === meetingIndex && stageIndex > meetingIndex && stageKey !== "desqualificado") transitioned.meetingOutcome = "Realizada";
     }
-    const updated = recordJourney(lead, transitioned, now);
+    const updated = touchLead(recordJourney(lead, transitioned, now), now);
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
@@ -927,7 +928,8 @@ export default function CRM() {
   const updateLead = (id: string, changes: Partial<Lead>) => {
     const lead = leadsRef.current.find((item) => item.id === id);
     if (!lead) return;
-    const updated = recordJourney(lead, applyLeadChanges(lead, changes));
+    const now = new Date().toISOString();
+    const updated = touchLead(recordJourney(lead, applyLeadChanges(lead, changes), now), now);
     const next = leadsRef.current.map((item) => item.id === id ? updated : item);
     leadsRef.current = next; localDataRevision.current += 1;
     setLeads(next);
@@ -1061,7 +1063,7 @@ export default function CRM() {
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
-          <Pipeline allLeads={leads} leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={savePipelineStages} removeStage={deletePipelineStage} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
+          <Pipeline allLeads={leads} leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={savePipelineStages} removeStage={deletePipelineStage} activateLead={id => updateLead(id, {})} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} stages={pipelineStages} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -1509,6 +1511,7 @@ function Pipeline({
   stages,
   setStages,
   removeStage,
+  activateLead,
   moveLead,
   toggleContactToday,
   completeSummaryContact,
@@ -1522,6 +1525,7 @@ function Pipeline({
   allLeads: Lead[];
   setStages: (stages: Stage[]) => Promise<void>;
   removeStage: (name: Stage) => Promise<void>;
+  activateLead: (id: string) => void;
   moveLead: (id: string, stage: Stage) => void;
   toggleContactToday: (id: string) => void;
   completeSummaryContact: (id: string, mode: 'followups' | 'returns') => Promise<void>;
@@ -1604,19 +1608,11 @@ function Pipeline({
       const stage = visibleStage(lead);
       grouped.get(stage)?.push(lead);
     }
-    grouped.get("Novo lead")?.sort(compareNewLeadEntries);
-    const closedStage = stages.find((stage) => stage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "fechado");
-    if (closedStage) grouped.get(closedStage)?.sort((left, right) => {
-      const latestClosing = (lead: Lead) => purchasesForLead(lead, products).reduce((latest, purchase) => Math.max(latest, new Date(purchase.closedAt).getTime() || 0), 0);
-      return latestClosing(right) - latestClosing(left);
-    });
+    for (const items of grouped.values()) items.sort(compareLeadActivity);
     return grouped;
   }, [leads, products, stages, range.start, range.end, productFilter, sourceFilter, revenueFilter, tagFilter, search]);
   const summaryMode = summary && isReturnStage(summary) ? 'returns' : 'followups';
-  const summaryLeads = summary ? [...(stageItems.get(summary) || [])].sort((a, b) => {
-    const done = Number((a.contactCheckpoints || []).some(value => contactDay(value) === today)) - Number((b.contactCheckpoints || []).some(value => contactDay(value) === today));
-    return done || (Date.parse(a.followUpAt || '') || Infinity) - (Date.parse(b.followUpAt || '') || Infinity) || a.name.localeCompare(b.name, 'pt-BR');
-  }) : [];
+  const summaryLeads = summary ? stageItems.get(summary) || [] : [];
   const moveStage = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= stages.length) return; const next = [...stages]; [next[index], next[target]] = [next[target], next[index]]; void setStages(next).catch(() => setStageError('Não foi possível reordenar as etapas.')); };
   const addStage = async (event: React.FormEvent) => { event.preventDefault(); const name = newStage.trim(); if (!name || stages.some((stage) => stage.toLowerCase() === name.toLowerCase())) return; setStageError(''); try { await setStages([...stages, name]); setNewStage(''); } catch { setStageError('Não foi possível criar a etapa.'); } };
   const toggleLeadSelection = (id: string) => setSelectedLeadIds((current) => {
@@ -1716,7 +1712,7 @@ function Pipeline({
                       </div>
                       {lead.phone && (
                         <div className={styles.cardActions}>
-                          <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => event.stopPropagation()}>
+                          <a href={whatsappLink(lead)} target="_blank" rel="noopener noreferrer" style={{ color: `color-mix(in srgb, ${stageColor(stage)} 82%, white)`, background: `${stageColor(stage)}20`, borderColor: `${stageColor(stage)}66` }} aria-label={`Chamar ${lead.name} no WhatsApp`} onClick={(event) => { event.stopPropagation(); activateLead(lead.id); }}>
                             <WhatsAppIcon />
                           </a>
                           <button type="button" className={styles.copyButton} data-copied={copiedPhoneId === lead.id} aria-label={copiedPhoneId === lead.id ? "Telefone copiado" : `Copiar telefone de ${lead.name}`} onClick={(event) => { event.stopPropagation(); void copyPhone(lead); }}>
@@ -1734,7 +1730,7 @@ function Pipeline({
           );
         })}
       </div></div>
-      {summary && <ContactSummary key={summary} title={summary} mode={summaryMode} leads={summaryLeads} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) { setSummary(null); select(lead); } }} complete={completeSummaryContact} whatsapp={whatsappLink} />}
+      {summary && <ContactSummary key={summary} title={summary} mode={summaryMode} leads={summaryLeads} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) { setSummary(null); select(lead); } }} complete={completeSummaryContact} whatsapp={whatsappLink} activateLead={activateLead} />}
 
     </div>
   );
@@ -1785,7 +1781,7 @@ function Contacts({
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
   const inContactRange = (lead: Lead) => (!contactRange.start || brazilDateKey(lead.createdAt) >= contactRange.start) && (!contactRange.end || brazilDateKey(lead.createdAt) <= contactRange.end);
-  const visibleLeads = leads.filter((lead) => inContactRange(lead) && matchesStage(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead))));
+  const visibleLeads = leads.filter((lead) => inContactRange(lead) && matchesStage(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead)))).sort(compareLeadActivity);
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
     <div className={styles.content}>
@@ -2337,7 +2333,7 @@ function LeadDrawer({
         </section>
         <section className={styles.leadDatesSection}>
           <details><summary style={{ cursor: "pointer" }}>Histórico da jornada · {(lead.journeyHistory || []).length} registros · {(lead.journeyHistory || []).filter(item => item.kind === 'no-show').length} no-shows</summary>
-            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'activity' ? (item.actions || []).join(' · ') : item.kind === 'reentry' ? `Nova entrada por ${item.funnel || item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
+            <div className={styles.contactHistoryList}>{[...(lead.journeyHistory || [])].sort((a, b) => b.at.localeCompare(a.at)).map(item => <article key={item.id}><i>{item.kind === 'no-show' ? '!' : '✓'}</i><span><b>{item.kind === 'interaction' ? 'Atendimento atualizado' : item.kind === 'activity' ? (item.actions || []).join(' · ') : item.kind === 'reentry' ? `Nova entrada por ${item.funnel || item.source || 'canal não informado'} · Novo lead (antes: ${item.previousStage})` : item.kind === 'stage' ? `Movido para ${item.stage}` : item.kind === 'no-show' ? 'No-show' : 'Retorno concluído'}</b><small>{item.scheduledFor ? `Data agendada: ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(item.scheduledFor))} · ` : ''}Registrado em {new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.at))}</small></span></article>)}</div>
             {!(lead.journeyHistory || []).length && <p>Nenhuma ocorrência registrada.</p>}
           </details>
         </section>

@@ -32,3 +32,8 @@ assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show').length,2);
 assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show')[0].scheduledFor,'2026-09-21T12:00:00Z');
 assert.equal(lead.journeyHistory.filter(x=>x.kind==='no-show')[1].scheduledFor,'2026-09-25T12:00:00Z');
 console.log('PASS: stage history, daily contact deduplication, repeated returns and no-shows retain scheduled dates, unchanged saves are idempotent.');
+const {touchLead}=load('crm-journey');
+const touched=touchLead(lead,'2026-11-05T15:00:00Z');
+assert.equal(touched.lastActivityAt,'2026-11-05T15:00:00Z');
+assert.equal(touched.journeyHistory.length,lead.journeyHistory.length);
+assert.equal(touched.contactCheckpoints.length,lead.contactCheckpoints.length);

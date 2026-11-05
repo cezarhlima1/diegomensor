@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { contactDay, contactedOn, phoneEnding, type ContactSummaryLead } from '@/lib/crm-contact-summary';
 import styles from './crm.module.css';
 
-export default function ContactSummary({ title, mode, leads, today, close, openLead, complete, whatsapp }: {
+export default function ContactSummary({ title, mode, leads, today, close, openLead, complete, whatsapp, activateLead }: {
   title: string; mode: 'followups' | 'returns'; leads: ContactSummaryLead[]; today: string;
   close: () => void; openLead: (id: string) => void;
   complete: (id: string, mode: 'followups' | 'returns') => Promise<void>;
   whatsapp: (lead: ContactSummaryLead) => string;
+  activateLead?: (id: string) => void;
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export default function ContactSummary({ title, mode, leads, today, close, openL
         <button type="button" className={styles.contactSummaryCheck} aria-label={`${done ? 'Desfazer contato de hoje de' : 'Marcar contato feito com'} ${lead.name}`} aria-pressed={done} disabled={!!pending || !!confirmed || (mode === 'returns' && done)} onClick={() => void check(lead.id)}>{done ? '✓' : pending === lead.id ? '…' : ''}</button>
         <div><button type="button" className={styles.contactSummaryName} onClick={() => openLead(lead.id)}>{lead.name}</button><small>{lead.company || 'Oficina não informada'}</small>{(lead.product || lead.nextAction) && <details><summary>Ver contexto</summary>{lead.product && <span>{lead.product}</span>}{lead.nextAction && <p>{lead.nextAction}</p>}</details>}</div>
         <div><strong className={styles.contactSummaryPhone}>{lead.phone || 'Telefone não informado'}</strong>{ending && <button type="button" onClick={() => void copy(lead)}>{copied === lead.id ? '✓ Copiado' : `Copiar final ${ending}`}</button>}</div>
-        <div>{lead.followUpAt ? <time className={contactDay(lead.followUpAt) < today ? styles.contactSummaryLate : undefined} dateTime={lead.followUpAt}>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short' }).format(new Date(lead.followUpAt))}</time> : mode === 'returns' ? <span>Sem data agendada</span> : <span>{done ? 'Feito hoje' : 'Pendente hoje'}</span>}{lead.phone && <a href={whatsapp(lead)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}</div>
+        <div>{lead.followUpAt ? <time className={contactDay(lead.followUpAt) < today ? styles.contactSummaryLate : undefined} dateTime={lead.followUpAt}>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short' }).format(new Date(lead.followUpAt))}</time> : mode === 'returns' ? <span>Sem data agendada</span> : <span>{done ? 'Feito hoje' : 'Pendente hoje'}</span>}{lead.phone && <a href={whatsapp(lead)} onClick={() => activateLead?.(lead.id)} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}</div>
       </article>;
     })}</div>
     {!rows.length && <p className={styles.contactSummaryEmpty}>Nenhum contato pendente nesta visualização.</p>}

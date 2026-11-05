@@ -2,6 +2,8 @@
  * Planilha Automações de cadastro ISCAS, aba Leads (colunas A:G):
  * username, oficina, celular, pessoas, funil, faturamento, problema.
  * CRM_APLICACAO_ID identifica cada aplicação e acompanha a linha ao ordenar.
+ * Só cadastra contatos ausentes do CRM. Contatos existentes são ignorados,
+ * sem atualizar dados, criar reaplicação ou mover etapa.
  * Não apague nem reutilize esse ID em novas aplicações.
  * Substitua o script antigo por este. Mantenha CRM_SECRET nas propriedades
  * do script, igual a SHEETS_TO_CRM_SECRET no servidor. Execute instalarSincronizacao
@@ -91,7 +93,7 @@ function sincronizarPendentes() {
     });
     const start = Math.min(Number(state.CRM_CURSOR) || 0, count - 1);
     const deadline = Date.now() + 240000;
-    let sent = 0, failed = 0, scanned = 0;
+    let sent = 0, created = 0, skipped = 0, failed = 0, scanned = 0;
     const errors = [];
     for (; scanned < count && Date.now() < deadline; scanned++) {
       const index = (start + scanned) % count;
@@ -111,7 +113,8 @@ function sincronizarPendentes() {
       try {
         const response = UrlFetchApp.fetch(CRM_ENDPOINT_URL, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), headers: { Authorization: "Bearer " + state.CRM_SECRET }, muteHttpExceptions: true });
         const code = response.getResponseCode();
-        if (code !== 200 || JSON.parse(response.getContentText()).ok !== true) {
+        const result = code === 200 ? JSON.parse(response.getContentText()) : {};
+        if (code !== 200 || result.ok !== true) {
           failed++;
           if (errors.length < 10) errors.push("Linha " + (index + 2) + ": HTTP " + code);
           console.error("Falha na linha " + (index + 2) + ": HTTP " + code);
@@ -121,6 +124,8 @@ function sincronizarPendentes() {
         }
         props.setProperty(key, hash);
         sent++;
+        if (result.created === true) created++;
+        if (result.skipped === true) skipped++;
       } catch (error) {
         failed++;
         if (errors.length < 10) errors.push("Linha " + (index + 2) + ": não foi possível confirmar o envio.");
@@ -129,7 +134,7 @@ function sincronizarPendentes() {
       }
     }
     props.setProperty("CRM_CURSOR", String((start + scanned) % count));
-    const status = sent + " linha(s) enviada(s); " + failed + " falha(s). Linhas pendentes serão tentadas na próxima execução.";
+    const status = sent + " linha(s) confirmada(s); " + created + " novo(s) contato(s); " + skipped + " existente(s) ignorado(s); " + failed + " falha(s). Linhas pendentes serão tentadas na próxima execução.";
     props.setProperty("CRM_LAST_RUN", new Date().toISOString());
     props.setProperty("CRM_LAST_RESULT", status);
     props.setProperty("CRM_LAST_ERRORS", errors.join("\n"));

@@ -232,6 +232,9 @@ export async function PATCH(request: Request) {
         const after = await db.query("select to_jsonb(l) as snapshot from public.crm_leads l where id=$1", [lead.id]);
         const activity = auditLeadChange(before.rows[0]?.snapshot, after.rows[0]?.snapshot, auth.userId);
         if (activity) await saveJourneyHistory(db, { id: lead.id, journeyHistory: [activity] }, true);
+        if (before.rows[0]?.snapshot) await saveJourneyHistory(db, { id: lead.id, journeyHistory: [{
+          id: `interaction:${crypto.randomUUID()}`, kind: 'interaction', at: new Date().toISOString(), actorId: auth.userId, stage: lead.stage,
+        }] }, true);
         const verification = await db.query(`select stage,product,tags,contact_checkpoints,journey_history,created_at,conversation_at,meeting_at,proposal_at,closed_at,${meetingScheduledSupported ? "meeting_scheduled_for" : "null::timestamptz as meeting_scheduled_for"},${meetingOutcomeSupported ? "meeting_outcome" : "null::text as meeting_outcome"},${followUpSupported ? "follow_up_at" : "null::timestamptz as follow_up_at"},updated_at from public.crm_leads where id=$1`, [lead.id]);
         const commissions = await db.query('select id,commission_rate from public.crm_purchases where lead_id=$1', [lead.id]);
         return { ...verification.rows[0], purchaseCommissions: commissions.rows.map(row => ({ id: row.id, commissionRate: Number(row.commission_rate) })) };
