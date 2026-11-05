@@ -76,12 +76,21 @@ test('creates lead with sheet contact data and answers', async () => {
   assert.equal(insert.params[4], 'Forms - Manychat');
 });
 
-test('existing contacts are acknowledged without touching their data; ambiguous matches stay pending', async () => {
+test('existing contacts are untouched; ambiguous matches become tagged review entries', async () => {
   const { send, calls } = endpoint([{ id: 'existing', application: {} }]);
   const result = await (await send({ celular: '12974038745' })).json();
   assert.equal(result.id, 'existing'); assert.equal(result.created, false); assert.equal(result.skipped, true);
   assert.equal(calls.some(c => /^(insert into|update|delete from) public\.crm_leads/.test(c.sql)), false);
-  assert.equal((await endpoint([{ id: 'a' }, { id: 'b' }]).send({ celular: '12974038745' })).status, 409);
+  const conflict=endpoint([{id:'a'},{id:'b'}]);
+  const review=await conflict.send({celular:'12974038745',username:'Conferir',applicationId:'conflict'});
+  assert.equal(review.status,200);assert.equal((await review.json()).review,true);
+  const inserted=conflict.calls.find(call=>call.sql.startsWith('insert into public.crm_leads('));
+  assert.equal(inserted.params[3],'');assert.equal(inserted.params[8],'Novo lead');
+  assert.ok(inserted.params[7].includes('Verificar entrada'));
+  const application=JSON.parse(inserted.params[5]);
+  assert.equal(application.identityReview.originalPhone,'12974038745');
+  assert.equal(application.identityReview.matchedLeadIds.length,2);
+  assert.equal(conflict.calls.some(call=>/^(update|delete from) public\.crm_leads/.test(call.sql)),false);
 });
 
 test('timer scan retries failed rows, skips acknowledged rows and detects later additions', () => {
@@ -356,4 +365,31 @@ test('repeated full imports add only missing contacts and never move the existin
   const repeated=await route.POST(new Request('https://example.test/api/crm/sheets-sync',{method:'POST',headers:{authorization:'Bearer test-only-secret'},body:JSON.stringify(editedExisting)}));
   assert.equal((await repeated.json()).skipped,true);assert.equal(leads.length,2);assert.equal(JSON.stringify(leads[0]),original);
 
+});
+
+test('ambiguous imports create exactly one review entry per row and never alter candidate contacts', async () => {
+  for (const withId of [true,false]) {
+    const leads=[{id:'a',phone:'11993864504',stage:'Fechado'},{id:'b',phone:'11993864504',stage:'Follow up'}];
+    const originals=JSON.stringify(leads);let inserts=0;
+    const db={query:async(sql,params)=>{
+      if(sql.startsWith('select id'))return {rows:leads.filter(lead=>lead.phone===params[0]||lead.id===params[5])};
+      if(sql.startsWith('insert into public.crm_leads(')){inserts++;leads.push({id:params[0],phone:params[3],stage:params[8],tags:params[7],application:JSON.parse(params[5])});}
+      if(/^(update|delete)/.test(sql))throw Error('No existing lead may be changed');
+      return {rows:[]};
+    }};
+    const route=load('app/api/crm/sheets-sync/route.ts',{
+      'next/server':{NextResponse:{json:(body,options)=>Response.json(body,options)}},
+      '@/lib/crm-db':{withCrmTransaction:async callback=>callback(db)},'@/lib/crm-sheets':mapping,
+    },{process:{env:{SHEETS_TO_CRM_SECRET:'test-only-secret'}}});
+    const body={username:'Maria',celular:'11993864504',funil:'Mentoria',...(withId?{spreadsheetId:'sheet',applicationId:'conflicting-row'}:{})};
+    for(let run=0;run<3;run++){
+      const response=await route.POST(new Request('https://example.test/api/crm/sheets-sync',{method:'POST',headers:{authorization:'Bearer test-only-secret'},body:JSON.stringify(body)}));
+      assert.equal(response.status,200);const result=await response.json();assert.equal(result.review,true);assert.equal(result.created,run===0);
+      if(run===0)leads[2].stage='Em conversação';
+    }
+    assert.equal(inserts,1);assert.equal(leads.length,3);assert.equal(JSON.stringify(leads.slice(0,2)),originals);
+    assert.equal(leads[2].stage,'Em conversação','A retry must not reopen the review entry after manual handling');
+    assert.ok(leads[2].tags.includes('Verificar entrada'));assert.ok(leads[2].tags.includes('Mentoria'));
+    assert.equal(leads[2].application.sheetsIscas.phone,'11993864504');
+  }
 });

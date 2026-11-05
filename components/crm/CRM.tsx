@@ -17,6 +17,7 @@ type View = CrmModule | "acoes" | "admin" | "monitoramento";
 type PaymentMethod = "Pix" | "Boleto" | "Cartão" | "Green" | "Transferência" | "Outro";
 type MeetingOutcome = "Agendada" | "Realizada" | "No-show" | "Cancelada";
 type LeadApplication = {
+  identityReview?: { status: string; originalPhone?: string; matchedLeadIds?: string[] };
   entryAudit?: EntryAudit;
   sessionId?: string;
   sheetDate?: string | null;
@@ -2228,6 +2229,7 @@ function LeadDrawer({
           <h2>{lead.name}</h2>
           <p>{lead.company}</p>
         </header>
+          {lead.application?.identityReview?.status === 'pending' && <p className={styles.identityReviewNotice}>Verificar entrada · Há mais de um cadastro correspondente. {lead.application.identityReview.originalPhone && <>Telefone recebido: <b>{lead.application.identityReview.originalPhone}</b>. </>}Confira a identificação antes de vincular este registro a um contato.</p>}
           <div className={styles.leadActions}>
             <button type="button" onClick={() => setEditing(current => !current)}>{editing ? 'Cancelar edição' : 'Editar dados'}</button>
             <button type="button" onClick={remove}>Excluir lead</button>

@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { withCrmTransaction } from "@/lib/crm-db";
 import { sheetApplication, sheetContact, sheetProduct, sheetEntryDate } from "@/lib/crm-sheets";
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   const applicationId = typeof body.applicationId === "string" ? body.applicationId.trim().slice(0, 200) : "";
   const syncRecordId = applicationId
     ? `${String(body.spreadsheetId || "iscas").slice(0, 200)}:${applicationId}` : undefined;
+  const reviewId = `sheet-review:${createHash('sha256').update(syncRecordId || JSON.stringify(contact)).digest('hex')}`;
   try {
     const result = await withCrmTransaction(async (db) => {
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", ["sheets-iscas-sync"]);
@@ -37,9 +38,11 @@ export async function POST(request: Request) {
         or ($2<>'' and source='Forms - Manychat' and lower(name)=lower($2) and (phone='' or $1='') and (company='' or $3='' or lower(company)=lower($3)))
         or ($4<>'' and (id=(select value from public.crm_state where key=$5) or application->>'syncRecordId'=$4 or exists(
           select 1 from jsonb_array_elements(case when jsonb_typeof(application->'history')='array' then application->'history' else '[]'::jsonb end) entry where entry->>'syncRecordId'=$4
-        ))) for update`, [contact.phone, contact.name, contact.company, syncRecordId || '', `sheet_contact:${syncRecordId || ''}`]);
-      if (matches.rows.length > 1) return { conflict: true };
-      const existing = matches.rows[0];
+        ))) or id=$6 for update`, [contact.phone, contact.name, contact.company, syncRecordId || '', `sheet_contact:${syncRecordId || ''}`, reviewId]);
+      const priorReview = matches.rows.find(row => row.id === reviewId);
+      if (priorReview) return { id: priorReview.id, created: false, skipped: true, review: true, reason: 'review-already-recorded' };
+      const needsReview = matches.rows.length > 1;
+      const existing = needsReview ? undefined : matches.rows[0];
       // This integration only fills gaps in the CRM. A resend, edited row or new
       // application from a known contact must never update or reopen that lead.
       const rememberContact = async (id: string) => {
@@ -55,17 +58,23 @@ export async function POST(request: Request) {
       const application = { ...sheetApplication(contact), receivedAt, ...(entryAt ? { sheetDate: String(body.sheetDate), submittedAt: entryAt } : {}), ...(syncRecordId ? { syncRecordId } : {}) };
       const source = "Forms - Manychat";
       await db.query("insert into public.crm_lead_sources(name) values($1) on conflict do nothing", [source]);
-      const id = crypto.randomUUID();
+      const id = needsReview ? reviewId : crypto.randomUUID();
       // Etiqueta com o funil exatamente como veio na coluna FUNIL da
       // planilha, pra identificar de qual automação o lead saiu.
-      const tags = contact.funnel ? [contact.funnel] : [];
+      const tags = [...(contact.funnel ? [contact.funnel] : []), ...(needsReview ? ["Verificar entrada"] : [])];
       const verifiedAt = entryAt || (applicationId && body.baseline !== true ? receivedAt : null);
-      const recordedApplication = { ...application, entryAudit: verifiedAt ? { status: "confirmed", entryAt: verifiedAt } : { status: "review", entryAt: null, reasons: ["Sem data comprovada de aplicação"] } };
-      await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,$9,'Morno','',to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,$8)", [id, contact.name, contact.company, contact.phone, source, JSON.stringify(recordedApplication), sheetProduct(contact.funnel), tags, "Novo lead"]);
+      const recordedApplication = { ...application,
+        ...(needsReview ? { identityReview: { status: 'pending', originalPhone: contact.phone, matchedLeadIds: matches.rows.map(row => row.id) } } : {}),
+        entryAudit: needsReview ? { status: 'review', entryAt: verifiedAt, reasons: ['Mais de um cadastro corresponde a esta entrada. Conferir a identificação.'] } : verifiedAt ? { status: "confirmed", entryAt: verifiedAt } : { status: "review", entryAt: null, reasons: ["Sem data comprovada de aplicação"] },
+      };
+      // A review entry is not an extra contact with the same phone. Preserve
+      // the submitted number in its application until a person resolves it.
+      const phone = needsReview ? '' : contact.phone;
+      const nextAction = needsReview ? `Verificar identificação da entrada${contact.phone ? ` · Telefone recebido: ${contact.phone}` : ''}` : '';
+      await db.query("insert into public.crm_leads(id,name,company,phone,email,source,stage,temperature,next_action,display_date,created_at,application,product,tags) values($1,$2,$3,$4,'',$5,$9,'Morno',$10,to_char(now() at time zone 'America/Sao_Paulo','DD/MM/YYYY'),now(),$6::jsonb,$7,$8)", [id, contact.name, contact.company, phone, source, JSON.stringify(recordedApplication), sheetProduct(contact.funnel), tags, "Novo lead", nextAction]);
       await rememberContact(id);
-      return { id, created: true };
+      return { id, created: true, ...(needsReview ? { review: true } : {}) };
     });
-    if (result.conflict) return NextResponse.json({ ok: false, error: "duplicate-phone-conflict" }, { status: 409 });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error("Sheets CRM synchronization failed");
