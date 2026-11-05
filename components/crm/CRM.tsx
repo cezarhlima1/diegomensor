@@ -1063,7 +1063,7 @@ export default function CRM() {
         {view === "campanhas" && <TrafficDashboard records={traffic.filter((item) => inRange(item.date || `${item.month}-01`, dateRange.start, dateRange.end) || purchasesForCampaignAll(leads, item.id, catalogProducts).some((purchase) => inRange(purchase.closedAt, dateRange.start, dateRange.end)))} month={selectedMonth} start={dateRange.start} end={dateRange.end} products={catalogProducts} sources={catalogSources} leads={leads} save={saveCampaign} remove={(id) => { void removeCampaign(id); }} importSales={importCampaignSales} ascendLeads={startBulkAscension} importAscension={importAscensionSales} />}
         {view === "acoes" && <CommercialActions products={catalogProducts} />}
         {view === "pipeline" && (
-          <Pipeline allLeads={leads} leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={savePipelineStages} removeStage={deletePipelineStage} activateLead={id => updateLead(id, {})} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
+          <Pipeline detailOpen={!!selected} allLeads={leads} leads={filtered} products={catalogProducts} sources={catalogSources} stages={pipelineStages} setStages={savePipelineStages} removeStage={deletePipelineStage} activateLead={id => updateLead(id, {})} moveLead={moveLead} toggleContactToday={toggleContactToday} completeSummaryContact={completeSummaryContact} select={setSelected} search={search} />
         )}
         {view === "contatos" && (
           <Contacts leads={filtered} stages={pipelineStages} sources={catalogSources} products={catalogProducts} select={setSelected} />
@@ -1504,6 +1504,7 @@ function FilterMenu({ label, options, selected, toggle, clear }: { label: string
 }
 
 function Pipeline({
+  detailOpen,
   allLeads,
   leads,
   products,
@@ -1522,6 +1523,7 @@ function Pipeline({
   products: ProductDefinition[];
   sources: string[];
   stages: Stage[];
+  detailOpen: boolean;
   allLeads: Lead[];
   setStages: (stages: Stage[]) => Promise<void>;
   removeStage: (name: Stage) => Promise<void>;
@@ -1730,7 +1732,7 @@ function Pipeline({
           );
         })}
       </div></div>
-      {summary && <ContactSummary key={summary} title={summary} mode={summaryMode} leads={summaryLeads} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) { setSummary(null); select(lead); } }} complete={completeSummaryContact} whatsapp={whatsappLink} activateLead={activateLead} />}
+      {summary && <ContactSummary covered={detailOpen} key={summary} title={summary} mode={summaryMode} leads={summaryLeads} today={today} close={() => setSummary(null)} openLead={id => { const lead = leads.find(item => item.id === id); if (lead) select(lead); }} complete={completeSummaryContact} whatsapp={whatsappLink} activateLead={activateLead} />}
 
     </div>
   );
@@ -2209,10 +2211,17 @@ function LeadDrawer({
       <aside
         className={styles.drawer}
         role="dialog" aria-modal="true" aria-label={`Contato de ${lead.name}`}
+        onKeyDown={event => {
+          if (event.key !== 'Tab') return;
+          const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary')).filter(element => element.getClientRects().length);
+          const first = controls[0], last = controls.at(-1);
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header>
-          <button onClick={close} aria-label="Fechar contato">×</button>
+          <button autoFocus onClick={close} aria-label="Fechar contato">×</button>
           <span className={styles[lead.temperature.toLowerCase()]}>
             {lead.temperature}
           </span>
