@@ -109,6 +109,7 @@ const groupedOriginName = (source: string) => {
   if (normalized === "formulario" || normalized === "forms" || normalized === "form") return "Forms - Sem especificação";
   return source.trim() || "Origem não informada";
 };
+const productKey = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
 const normalizeQuestion = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const answersForLead = (lead: Lead) => allQuestions.map((question) => {
   const answer = lead.application?.answers?.find((item) => normalizeQuestion(item.pergunta) === normalizeQuestion(question.label));
@@ -815,9 +816,10 @@ export default function CRM() {
     const newProducts: { name: string; price: number; netPrice: number }[] = [];
     const resolveProduct = (sale: ImportedSale) => {
       const name = sale.product?.trim() || campaign.product;
-      const known = catalogProducts.some((product) => product.name.toLowerCase() === name.toLowerCase())
-        || newProducts.some((added) => added.name.toLowerCase() === name.toLowerCase());
-      if (!known) newProducts.push({ name, price: sale.gross, netPrice: sale.net });
+      const known = catalogProducts.find((product) => productKey(product.name) === productKey(name))
+        || newProducts.find((added) => productKey(added.name) === productKey(name));
+      if (known) return known.name;
+      newProducts.push({ name, price: sale.gross, netPrice: sale.net });
       return name;
     };
     for (const sale of uniqueSales) {
@@ -831,7 +833,7 @@ export default function CRM() {
         // Venda lançada manualmente (orgânica): a planilha só corrige o valor.
         if (!isCampaignPurchase(codedPurchase)) {
           const purchases = codedHistory.map((purchase, purchaseIndex) => purchaseIndex === codedPurchaseIndex
-            ? { ...purchase, value: sale.gross, netValue: sale.net }
+            ? { ...purchase, product: saleProduct, value: sale.gross, netValue: sale.net }
             : purchase);
           next[codedLeadIndex] = { ...next[codedLeadIndex], purchases };
           continue;
@@ -851,10 +853,11 @@ export default function CRM() {
       // o valor. Produto diferente gera uma nova compra de tráfego,
       // preservando a esteira do cliente.
       const matchingPurchaseIndex = history.findLastIndex((purchase) => !isCampaignPurchase(purchase)
-        && purchase.product === saleProduct);
+        && productKey(purchase.product) === productKey(saleProduct)
+        && (!purchase.externalSaleCode || purchase.externalSaleCode === sale.code));
       const paidInstallments: Installment[] = [{ id: `gateway-${sale.code}-1`, number: 1, dueDate: brazilDateKey(sale.date), amount: sale.net, status: "Recebido", receivedAt: brazilDateKey(sale.date) }];
       const purchase: Purchase = matchingPurchaseIndex >= 0
-        ? { ...history[matchingPurchaseIndex], externalSaleCode: sale.code, value: sale.gross, netValue: sale.net }
+        ? { ...history[matchingPurchaseIndex], product: saleProduct, origin: "pipeline", externalSaleCode: sale.code, value: sale.gross, netValue: sale.net }
         : { id: `gateway-${sale.code}`, origin: "campaign", source: "Tráfego", externalSaleCode: sale.code, campaignId: campaign.id, product: saleProduct, value: sale.gross, netValue: sale.net, closedAt: sale.date, repurchase: history.length > 0, installments: paidInstallments };
       const purchases = matchingPurchaseIndex >= 0
         ? history.map((item, purchaseIndex) => purchaseIndex === matchingPurchaseIndex ? purchase : item)

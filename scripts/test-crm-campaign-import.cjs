@@ -13,9 +13,12 @@ const context = {
   purchasesForLead: lead => lead.purchases || [],
   isCampaignPurchase: purchase => purchase.origin === 'campaign',
   brazilDateKey: date => date?.slice(0, 10) || '', phoneKey: phone => phone,
+  setCatalogProducts: () => {}, window: { alert: () => {} }, currency: new Intl.NumberFormat("pt-BR"),
   persistImportBatch: async (...args) => { saved = args; },
 };
 vm.createContext(context);
+const keySource = source.slice(source.indexOf('const productKey ='), source.indexOf('\n', source.indexOf('const productKey =')));
+vm.runInContext(ts.transpileModule(keySource, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
 vm.runInContext(ts.transpileModule(source.slice(start, end) + '\nglobalThis.runImport = importCampaignSales;', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
 (async () => {
   await context.runImport(campaign, [sale, sale]);
@@ -32,6 +35,24 @@ vm.runInContext(ts.transpileModule(source.slice(start, end) + '\nglobalThis.runI
   assert.equal(saved[0].length, 1);
   assert.equal(saved[0][0].purchases.length, 1);
   assert.equal(saved[0][0].stage, 'Fechado');
+  const manual = { ...lead, id: 'manual', purchases: [{ id: 'manual-sale', product: 'PRECIFICACÃO  PARA OFICINAS', origin: 'pipeline', value: 200, netValue: 190, closedAt: sale.date }] };
+  context.catalogProducts = [{ name: 'Precificação para oficinas', price: 197, netPrice: 186.17 }];
+  context.leads = [manual];
+  await context.runImport(campaign, [{ ...sale, product: 'precificacao para oficinas', gross: 150, net: 140 }]);
+  const reconciled = saved[0][0].purchases;
+  assert.equal(reconciled.length, 1);
+  assert.equal(reconciled[0].id, 'manual-sale');
+  assert.equal(reconciled[0].product, 'Precificação para oficinas');
+  assert.equal(reconciled[0].value, 150);
+  assert.equal(reconciled[0].netValue, 140);
+  assert.equal(reconciled[0].origin, 'pipeline');
+  assert.equal(context.catalogProducts[0].price, 197);
+  context.leads = saved[0];
+  await context.runImport(campaign, [{ ...sale, code: 'different-sale', product: 'PRECIFICAÇÃO PARA OFICINAS' }]);
+  assert.equal(saved[0][0].purchases.length, 2, 'distinct sale codes remain separate sales');
+  context.leads = [manual];
+  await context.runImport(campaign, [{ ...sale, product: 'Outro curso' }]);
+  assert.equal(saved[0][0].purchases.length, 2, 'different products stay separate');
   // A customer acquired earlier is filtered by the sale date in Fechado.
   const rangeStart = source.indexOf('  const inContactRange =');
   const rangeEnd = source.indexOf('\n  const visibleLeads', rangeStart);
