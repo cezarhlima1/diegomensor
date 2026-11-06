@@ -859,10 +859,10 @@ export default function CRM() {
       const purchases = matchingPurchaseIndex >= 0
         ? history.map((item, purchaseIndex) => purchaseIndex === matchingPurchaseIndex ? purchase : item)
         : [...history, purchase];
-      const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: saleProduct, stage: "Novo lead", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: brazilDateKey(sale.date).split("-").reverse().join("/"), createdAt: sale.date };
+      const base: Lead = existing || { id: `gateway-lead-${sale.code}`, name: sale.name, company: "", phone: sale.phone, email: sale.email, notes: "", tags: [], source: "Tráfego", product: saleProduct, stage: "Fechado", value: sale.gross, netValue: sale.net, temperature: "Quente", nextAction: "", date: brazilDateKey(sale.date).split("-").reverse().join("/"), createdAt: sale.date };
       const updated: Lead = existing
         ? { ...base, name: base.name || sale.name, phone: base.phone || sale.phone, email: base.email || sale.email, purchases }
-        : { ...base, product: saleProduct, stage: "Novo lead", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases };
+        : { ...base, product: saleProduct, stage: "Fechado", value: sale.gross, netValue: sale.net, closedAt: sale.date, purchases };
       if (index >= 0) next[index] = updated; else { next.unshift(updated); index = 0; }
     }
     const campaignBase = traffic.some((item) => item.id === campaign.id) ? traffic : [campaign, ...traffic];
@@ -1783,7 +1783,10 @@ function Contacts({
   const sourceTags = sources;
   const canAscend = (lead: Lead) => { const history = purchasesForLead(lead, products); if (!history.length) return false; const ladder = productLadder(products); const index = ladder.findIndex((product) => product.name === history.at(-1)?.product); return index >= 0 && index < ladder.length - 1; };
   const hasRepurchase = (lead: Lead) => purchasesForLead(lead, products).some((purchase) => purchase.repurchase);
-  const inContactRange = (lead: Lead) => (!contactRange.start || brazilDateKey(lead.createdAt) >= contactRange.start) && (!contactRange.end || brazilDateKey(lead.createdAt) <= contactRange.end);
+  const inContactRange = (lead: Lead) => {
+    const date = brazilDateKey(stageFilter === "Fechado" ? lead.closedAt : lead.createdAt);
+    return (!contactRange.start || date >= contactRange.start) && (!contactRange.end || date <= contactRange.end);
+  };
   const visibleLeads = leads.filter((lead) => inContactRange(lead) && matchesStage(lead) && (sourceFilter === "Todos" || lead.source.trim() === sourceFilter) && (productFilter === "Todos" || lead.product === productFilter || purchasesForLead(lead, products).some((purchase) => purchase.product === productFilter)) && (ascensionFilter === "Todos" || (ascensionFilter === "Possível ascensão" ? canAscend(lead) : hasRepurchase(lead)))).sort(compareLeadActivity);
   const exportExcel = () => { const rows = [["Nome", "Empresa", "WhatsApp", "E-mail", "Origem", "Produto", "Etapa", "Valor", "Data do lead", "Data do fechamento"], ...visibleLeads.map((lead) => [lead.name, lead.company, lead.phone, lead.email, lead.source, lead.product || "", lead.stage, String(lead.value), lead.createdAt || "", lead.closedAt || ""])]; const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")}`; const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = contactRange.start || contactRange.end ? `leads-${contactRange.start || "inicio"}-${contactRange.end || "hoje"}.csv` : "todos-os-leads.csv"; link.click(); URL.revokeObjectURL(url); };
   return (
