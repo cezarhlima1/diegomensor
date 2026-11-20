@@ -9,6 +9,8 @@ import {
   MARKUP_MIN,
   MARKUP_MAX,
   ORIGENS_CLIENTE,
+  LIMITE_ORIGEM_CLIENTE,
+  normalizarOrigemCliente,
   arredondarMoeda,
   brl,
   buildOrcamentoMsg,
@@ -68,6 +70,42 @@ type SalvamentoConfig = "ocioso" | "salvando" | "salvo" | "erro";
 // passo1Inicial — que a page só consulta/passa para admin.
 const Passo1 = nextDynamic(() => import("./Passo1"));
 
+function CampoOrigem({ id, origem, manual, onChange }: {
+  id: string;
+  origem: OrigemCliente;
+  manual: boolean;
+  onChange: (origem: OrigemCliente, manual: boolean) => void;
+}) {
+  const opcaoManual = "__outro__";
+  return (
+    <div className="grid gap-1.5">
+      <label className="grid gap-1.5">
+        <span className="quiz-label">Origem *</span>
+        <select id={id} className="quiz-input" required value={manual ? opcaoManual : origem}
+          onChange={(e) => {
+            const valor = e.target.value;
+            onChange(valor === opcaoManual ? "" : valor, valor === opcaoManual);
+          }}>
+          <option value="">Selecione a origem</option>
+          {ORIGENS_CLIENTE.map((item) => <option key={item} value={item}>{item}</option>)}
+          {!manual && origem && !ORIGENS_CLIENTE.some((item) => item === origem) && (
+            <option value={origem}>{origem}</option>
+          )}
+          <option value={opcaoManual}>Outro</option>
+        </select>
+      </label>
+      {manual && (
+        <label className="grid gap-1.5">
+          <span className="quiz-label">Qual é a origem? *</span>
+          <input id={id + "-manual"} className="quiz-input" type="text" required
+            value={origem} maxLength={LIMITE_ORIGEM_CLIENTE}
+            onChange={(e) => onChange(e.target.value, true)} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 type View = "calc" | "hist";
 type Step = 1 | 2 | 3;
 type FiltroPeriodo = "todos" | "semana" | "mes" | "personalizado";
@@ -87,7 +125,8 @@ type OrcamentoAjusteRapido = {
   nomeCarro: string;
   placa: string;
   contatoCliente: string;
-  origem: OrigemCliente | "";
+  origem: OrigemCliente;
+  origemManual: boolean;
   observacao: string;
   valorHora: number;
   pecas: PecaAjusteRapido[];
@@ -198,7 +237,8 @@ export default function Calculadora({
   const [nomeCarro, setNomeCarro] = useState("");
   const [placa, setPlaca] = useState("");
   const [contatoCliente, setContatoCliente] = useState("");
-  const [origem, setOrigem] = useState<OrigemCliente | "">("");
+  const [origem, setOrigem] = useState("");
+  const [origemManual, setOrigemManual] = useState(false);
   const [sufixoOrcamento, setSufixoOrcamento] = useState(
     passo2ConfigInicial?.sufixoOrcamento ?? DEFAULT_SUFIXO_ORCAMENTO,
   );
@@ -419,13 +459,34 @@ export default function Calculadora({
         .reduce((acc, o) => acc + o.total, 0),
     [orcamentosFiltrados],
   );
-  const saldoOrigens = useMemo(
-    () => Object.fromEntries(ORIGENS_CLIENTE.map((origem) => {
-      const doOrigem = orcamentosFiltrados.filter((o) => o.origem === origem);
-      return [origem, { quantidade: doOrigem.length, valor: doOrigem.reduce((acc, o) => acc + o.total, 0) }];
-    })) as Record<(typeof ORIGENS_CLIENTE)[number], { quantidade: number; valor: number }>,
-    [orcamentosFiltrados],
-  );
+  const saldoOrigens = useMemo(() => {
+    const canais = new Map<string, { quantidade: number; valor: number }>(
+      ORIGENS_CLIENTE.map((origem) => [origem, { quantidade: 0, valor: 0 }]),
+    );
+    const outros = new Map<string, { nome: string; quantidade: number; valor: number }>();
+    const totalOutros = { quantidade: 0, valor: 0 };
+
+    for (const orcamento of orcamentosFiltrados) {
+      const nome = orcamento.origem;
+      if (!nome) continue;
+      if (orcamento.pecas[0]?.origemManual) {
+        const chave = nome.toLocaleLowerCase("pt-BR");
+        const saldo = outros.get(chave) ?? { nome, quantidade: 0, valor: 0 };
+        saldo.quantidade += 1;
+        saldo.valor = somarValoresMonetarios([saldo.valor, orcamento.total]);
+        outros.set(chave, saldo);
+        totalOutros.quantidade += 1;
+        totalOutros.valor = somarValoresMonetarios([totalOutros.valor, orcamento.total]);
+      } else {
+        const saldo = canais.get(nome);
+        if (!saldo) continue;
+        saldo.quantidade += 1;
+        saldo.valor = somarValoresMonetarios([saldo.valor, orcamento.total]);
+      }
+    }
+
+    return { canais, outros, totalOutros };
+  }, [orcamentosFiltrados]);
   const totaisAjusteRapido = useMemo(() => {
     if (!ajusteRapido) return { pecas: 0, maoDeObra: 0, total: 0 };
     const totalPecas = somarValoresMonetarios(
@@ -462,6 +523,7 @@ export default function Calculadora({
     setPlaca("");
     setContatoCliente("");
     setOrigem("");
+    setOrigemManual(false);
     clearInputs(empresaId);
   }
 
@@ -603,7 +665,11 @@ export default function Calculadora({
   }
 
   async function salvarOrcamento() {
-    if (!origem) { avisarPreenchimento("origem", "calc-origem"); return; }
+    const origemPreenchida = normalizarOrigemCliente(origem, origemManual);
+    if (!origemPreenchida) {
+      avisarPreenchimento("origem", origemManual ? "calc-origem-manual" : "calc-origem");
+      return;
+    }
     setSalvandoOrcamento(true);
     setErroOrcamento("");
     const dados = {
@@ -611,7 +677,8 @@ export default function Calculadora({
       nomeCarro: nomeCarro.trim() || "Sem nome",
       placa: placa.trim(),
       contatoCliente,
-      origem: origem || null,
+      origem: origemPreenchida,
+      origemManual,
       valorHora: valorHoraOrcamento,
       horas: pecasValidas.reduce((acc, p) => acc + parseNum(p.horas), 0),
       maoDeObra: maoDeObraTotal,
@@ -643,6 +710,7 @@ export default function Calculadora({
     setPlaca("");
     setContatoCliente("");
     setOrigem("");
+    setOrigemManual(false);
     setPecas([p]);
     setExpandedId(p.id);
     setSelectedIds(new Set());
@@ -696,6 +764,7 @@ export default function Calculadora({
       placa: o.placa,
       contatoCliente: o.contatoCliente ?? "",
       origem: o.origem ?? "",
+      origemManual: o.pecas[0]?.origemManual === true,
       observacao: o.observacao ?? "",
       valorHora: o.valorHora,
       pecas: pecasRecuperadas,
@@ -704,7 +773,7 @@ export default function Calculadora({
   }
 
   function atualizarAjusteRapido(
-    campo: "nomeCliente" | "nomeCarro" | "placa" | "contatoCliente" | "origem",
+    campo: "nomeCliente" | "nomeCarro" | "placa" | "contatoCliente",
     valor: string,
   ) {
     setAjusteRapido((atual) =>
@@ -761,7 +830,11 @@ export default function Calculadora({
 
   async function salvarAjusteRapido() {
     if (!ajusteRapido || salvandoAjuste) return;
-    if (!ajusteRapido.origem) { avisarPreenchimento("origem", "calc-ajuste-origem"); return; }
+    const origemPreenchida = normalizarOrigemCliente(ajusteRapido.origem, ajusteRapido.origemManual);
+    if (!origemPreenchida) {
+      avisarPreenchimento("origem", ajusteRapido.origemManual ? "calc-ajuste-origem-manual" : "calc-ajuste-origem");
+      return;
+    }
     setSalvandoAjuste(true);
     setErroAjuste("");
     const pecasOrigem =
@@ -803,7 +876,8 @@ export default function Calculadora({
           nomeCarro: ajusteRapido.nomeCarro,
           placa: ajusteRapido.placa,
           contatoCliente: ajusteRapido.contatoCliente,
-          origem: ajusteRapido.origem || null,
+          origem: origemPreenchida,
+          origemManual: ajusteRapido.origemManual,
           observacao: ajusteRapido.observacao,
           valorHora: ajusteRapido.valorHora,
           horas,
@@ -1004,7 +1078,12 @@ export default function Calculadora({
       setOrcamentos((prev) => prev.map((o) => {
         if (o.id !== id) return o;
         const metadados = detalhes ? { origem: detalhes.origem || null, ...(status === "Não aprovado" ? { motivoRecusa: detalhes.motivoRecusa.trim() } : {}) } : {};
-        return { ...o, ...metadados, status, approvedAt, pecas: o.pecas?.map((p, index) => index === 0 ? { ...p, ...metadados } : p) };
+        const pecas = o.pecas.map((peca, index) => {
+          if (index !== 0 || !detalhes) return peca;
+          const origemManual = peca.origemManual === true && detalhes.origem === peca.origem;
+          return { ...peca, ...metadados, origemManual };
+        });
+        return { ...o, ...metadados, status, approvedAt, pecas };
       }));
       setErroStatus("");
       statusDialogRef.current?.close();
@@ -1504,21 +1583,11 @@ export default function Calculadora({
                             onChange={(e) => setContatoCliente(e.target.value)}
                           />
                         </label>}
-                        <label className="grid gap-1.5">
-                          <span className="quiz-label">Origem *</span>
-                          <select
-                            className="quiz-input"
-                            id="calc-origem"
-                            required
-                            value={origem}
-                            onChange={(e) =>
-                              setOrigem(e.target.value as OrigemCliente | "")
-                            }
-                          >
-                            <option value="">Selecione a origem</option>
-                            {ORIGENS_CLIENTE.map((item) => <option key={item} value={item}>{item}</option>)}
-                          </select>
-                        </label>
+                        <CampoOrigem id="calc-origem" origem={origem} manual={origemManual}
+                          onChange={(valor, manual) => {
+                            setOrigem(valor);
+                            setOrigemManual(manual);
+                          }} />
                       </div>
 
                     <div className="calc-grid-2">
@@ -1822,7 +1891,23 @@ export default function Calculadora({
                         <small>Quantidade e valor por canal</small>
                       </div>
                       <div className="calc-origens-grid">
-                        {ORIGENS_CLIENTE.map((origem) => <div key={origem}><span>{origem}</span><b>{saldoOrigens[origem].quantidade}</b><small>{brl(saldoOrigens[origem].valor)}</small></div>)}
+                        {Array.from(saldoOrigens.canais, ([nome, saldo]) => (
+                          <div key={nome}><span>{nome}</span><b>{saldo.quantidade}</b><small>{brl(saldo.valor)}</small></div>
+                        ))}
+                        <details className="calc-origens-outro">
+                          <summary>
+                            <span>Outro</span>
+                            <b>{saldoOrigens.totalOutros.quantidade}</b>
+                            <small>{brl(saldoOrigens.totalOutros.valor)}</small>
+                          </summary>
+                          {saldoOrigens.outros.size ? (
+                            <ul>
+                              {Array.from(saldoOrigens.outros, ([chave, saldo]) => (
+                                <li key={chave}><span>{saldo.nome}</span><b>{saldo.quantidade}</b><small>{brl(saldo.valor)}</small></li>
+                              ))}
+                            </ul>
+                          ) : <p>Nenhuma origem manual no período.</p>}
+                        </details>
                       </div>
                     </div>
                   )}
@@ -2377,21 +2462,10 @@ export default function Calculadora({
                         }
                       />
                     </label>}
-                    <label className="grid gap-1.5">
-                      <span className="quiz-label">Origem *</span>
-                      <select
-                        className="quiz-input"
-                        id="calc-ajuste-origem"
-                        required
-                        value={ajusteRapido.origem}
-                        onChange={(e) =>
-                          atualizarAjusteRapido("origem", e.target.value)
-                        }
-                      >
-                        <option value="">Selecione a origem</option>
-                        {ORIGENS_CLIENTE.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                    </label>
+                    <CampoOrigem id="calc-ajuste-origem" origem={ajusteRapido.origem} manual={ajusteRapido.origemManual}
+                      onChange={(origem, origemManual) => setAjusteRapido((atual) =>
+                        atual ? { ...atual, origem, origemManual } : atual
+                      )} />
                   </>
                 <label className="grid gap-1.5">
                   <span className="quiz-label">Veículo</span>

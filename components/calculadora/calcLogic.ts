@@ -290,6 +290,7 @@ export type PecaResumo = {
   /** Metadados do orçamento guardados no primeiro item do snapshot JSON. */
   contatoCliente?: string;
   origem?: OrigemCliente | null;
+  origemManual?: boolean;
   observacao?: string;
   motivoRecusa?: string;
 };
@@ -306,7 +307,18 @@ export const ORIGENS_CLIENTE = [
   "Rádio",
 ] as const;
 export const ORIGENS_CLIENTE_LEGADAS = ["Ligação", "WhatsApp", "Pessoalmente"] as const;
-export type OrigemCliente = typeof ORIGENS_CLIENTE[number] | typeof ORIGENS_CLIENTE_LEGADAS[number];
+export type OrigemCliente = string;
+export const LIMITE_ORIGEM_CLIENTE = 120;
+
+export function normalizarOrigemCliente(origem: unknown, manual: boolean) {
+  if (typeof origem !== "string") return undefined;
+  const valor = origem.trim();
+  if (!valor || valor.length > LIMITE_ORIGEM_CLIENTE) return undefined;
+  if (manual || [...ORIGENS_CLIENTE, ...ORIGENS_CLIENTE_LEGADAS].some((item) => item === valor)) {
+    return valor;
+  }
+  return undefined;
+}
 
 export type Orcamento = {
   id: string;

@@ -13,8 +13,7 @@ import {
   MULT_DEFAULT,
   MULT_MAX,
   MULT_MIN,
-  ORIGENS_CLIENTE,
-  ORIGENS_CLIENTE_LEGADAS,
+  normalizarOrigemCliente,
   calcCustoHora,
   arredondarMoeda,
   parseNum,
@@ -30,7 +29,6 @@ import {
   type ValorHoraSalvo,
 } from "./calcLogic";
 
-const ORIGENS_VALIDAS: readonly OrigemCliente[] = [...ORIGENS_CLIENTE, ...ORIGENS_CLIENTE_LEGADAS];
 const ERRO_SEM_PERMISSAO =
   "Você não tem permissão para editar os custos desta empresa.";
 const ERRO_SEM_VINCULO = "Você não tem acesso a esta empresa.";
@@ -219,11 +217,8 @@ function sanitizarPecas(pecas: PecaResumo[]): PecaResumo[] {
       p?.contatoCliente != null
         ? String(p.contatoCliente).trim().slice(0, 30)
         : undefined,
-    origem:
-      p?.origem != null &&
-      ORIGENS_VALIDAS.includes(p.origem as OrigemCliente)
-        ? (p.origem as OrigemCliente)
-        : undefined,
+    origem: normalizarOrigemCliente(p?.origem, p?.origemManual === true),
+    origemManual: p?.origemManual === true ? true : undefined,
     observacao:
       p?.observacao != null
         ? String(p.observacao).trim().slice(0, MAX_CHARS_OBSERVACAO)
@@ -289,6 +284,7 @@ type DadosOrcamento = {
   placa: string;
   contatoCliente?: string;
   origem?: OrigemCliente | null;
+  origemManual?: boolean;
   observacao?: string;
   valorHora: number;
   horas: number;
@@ -313,7 +309,9 @@ export async function criarOrcamento(
     return { ok: false, error: ERRO_SEM_VINCULO };
   }
 
-  if (!dados.origem || !ORIGENS_VALIDAS.includes(dados.origem) || !dados.pecas?.length) {
+  const origemManual = dados.origemManual === true;
+  const origem = normalizarOrigemCliente(dados.origem, origemManual);
+  if (!origem || !dados.pecas?.length) {
     return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
   }
 
@@ -322,7 +320,8 @@ export async function criarOrcamento(
       ? {
           ...peca,
           contatoCliente: dados.contatoCliente,
-          origem: dados.origem,
+          origem,
+          origemManual,
           observacao: dados.observacao,
         }
       : peca,
@@ -386,7 +385,9 @@ export async function editarOrcamento(
     };
   }
 
-  if (!dados.origem || !ORIGENS_VALIDAS.includes(dados.origem) || !dados.pecas?.length) {
+  const origemManual = dados.origemManual === true;
+  const origem = normalizarOrigemCliente(dados.origem, origemManual);
+  if (!origem || !dados.pecas?.length) {
     return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
   }
 
@@ -395,7 +396,8 @@ export async function editarOrcamento(
       ? {
           ...peca,
           contatoCliente: dados.contatoCliente,
-          origem: dados.origem,
+          origem,
+          origemManual,
           observacao: dados.observacao,
         }
       : peca,
@@ -503,15 +505,18 @@ export async function atualizarStatusOrcamento(
     .eq("id", orcamentoId).eq("empresa_id", empresaId).maybeSingle();
   if (erroLeitura || !atual) return { ok: false, error: ERRO_GENERICO };
   const pecas: PecaResumo[] = Array.isArray(atual.pecas) ? [...atual.pecas] : [];
-  const origem = detalhes?.origem ?? pecas[0]?.origem;
+  const origemAtual = pecas[0]?.origem;
+  const origemInformada = detalhes?.origem ?? origemAtual;
+  const origemManual = pecas[0]?.origemManual === true && origemInformada === origemAtual;
+  const origem = normalizarOrigemCliente(origemInformada, origemManual);
   const motivoRecusa = String(detalhes?.motivoRecusa ?? pecas[0]?.motivoRecusa ?? "").trim().slice(0, MAX_CHARS_OBSERVACAO);
-  if (!pecas.length || !origem || !ORIGENS_VALIDAS.includes(origem)) {
+  if (!pecas.length || !origem) {
     return { ok: false, error: AVISOS_PREENCHIMENTO.origem };
   }
   if (status === "Não aprovado" && !motivoRecusa) {
     return { ok: false, error: AVISOS_PREENCHIMENTO.motivo };
   }
-  pecas[0] = { ...pecas[0], origem, ...(status === "Não aprovado" ? { motivoRecusa } : {}) };
+  pecas[0] = { ...pecas[0], origem, origemManual, ...(status === "Não aprovado" ? { motivoRecusa } : {}) };
   const approvedAt = status === "Aprovado" ? new Date().toISOString() : null;
   let { data, error } = await admin
     .from("orcamentos")
