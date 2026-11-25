@@ -1445,6 +1445,10 @@
   gap: 16px;
 }
 
+.includedCard {
+  text-align: center;
+}
+
 .includedCard h3,
 .openingBonus h3 {
   margin: 0;
@@ -1542,4 +1546,26 @@
     grid-template-columns: 1fr;
     margin-top: 30px;
   }
+}
+
+.openingBonusGrid .openingBonus {
+  align-items: center;
+  background: #071522;
+  text-align: center;
+}
+
+.openingBonusGrid .bonusTop {
+  justify-content: center;
+}
+
+.openingBonusGrid .bonusCondition {
+  padding: 14px 16px;
+  border: 1px solid #e9bc59;
+  background: #1b2028;
+  color: #f8e9c1;
+}
+
+.openingBonusGrid .bonusCondition strong {
+  color: #ffdb78;
+  font-weight: 850;
 }

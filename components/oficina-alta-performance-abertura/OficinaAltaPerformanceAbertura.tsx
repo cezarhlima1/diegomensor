@@ -109,6 +109,13 @@ const openingBonuses = [
   },
 ];
 
+const trainingValues = [
+  ["Treinamento completo de todos os processos", "R$ 1.500,00"],
+  ["Encontros mensais ao vivo", "R$ 2.500,00"],
+  ["Aulas com especialistas", "R$ 2.000,00"],
+  ["Planilhas, checklists e ferramentas prontas", "R$ 500,00"],
+];
+
 const bonusTiers = [
   { label: "Primeiro comprador", total: "R$ 8.694,00", bonusCount: 4 },
   { label: "Do 2º ao 5º comprador", total: "R$ 2.694,00", bonusCount: 3 },
@@ -359,16 +366,19 @@ export default function OficinaAltaPerformanceAbertura() {
 
           <section className={styles.bonusDetails} aria-labelledby="bonus-total-titulo">
             <div className={styles.sectionIntro}>
-              <h2 id="bonus-total-titulo">03 — Valor total dos bônus exclusivos</h2>
+              <h2 id="bonus-total-titulo">Só de Bônus, é isso que eu vou te entregar:</h2>
             </div>
             <table className={styles.bonusTable} aria-labelledby="bonus-total-titulo">
-              <thead><tr><th scope="col">Bônus</th><th scope="col">Valor</th></tr></thead>
+              <thead><tr><th scope="col">Entregável</th><th scope="col">Valor</th></tr></thead>
               <tbody>
                 {openingBonuses.map(({ summary, value }) => (
                   <tr key={summary}><th scope="row">{summary}</th><td>{value}</td></tr>
                 ))}
+                {trainingValues.map(([item, value]) => (
+                  <tr key={item}><th scope="row">{item}</th><td>{value}</td></tr>
+                ))}
               </tbody>
-              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 8.694,00</td></tr></tfoot>
+              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 15.194,00</td></tr></tfoot>
             </table>
           </section>
 
@@ -463,12 +473,7 @@ export default function OficinaAltaPerformanceAbertura() {
                   <p>Você recebe um método construído em <strong>24 anos de oficina</strong>, além de:</p>
                 </div>
                 <div className={styles.valueItems}>
-                  {[
-                    ["Treinamento completo de todos os processos", "R$ 1.500,00"],
-                    ["Encontros mensais ao vivo", "R$ 2.500,00"],
-                    ["Aulas com especialistas", "R$ 2.000,00"],
-                    ["Planilhas, checklists e ferramentas prontas", "R$ 500,00"],
-                  ].map(([item, value]) => (
+                  {trainingValues.map(([item, value]) => (
                     <div key={item}><span>{item}</span><strong>{value}</strong></div>
                   ))}
                 </div>
