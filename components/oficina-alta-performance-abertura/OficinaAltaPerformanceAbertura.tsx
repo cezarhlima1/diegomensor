@@ -325,16 +325,10 @@ export default function OficinaAltaPerformanceAbertura() {
         </div>
       </section>
 
-      <section className={styles.bonusSection}>
-        <div className={styles.bonusRibbon} aria-label={bonusMessage}>
-          <div className={styles.bonusRibbonTrack} aria-hidden="true">
-            <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
-            <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
-          </div>
-        </div>
+      <section className={`${styles.bonusSection} ${styles.includedSection}`} aria-labelledby="incluido-titulo">
         <div className={styles.shell}>
           <div className={styles.sectionIntro}>
-            <h2>O que está incluído no Oficina de Alta Performance</h2>
+            <h2 id="incluido-titulo">O que está incluído no Oficina de Alta Performance</h2>
           </div>
           <div className={styles.bonusGrid}>
             {included.map(([title, description]) => (
@@ -345,24 +339,42 @@ export default function OficinaAltaPerformanceAbertura() {
             ))}
           </div>
 
-          <section className={styles.bonusDetails} aria-labelledby="bonus-titulo">
-            <div className={styles.sectionIntro}>
-              <h2 id="bonus-titulo">02 — Bônus exclusivos desta turma</h2>
+        </div>
+      </section>
+
+      <section className={`${styles.bonusSection} ${styles.eventBonusSection}`} aria-labelledby="bonus-titulo">
+        <div className={styles.bonusRibbon} aria-label={bonusMessage}>
+          <div className={styles.bonusRibbonTrack} aria-hidden="true">
+            <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
+            <div className={styles.bonusRibbonGroup}>{bonusTickerLine}</div>
+          </div>
+        </div>
+        <div className={styles.shell}>
+          <header className={styles.eventBonusHeader}>
+            <div>
+              <span className={styles.eventBonusLabel}>Para quem estava no evento</span>
+              <h2 id="bonus-titulo">Bônus exclusivos desta turma</h2>
+              <p>Quanto antes tu entrar, mais bônus tu recebe.</p>
             </div>
-            <div className={styles.openingBonusGrid}>
-              {openingBonuses.map(({ number, title, paragraphs, value, valueNote, condition }) => (
-                <article className={styles.openingBonus} key={number}>
-                  <div className={styles.bonusTop}><span>BÔNUS {number}</span></div>
-                  <h3>{title}</h3>
-                  <div className={styles.bonusDescription}>
-                    {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-                  </div>
-                  <p className={styles.bonusValue}>Valor: {value}{valueNote && ` (${valueNote})`}</p>
-                  <p className={styles.bonusCondition}>Exclusivo para <strong>{condition}</strong>.</p>
-                </article>
-              ))}
+            <div className={styles.eventBonusHighlight}>
+              <span>Até</span>
+              <strong>{bonusTiers[0].total}</strong>
+              <span>em bônus exclusivos</span>
             </div>
-          </section>
+          </header>
+          <div className={styles.openingBonusGrid}>
+            {openingBonuses.map(({ number, title, paragraphs, value, valueNote, condition }) => (
+              <article className={styles.openingBonus} key={number}>
+                <div className={styles.bonusTop}><span>BÔNUS {number}</span></div>
+                <h3>{title}</h3>
+                <div className={styles.bonusDescription}>
+                  {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                </div>
+                <p className={styles.bonusValue}>Valor: {value}{valueNote && ` (${valueNote})`}</p>
+                <p className={styles.bonusCondition}>Exclusivo para <strong>{condition}</strong>.</p>
+              </article>
+            ))}
+          </div>
 
           <section className={styles.bonusDetails} aria-labelledby="bonus-total-titulo">
             <div className={styles.sectionIntro}>
