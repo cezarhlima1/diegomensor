@@ -57,9 +57,63 @@ const problems = [
 
 const cohortMessage = "A MELHOR BLACK";
 const cohortTickerLine = `${cohortMessage}  |  `.repeat(24);
-const bonusMessage = "BÔNUS EXCLUSIVOS DE BLACK FRIDAY";
+const bonusMessage = "BÔNUS EXCLUSIVOS DESTA TURMA";
 const bonusTickerLine = `${bonusMessage}  ✦  `.repeat(10);
 const checkoutUrl = "https://payfast.greenn.com.br/186533/offer/lYQkb3?utm_medium=Evento+lanc";
+
+const included = [
+  ["Treinamento completo de todos os processos", "Acesso ao treinamento completo para construir uma oficina mais organizada, lucrativa, com processos bem definidos e menos dependente de ti."],
+  ["Materiais, planilhas e ferramentas prontas", "Além de ensinar, eu te entrego os materiais que utilizo dentro da minha própria oficina. Documentos, planilhas, checklists e ferramentas prontas para implementar na tua operação."],
+  ["Treinamentos com especialistas", "Aulas exclusivas com especialistas em diferentes áreas da tua empresa: marketing, comercial, tráfego pago, financeiro, tributário e muito mais."],
+  ["Aulas exclusivas sob demanda", "Sentiu falta de algum conteúdo dentro do treinamento? Tu pode solicitar uma aula sobre o tema que precisar, e nós vamos gravar e disponibilizar essa aula para ti e para os demais alunos. A ideia é que o treinamento seja cada vez mais completo."],
+  ["Encontros mensais ao vivo comigo", "Todo mês, vamos ter um encontro em grupo ao vivo para tirar dúvidas, acompanhar a implementação dos processos e direcionar os próximos passos da tua oficina."],
+];
+
+const openingBonuses = [
+  {
+    number: "01",
+    title: "Calculadora de Precificação",
+    summary: "Calculadora de Precificação",
+    paragraphs: ["Aprende a cobrar certo pelos teus serviços com uma ferramenta pronta para calcular tua hora técnica, custos e margem de lucro."],
+    value: "R$ 497,00",
+    condition: "quem entrar nas primeiras 24 horas",
+  },
+  {
+    number: "02",
+    title: "Ingresso para a Imersão Presencial Oficina de Alta Performance",
+    summary: "Ingresso para o evento presencial",
+    paragraphs: [
+      "Te encontro em 30 de janeiro de 2027, aqui em Blumenau – SC!",
+      "Será um dia inteiro de imersão presencial comigo, muito aprendizado, troca de experiências e estratégias práticas para transformar a tua oficina.",
+      "Uma experiência diferente de tudo que tu já viveu, para começar 2027 do JEITO CERTO!",
+    ],
+    value: "R$ 697,00",
+    valueNote: "valor do primeiro lote",
+    condition: "quem entrar nas primeiras 24 horas",
+  },
+  {
+    number: "03",
+    title: "Um dia de imersão dentro da minha oficina",
+    summary: "Um dia de imersão na oficina",
+    paragraphs: ["Passa um dia inteiro dentro da minha oficina, acompanhando de perto como funciona a minha operação, a minha equipe e os processos que ensino dentro do treinamento."],
+    value: "R$ 1.500,00",
+    condition: "os 5 primeiros compradores",
+  },
+  {
+    number: "04",
+    title: "60 dias de consultoria individual comigo",
+    summary: "60 dias de consultoria individual",
+    paragraphs: ["Serão 3 encontros individuais comigo para olhar diretamente para a realidade da tua empresa, identificar os principais problemas e definir as prioridades da tua operação."],
+    value: "R$ 6.000,00",
+    condition: "o primeiro comprador",
+  },
+];
+
+const bonusTiers = [
+  { label: "Primeiro comprador", total: "R$ 8.694,00", bonusCount: 4 },
+  { label: "Do 2º ao 5º comprador", total: "R$ 2.694,00", bonusCount: 3 },
+  { label: "Demais compradores nas primeiras 24 horas", total: "R$ 1.194,00", bonusCount: 2 },
+];
 
 function Arrow() {
   return <span aria-hidden="true">↗</span>;
@@ -272,52 +326,70 @@ export default function OficinaAltaPerformanceAbertura() {
           </div>
         </div>
         <div className={styles.shell}>
-          <div className={`${styles.sectionIntro} ${styles.reveal}`}>
-            <h2>Eu quero garantir que tu não precise buscar conhecimento em outro lugar e que encontre tudo o que precisa <em>AQUI.</em></h2>
-            <p className={styles.bonusLead}>Por isso, preparei alguns bônus que vão acelerar teus resultados.</p>
+          <div className={styles.sectionIntro}>
+            <h2>O que está incluído no Oficina de Alta Performance</h2>
           </div>
           <div className={styles.bonusGrid}>
-            {([
-              ["01", "Aulas exclusivas sob demanda", [
-                "Sentiu falta de algum conteúdo dentro do treinamento? Tu poderá solicitar uma aula exclusiva sobre o tema que precisar, e nós vamos gravar e disponibilizar essa aula para ti e para os demais alunos.",
-                "A ideia é que tu tenha acesso a tudo que precisa para evoluir a tua oficina e que, com a tua participação, o treinamento se torne cada vez mais completo.",
-              ]],
-              ["02", "Encontros mensais em grupo ao vivo comigo", [
-                "Todo mês, vamos ter uma aula ao vivo em grupo pra tirar dúvidas sobre o curso e conversar sobre as dificuldades que tu enfrentou ou está enfrentando no momento, com foco em acelerar o crescimento da tua oficina.",
-              ]],
-              ["03", "Aulas exclusivas com especialistas", [
-                "Dentro do curso, você terá acesso a aulas exclusivas com conteúdos de marketing, comercial, recrutamento, tráfego e área tributária para apoiar o crescimento da oficina.",
-              ]],
-            ] satisfies Array<[string, string, string[]]>).map(([n, title, paragraphs]) => (
-              <article className={`${styles.bonus} ${styles.reveal}`} key={n}>
-                <div className={styles.bonusTop}><span>BÔNUS {n}</span></div>
+            {included.map(([title, description]) => (
+              <article className={styles.includedCard} key={title}>
                 <h3>{title}</h3>
-                <div className={styles.bonusDescription}>
-                  {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-                </div>
-                <small>Incluído no Oficina de Alta Performance</small>
+                <p>{description}</p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section className={styles.immersion} aria-labelledby="imersao-titulo">
-        <div className={styles.shell}>
-          <div className={styles.immersionGrid}>
-            <div>
-              <span className={styles.immersionLabel}>BÔNUS 04 — O MELHOR DE TODOS</span>
-              <h2 id="imersao-titulo">Ingresso para a Imersão Presencial Oficina de Alta Performance</h2>
-              <p className={styles.immersionDate}><time dateTime="2027-01-30">30 de janeiro de 2027</time> · Blumenau – SC</p>
+          <section className={styles.bonusDetails} aria-labelledby="bonus-titulo">
+            <div className={styles.sectionIntro}>
+              <h2 id="bonus-titulo">02 — Bônus exclusivos desta turma</h2>
             </div>
-            <div className={styles.immersionCopy}>
-              <p>Todos que entrarem para esta turma vão ganhar um ingresso para participar do nosso treinamento presencial, em janeiro no dia 30/01, aqui em Blumenau – SC.</p>
-              <p>Será um dia inteiro de imersão comigo, troca de experiências com outros donos de oficina, muito aprendizado e estratégias práticas para transformar a tua empresa.</p>
-              <p>Uma experiência exclusiva, pensada para que tu comece 2027 com clareza, direcionamento e preparado para levar a tua oficina a outro nível.</p>
-              <strong>Começa 2027 do JEITO CERTO!</strong>
-              <p>Ingresso de presente, exclusivamente para os alunos desta turma do Oficina de Alta Performance.</p>
+            <div className={styles.openingBonusGrid}>
+              {openingBonuses.map(({ number, title, paragraphs, value, valueNote, condition }) => (
+                <article className={styles.openingBonus} key={number}>
+                  <div className={styles.bonusTop}><span>BÔNUS {number}</span></div>
+                  <h3>{title}</h3>
+                  <div className={styles.bonusDescription}>
+                    {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                  </div>
+                  <p className={styles.bonusValue}>Valor: {value}{valueNote && ` (${valueNote})`}</p>
+                  <p className={styles.bonusCondition}>Exclusivo para <strong>{condition}</strong>.</p>
+                </article>
+              ))}
             </div>
-          </div>
+          </section>
+
+          <section className={styles.bonusDetails} aria-labelledby="bonus-total-titulo">
+            <div className={styles.sectionIntro}>
+              <h2 id="bonus-total-titulo">03 — Valor total dos bônus exclusivos</h2>
+            </div>
+            <table className={styles.bonusTable} aria-labelledby="bonus-total-titulo">
+              <thead><tr><th scope="col">Bônus</th><th scope="col">Valor</th></tr></thead>
+              <tbody>
+                {openingBonuses.map(({ summary, value }) => (
+                  <tr key={summary}><th scope="row">{summary}</th><td>{value}</td></tr>
+                ))}
+              </tbody>
+              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 8.694,00</td></tr></tfoot>
+            </table>
+          </section>
+
+          <section className={styles.bonusDetails} aria-labelledby="bonus-faixas-titulo">
+            <div className={styles.sectionIntro}>
+              <h2 id="bonus-faixas-titulo">04 — Quanto antes tu entrar, mais tu recebe</h2>
+            </div>
+            <div className={styles.bonusGrid}>
+              {bonusTiers.map(({ label, total, bonusCount }) => (
+                <article className={styles.openingBonus} key={label}>
+                  <h3 className={styles.tierLabel}>{label}</h3>
+                  <p className={styles.tierTotal}><strong>{total}</strong>Em bônus exclusivos</p>
+                  <ul className={styles.tierList}>
+                    {openingBonuses.slice(0, bonusCount).reverse().map(({ summary }) => (
+                      <li key={summary}><Check />{summary}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
       </section>
 
@@ -392,21 +464,19 @@ export default function OficinaAltaPerformanceAbertura() {
                 </div>
                 <div className={styles.valueItems}>
                   {[
-                    ["Treinamento completo de todos os processos", "R$ 1.500"],
-                    ["Encontros mensais ao vivo", "R$ 2.500"],
-                    ["Aulas com especialistas", "R$ 2.000"],
-                    ["Planilhas, checklists e ferramentas prontas", "R$ 500"],
-                    ["Evento presencial (só o primeiro lote)", "R$ 697"],
+                    ["Treinamento completo de todos os processos", "R$ 1.500,00"],
+                    ["Encontros mensais ao vivo", "R$ 2.500,00"],
+                    ["Aulas com especialistas", "R$ 2.000,00"],
+                    ["Planilhas, checklists e ferramentas prontas", "R$ 500,00"],
                   ].map(([item, value]) => (
                     <div key={item}><span>{item}</span><strong>{value}</strong></div>
                   ))}
                 </div>
-                <strong className={styles.valueTotal}>Só até aqui, já são R$ 7.197,00 em conteúdo, ferramentas, acompanhamento e imersão presencial.</strong>
+                <strong className={styles.valueTotal}>Valor total do treinamento · R$ 6.500,00</strong>
                 <p className={styles.experienceNote}>E eu nem coloquei um valor nos meus 24 anos de experiência, nem em tudo que você vai economizar deixando de aprender na tentativa e erro.</p>
                 <div className={styles.valueTurn}>
                   <span>CONTUDO...</span>
-                  <strong>Tu não vai precisar investir R$ 7.197,00.</strong>
-                  <del>R$ 7.197,00</del>
+                  <strong>Tu não vai precisar investir <del>R$ 6.500,00</del>.</strong>
                   <p>Tu não vai precisar investir nem <strong>METADE DESSE VALOR.</strong></p>
                 </div>
               </div>
@@ -416,7 +486,7 @@ export default function OficinaAltaPerformanceAbertura() {
             <div className={styles.priceCard}>
               <span className={styles.offerProduct}>OFICINA DE ALTA PERFORMANCE®</span>
               <small className={styles.paymentLabel}>CONDIÇÃO DE PAGAMENTO</small>
-              <p className={styles.investmentLead}>Para ter uma oficina lucrativa, organizada e menos dependente de você, o investimento é de <strong>APENAS:</strong></p>
+              <p className={styles.investmentLead}>Para ter uma oficina lucrativa, organizada e menos dependente de ti, o investimento é de <strong>APENAS:</strong></p>
               <div className={styles.installment}>
                 <div className={styles.installmentPrefix}>
                   <span>12x</span>
@@ -427,7 +497,7 @@ export default function OficinaAltaPerformanceAbertura() {
               <small className={styles.noInterest}>(Sem juros)</small>
               <p className={styles.totalPrice}>À vista R$ 1.897,00</p>
               <div className={styles.dailyCost}>
-                <span>Fazendo as contas, isso representa cerca de</span>
+                <span>Isso representa cerca de</span>
                 <strong>R$ 5,20 por dia.</strong>
               </div>
               <p className={styles.impactText}>Um investimento simbólico quando comparado ao retorno financeiro e, muito além disso, ao impacto na sua vida profissional e pessoal.</p>
