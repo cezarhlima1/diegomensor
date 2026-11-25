@@ -1636,3 +1636,13 @@
     text-align: center;
   }
 }
+
+.bonusCalculationNote {
+  margin: 24px 0;
+  padding: 14px 18px;
+  border: 1px solid #a98035;
+  border-radius: 10px;
+  color: #f3d985;
+  font-weight: 800;
+  text-align: center;
+}

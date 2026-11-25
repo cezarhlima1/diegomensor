@@ -386,17 +386,17 @@ export default function OficinaAltaPerformanceAbertura() {
                 {openingBonuses.map(({ summary, value }) => (
                   <tr key={summary}><th scope="row">{summary}</th><td>{value}</td></tr>
                 ))}
-                {trainingValues.map(([item, value]) => (
+                {trainingValues.slice(1).map(([item, value]) => (
                   <tr key={item}><th scope="row">{item}</th><td>{value}</td></tr>
                 ))}
               </tbody>
-              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 15.194,00</td></tr></tfoot>
+              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 13.694,00</td></tr></tfoot>
             </table>
           </section>
 
           <section className={styles.bonusDetails} aria-labelledby="bonus-faixas-titulo">
             <div className={styles.sectionIntro}>
-              <h2 id="bonus-faixas-titulo">04 — Quanto antes tu entrar, mais tu recebe</h2>
+              <h2 id="bonus-faixas-titulo">Quanto antes tu entrar, mais tu recebe</h2>
             </div>
             <div className={styles.bonusGrid}>
               {bonusTiers.map(({ label, total, bonusCount }) => (
@@ -489,6 +489,7 @@ export default function OficinaAltaPerformanceAbertura() {
                     <div key={item}><span>{item}</span><strong>{value}</strong></div>
                   ))}
                 </div>
+                <p className={styles.bonusCalculationNote}>NEM VOU CALCULAR OS BÔNUS AQUI</p>
                 <strong className={styles.valueTotal}>Valor total do treinamento · R$ 6.500,00</strong>
                 <p className={styles.experienceNote}>E eu nem coloquei um valor nos meus 24 anos de experiência, nem em tudo que você vai economizar deixando de aprender na tentativa e erro.</p>
                 <div className={styles.valueTurn}>
