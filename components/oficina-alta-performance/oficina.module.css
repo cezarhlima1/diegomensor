@@ -1408,3 +1408,69 @@
   .testimonialCard{margin-bottom:14px;border-radius:14px}
   .testimonialCard figcaption{padding:11px 13px}
 }
+
+.bonusDescription {
+  display: grid;
+  gap: 12px;
+}
+
+.immersion {
+  display: grid;
+  align-items: center;
+  min-height: 100svh;
+  padding: clamp(64px, 10vw, 132px) 0;
+  border-block: 1px solid #a98035;
+  background: radial-gradient(ellipse at top left, #263746, transparent 65%), #07111a;
+  color: #fff;
+}
+
+.immersionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(28px, 6vw, 80px);
+}
+
+.immersionLabel,
+.immersionDate {
+  color: #f3d985;
+  font-weight: 750;
+}
+
+.immersionLabel {
+  font-family: var(--font-jetbrains);
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+.immersion h2 {
+  margin: 20px 0 24px;
+  font: 750 clamp(34px, 5vw, 62px)/1.04 var(--font-archivo);
+  letter-spacing: -.045em;
+}
+
+.immersionCopy {
+  display: grid;
+  gap: 16px;
+  padding: clamp(22px, 4vw, 44px);
+  border: 1px solid #a98035;
+  border-radius: 20px;
+  background: #102331;
+}
+
+.immersionCopy p {
+  margin: 0;
+  color: #d8e7ee;
+  line-height: 1.65;
+}
+
+.immersionCopy strong {
+  color: #f3d985;
+  font: 750 clamp(22px, 3vw, 30px)/1.15 var(--font-archivo);
+}
+
+@media (max-width: 800px) {
+  .immersionGrid {
+    grid-template-columns: 1fr;
+  }
+}

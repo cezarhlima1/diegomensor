@@ -9,7 +9,12 @@ export const ATTRIBUTION_STORAGE_KEY = "oficina-organizada:attribution:v1";
 
 // Literal checkout URLs supplied by the user. Do not rebuild these URLs or
 // append parameters: spelling, capitalization and encoding are intentional.
-export const checkoutLinks: Record<string, readonly [string, string, string]> = {
+export const checkoutLinks: Record<string, readonly [string | undefined, string | undefined, string]> = {
+  livredoinstam: [
+    undefined,
+    undefined,
+    "https://payfast.greenn.com.br/200537/offer/7CnUfU?utm_medium=Live+instagram&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
+  ],
   instagram: [
     "https://payfast.greenn.com.br/200537/offer/uEHm9j?utm_medium=PV+-+Storie&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
     "https://payfast.greenn.com.br/200537/offer/fTygOH?utm_medium=PV+-+Stories&b_id_1=201377&b_offer_1=ezTzvW&b_id_2=201423&b_offer_2=DQqf2S&b_id_3=201432&b_offer_3=BlsB7I",
@@ -67,7 +72,8 @@ export function getCheckoutUrl(now: number, tracking: Tracking): string {
     ? 'direct'
     : source === 'instagram' && (medium === 'bio' || medium === 'biografia') ? 'biografia' : source;
   const links = origin && Object.hasOwn(checkoutLinks, origin) ? checkoutLinks[origin] : undefined;
-  if (links && index >= 1) return links[index - 1];
+  const checkout = index >= 1 ? links?.[index - 1] : undefined;
+  if (checkout) return checkout;
   const url = new URL(lots[index].checkoutUrl);
   for (const key of trackingKeys) {
     const value = tracking[key];
