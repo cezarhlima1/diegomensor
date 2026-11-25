@@ -72,6 +72,22 @@ const included = [
 const openingBonuses = [
   {
     number: "01",
+    title: "60 dias de consultoria individual comigo",
+    summary: "60 dias de consultoria individual",
+    paragraphs: ["Serão 3 encontros individuais comigo para olhar diretamente para a realidade da tua empresa, identificar os principais problemas e definir as prioridades da tua operação."],
+    value: "R$ 6.000,00",
+    condition: "o primeiro comprador",
+  },
+  {
+    number: "02",
+    title: "Um dia de imersão dentro da minha oficina",
+    summary: "Um dia de imersão na oficina",
+    paragraphs: ["Passa um dia inteiro dentro da minha oficina, acompanhando de perto como funciona a minha operação, a minha equipe e os processos que ensino dentro do treinamento."],
+    value: "R$ 1.500,00",
+    condition: "os 5 primeiros compradores",
+  },
+  {
+    number: "03",
     title: "Calculadora de Precificação",
     summary: "Calculadora de Precificação",
     paragraphs: ["Aprende a cobrar certo pelos teus serviços com uma ferramenta pronta para calcular tua hora técnica, custos e margem de lucro."],
@@ -79,7 +95,7 @@ const openingBonuses = [
     condition: "quem entrar nas primeiras 24 horas",
   },
   {
-    number: "02",
+    number: "04",
     title: "Ingresso para a Imersão Presencial Oficina de Alta Performance",
     summary: "Ingresso para o evento presencial",
     paragraphs: [
@@ -90,22 +106,6 @@ const openingBonuses = [
     value: "R$ 697,00",
     valueNote: "valor do primeiro lote",
     condition: "quem entrar nas primeiras 24 horas",
-  },
-  {
-    number: "03",
-    title: "Um dia de imersão dentro da minha oficina",
-    summary: "Um dia de imersão na oficina",
-    paragraphs: ["Passa um dia inteiro dentro da minha oficina, acompanhando de perto como funciona a minha operação, a minha equipe e os processos que ensino dentro do treinamento."],
-    value: "R$ 1.500,00",
-    condition: "os 5 primeiros compradores",
-  },
-  {
-    number: "04",
-    title: "60 dias de consultoria individual comigo",
-    summary: "60 dias de consultoria individual",
-    paragraphs: ["Serão 3 encontros individuais comigo para olhar diretamente para a realidade da tua empresa, identificar os principais problemas e definir as prioridades da tua operação."],
-    value: "R$ 6.000,00",
-    condition: "o primeiro comprador",
   },
 ];
 
@@ -366,12 +366,12 @@ export default function OficinaAltaPerformanceAbertura() {
             {openingBonuses.map(({ number, title, paragraphs, value, valueNote, condition }) => (
               <article className={styles.openingBonus} key={number}>
                 <div className={styles.bonusTop}><span>BÔNUS {number}</span></div>
+                <p className={styles.bonusCondition}>Exclusivo para <strong>{condition}</strong>.</p>
                 <h3>{title}</h3>
                 <div className={styles.bonusDescription}>
                   {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
                 </div>
                 <p className={styles.bonusValue}>Valor: {value}{valueNote && ` (${valueNote})`}</p>
-                <p className={styles.bonusCondition}>Exclusivo para <strong>{condition}</strong>.</p>
               </article>
             ))}
           </div>
@@ -386,11 +386,8 @@ export default function OficinaAltaPerformanceAbertura() {
                 {openingBonuses.map(({ summary, value }) => (
                   <tr key={summary}><th scope="row">{summary}</th><td>{value}</td></tr>
                 ))}
-                {trainingValues.slice(1).map(([item, value]) => (
-                  <tr key={item}><th scope="row">{item}</th><td>{value}</td></tr>
-                ))}
               </tbody>
-              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 13.694,00</td></tr></tfoot>
+              <tfoot><tr><th scope="row">TOTAL</th><td>R$ 8.694,00</td></tr></tfoot>
             </table>
           </section>
 
@@ -404,7 +401,7 @@ export default function OficinaAltaPerformanceAbertura() {
                   <h3 className={styles.tierLabel}>{label}</h3>
                   <p className={styles.tierTotal}><strong>{total}</strong>Em bônus exclusivos</p>
                   <ul className={styles.tierList}>
-                    {openingBonuses.slice(0, bonusCount).reverse().map(({ summary }) => (
+                    {openingBonuses.slice(-bonusCount).map(({ summary }) => (
                       <li key={summary}><Check />{summary}</li>
                     ))}
                   </ul>
